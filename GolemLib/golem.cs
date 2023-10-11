@@ -1,6 +1,7 @@
 ﻿namespace GolemLib;
 
 using GolemLib.Types;
+using System.Threading.Tasks;
 
 public interface IGolem
 {
@@ -20,16 +21,8 @@ public interface IGolem
     int SetNetworkSpeed { get; set; }
 
 
-    bool StartYagna();
-    bool StopYagna();
-    void BlacklistNode(string node_id);
+    Task<bool> StartYagna();
+    Task<bool> StopYagna();
+    Task<bool> BlacklistNode(string node_id);
 }
-
-
-public interface IGolemConnector
-{
-    void OnEvent(Events.IGolemEvent golemEvent);
-    ApplicationState OnGetAppStatus();
-}
-
 

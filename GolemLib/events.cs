@@ -2,10 +2,6 @@ namespace GolemLib.Events;
 
 using GolemLib.Types;
 
-public interface IGolemEvent
-{
-
-}
 
 public class JobEvent : EventArgs
 {
