@@ -9,16 +9,19 @@ public interface IGolem
     public event EventHandler<Events.JobFinished> OnJobFinished;
     public event EventHandler<Events.PaymentConfirmed> OnPaymentConfirmed;
 
-    bool StartYagna();
-    bool StopYagna();
-    void SetPrice(GolemPrice price);
-    void SetAppState(ApplicationState state);
-    void SetWalletAddres(string wallet);
+
+    GolemPrice Price { get; set; }
+    string WalletAddress { get; set; }
+    ApplicationState AppState { get; set; }
     /// <summary>
     /// Benchmarked network speed in B/s
     /// </summary>
     /// <param name="speed"></param>
-    void SetNetworkSpeed(int speed);
+    int SetNetworkSpeed { get; set; }
+
+
+    bool StartYagna();
+    bool StopYagna();
     void BlacklistNode(string node_id);
 }
 
