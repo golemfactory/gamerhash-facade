@@ -21,8 +21,8 @@ public interface IGolem
     int SetNetworkSpeed { get; set; }
 
 
-    Task<bool> StartYagna();
-    Task<bool> StopYagna();
-    Task<bool> BlacklistNode(string node_id);
+    Task<Result<Void, Error>> StartYagna();
+    Task<Result<Void, Error>> StopYagna();
+    Task<Result<Void, Error>> BlacklistNode(string node_id);
 }
 
