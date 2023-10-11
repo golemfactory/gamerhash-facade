@@ -52,6 +52,24 @@ public enum JobStatus
     Finished,
 }
 
+/// <summary>
+/// Golem consists of `yagna` and `ya-provider`, but this enum
+/// aims to hide the complexity and provide only meaningful statuses
+/// from UI perspective.
+/// </summary>
+public enum GolemStatus
+{
+    Off,
+    Starting,
+    Ready,
+    /// <summary>
+    /// Yagna daemon is running, but Golem will not accept tasks.
+    /// (That can be implemented as `ya-provider` not running)
+    /// </summary>
+    Suspended,
+    Error,
+}
+
 public class ActivityPayment
 {
     string activity_id;
