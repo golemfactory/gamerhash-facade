@@ -1,22 +1,14 @@
 ﻿namespace GolemLib;
 
-/// <summary>
-/// Represents price settings in Golem pricing model.
-/// TODO: We will find out later which of these options make the most sense.
-/// </summary>
-public class GolemPrice
-{
-    decimal GpuPerHour { get; set; }
-    decimal EnvPerHour { get; set; }
-    decimal NumRequests { get; set; }
-    decimal StartPrice { get; set; }
-}
+using GolemLib.Types;
 
-public class ApplicationState
-{ }
-
-public interface IProvider
+public interface IGolem
 {
+    public event EventHandler<Events.JobStarted> OnJobStarted;
+    public event EventHandler<Events.Computing> OnComputing;
+    public event EventHandler<Events.JobFinished> OnJobFinished;
+    public event EventHandler<Events.PaymentConfirmed> OnPaymentConfirmed;
+
     bool StartYagna();
     bool StopYagna();
     void SetPrice(GolemPrice price);
@@ -27,18 +19,14 @@ public interface IProvider
     /// </summary>
     /// <param name="speed"></param>
     void SetNetworkSpeed(int speed);
+    void BlacklistNode(string node_id);
 }
 
 
 public interface IGolemConnector
 {
-    void OnEvent<T>(T golemEvent);
+    void OnEvent(Events.IGolemEvent golemEvent);
     ApplicationState OnGetAppStatus();
 }
 
-public class GolemConfiguration
-{
-    public string WalletAddress { get; set; }
-    public GolemPrice Price { get; set; }
-}
 
