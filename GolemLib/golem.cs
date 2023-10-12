@@ -34,8 +34,8 @@ public interface IGolem : INotifyPropertyChanged
         return usage.reward(this.Price);
     }
 
-    Task<Void> StartYagna();
-    Task<Void> StopYagna();
+    public Task<Void> StartYagna();
+    public Task<Void> StopYagna();
     /// <summary>
     /// Returns true if process can be suspended without stopping computations.
     /// When job is in progress, `Provider` will be stopped after it is finished.
@@ -43,13 +43,13 @@ public interface IGolem : INotifyPropertyChanged
     /// If you want to stop anyway, use `StopYagna` method.
     /// </summary>
     /// <returns></returns>
-    Task<bool> Suspend();
+    public Task<bool> Suspend();
     /// <summary>
     /// Allow Provider to run tasks again.
     /// TODO: Might be redundant. Consider leaving only `StartYagna`.
     /// </summary>
     /// <returns></returns>
-    Task<Void> Resume();
-    Task<Void> BlacklistNode(string node_id);
+    public Task<Void> Resume();
+    public Task<Void> BlacklistNode(string node_id);
 }
 
