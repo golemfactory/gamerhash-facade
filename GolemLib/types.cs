@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 
 
-public class Void { }
-
 /// <summary>
 /// Represents price settings in Golem pricing model.
 /// TODO: We will find out later which of these options make the most sense.
