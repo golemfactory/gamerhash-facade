@@ -12,24 +12,30 @@ public interface IGolem : INotifyPropertyChanged
     public event EventHandler<Events.PaymentConfirmed> OnPaymentConfirmed;
 
 
-    GolemPrice Price { get; set; }
-    string WalletAddress { get; set; }
-    ApplicationState AppState { get; set; }
+    public GolemPrice Price { get; set; }
+    public string WalletAddress { get; set; }
+    public ApplicationState AppState { get; set; }
     /// <summary>
     /// Benchmarked network speed in B/s
     /// </summary>
     /// <param name="speed"></param>
-    int SetNetworkSpeed { get; set; }
-    GolemStatus Status { get; set; }
+    public int SetNetworkSpeed { get; set; }
+    public GolemStatus Status { get; set; }
 
     /// <summary>
     /// Node identification in Golem network.
     /// </summary>
-    string NodeId { get; }
+    public string NodeId { get; }
 
+    public Task<GolemUsage> CurrentUsage(string job_id);
+    public async Task<decimal> CurrentReward(string job_id)
+    {
+        var usage = await this.CurrentUsage(job_id);
+        return usage.reward(this.Price);
+    }
 
-    Task<Result<Void, Error>> StartYagna();
-    Task<Result<Void, Error>> StopYagna();
+    Task<Void> StartYagna();
+    Task<Void> StopYagna();
     /// <summary>
     /// Returns true if process can be suspended without stopping computations.
     /// When job is in progress, `Provider` will be stopped after it is finished.
@@ -37,13 +43,13 @@ public interface IGolem : INotifyPropertyChanged
     /// If you want to stop anyway, use `StopYagna` method.
     /// </summary>
     /// <returns></returns>
-    Task<Result<bool, Error>> Suspend();
+    Task<bool> Suspend();
     /// <summary>
     /// Allow Provider to run tasks again.
     /// TODO: Might be redundant. Consider leaving only `StartYagna`.
     /// </summary>
     /// <returns></returns>
-    Task<Result<Void, Error>> Resume();
-    Task<Result<Void, Error>> BlacklistNode(string node_id);
+    Task<Void> Resume();
+    Task<Void> BlacklistNode(string node_id);
 }
 

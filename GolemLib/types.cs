@@ -4,21 +4,6 @@ using System;
 using System.Collections.Generic;
 
 
-public class Result<TOk, TError>
-{
-    public TOk? Ok { get; set; }
-    public TError? Err { get; set; }
-}
-
-/// <summary>
-/// Represents error, for now only wraps error message, but it might
-/// be more complicated in the future.
-/// </summary>
-public class Error
-{
-    string message;
-}
-
 public class Void { }
 
 /// <summary>
@@ -27,13 +12,22 @@ public class Void { }
 /// </summary>
 public class GolemPrice
 {
-    decimal GpuPerHour { get; set; }
-    decimal EnvPerHour { get; set; }
-    decimal NumRequests { get; set; }
-    decimal StartPrice { get; set; }
+    public decimal GpuPerHour { get; set; }
+    public decimal EnvPerHour { get; set; }
+    public decimal NumRequests { get; set; }
+    public decimal StartPrice { get; set; }
 }
 
-public class GolemUsage : GolemPrice { }
+public class GolemUsage : GolemPrice
+{
+    public decimal reward(GolemPrice prices)
+    {
+        return prices.StartPrice * this.StartPrice
+            + prices.GpuPerHour * this.GpuPerHour
+            + prices.NumRequests * this.NumRequests
+            + prices.EnvPerHour * this.EnvPerHour;
+    }
+}
 
 public class ApplicationState
 { }
