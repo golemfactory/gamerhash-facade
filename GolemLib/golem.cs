@@ -7,7 +7,7 @@ using System.ComponentModel;
 public interface IGolem : INotifyPropertyChanged
 {
     public event EventHandler<Events.JobStarted> OnJobStarted;
-    public event EventHandler<Events.Computing> OnComputing;
+    public event EventHandler<Events.JobStatusChanged> OnJobStatusChanged;
     public event EventHandler<Events.JobFinished> OnJobFinished;
     public event EventHandler<Events.PaymentConfirmed> OnPaymentConfirmed;
 
@@ -19,8 +19,8 @@ public interface IGolem : INotifyPropertyChanged
     /// Benchmarked network speed in B/s
     /// </summary>
     /// <param name="speed"></param>
-    public int SetNetworkSpeed { get; set; }
-    public GolemStatus Status { get; set; }
+    public uint SetNetworkSpeed { get; set; }
+    public GolemStatus Status { get; }
 
     /// <summary>
     /// Node identification in Golem network.
@@ -31,10 +31,14 @@ public interface IGolem : INotifyPropertyChanged
     public async Task<decimal> CurrentReward(string job_id)
     {
         var usage = await this.CurrentUsage(job_id);
-        return usage.reward(this.Price);
+        return usage.Reward(this.Price);
     }
 
     public Task StartYagna();
+    /// <summary>
+    /// Shutdown all Golem processes even if any job is in progress.
+    /// </summary>
+    /// <returns></returns>
     public Task StopYagna();
     /// <summary>
     /// Returns true if process can be suspended without stopping computations.

@@ -5,20 +5,23 @@ using GolemLib.Types;
 
 public class JobEvent : EventArgs
 {
-    string Id { get; }
+    public string Id { get; }
 }
 
 public class JobStarted : JobEvent { }
 
-public class Computing : JobEvent { }
+public class JobStatusChanged : JobEvent
+{
+    public JobStatus Status { get; }
+}
 
 public class JobFinished : JobEvent
 {
-    GolemUsage Usage { get; }
-    decimal Amount { get; }
+    public GolemUsage Usage { get; }
+    public decimal Amount { get; }
 }
 
 public class PaymentConfirmed : JobEvent
 {
-    Payment payment;
+    public Payment Payment { get; }
 }

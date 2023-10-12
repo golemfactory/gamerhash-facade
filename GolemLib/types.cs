@@ -2,13 +2,15 @@ namespace GolemLib.Types;
 
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 
 /// <summary>
 /// Represents price settings in Golem pricing model.
 /// TODO: We will find out later which of these options make the most sense.
 /// </summary>
-public class GolemPrice
+public record class GolemPrice
 {
     public decimal GpuPerHour { get; set; }
     public decimal EnvPerHour { get; set; }
@@ -16,9 +18,9 @@ public class GolemPrice
     public decimal StartPrice { get; set; }
 }
 
-public class GolemUsage : GolemPrice
+public record class GolemUsage : GolemPrice
 {
-    public decimal reward(GolemPrice prices)
+    public decimal Reward(GolemPrice prices)
     {
         return prices.StartPrice * this.StartPrice
             + prices.GpuPerHour * this.GpuPerHour
@@ -32,8 +34,8 @@ public class ApplicationState
 
 public class GolemConfiguration
 {
-    string WalletAddress { get; set; }
-    GolemPrice Price { get; set; }
+    public string WalletAddress { get; set; }
+    public GolemPrice Price { get; set; }
 }
 
 public enum JobStatus
@@ -62,35 +64,38 @@ public enum GolemStatus
     Error,
 }
 
-public class ActivityPayment
+[JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
+public record class ActivityPayment
 {
-    string activity_id;
-    decimal amount;
+    public string ActivityId { get; set; }
+    public decimal Amount { get; set; }
 }
 
-public class AgreementPayment
+[JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
+public record class AgreementPayment
 {
-    string agreement_id;
-    decimal amount;
+    public string AgreementId { get; set; }
+    public decimal Amount { get; set; }
 }
 
-public class Payment
+[JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
+public record class Payment
 {
-    string payment_id;
-    string payer_id;
-    string payee_id;
-    string payer_addr;
-    string payee_addr;
-    string payment_platform;
-    decimal amount;
-    DateTime timestamp;
-    List<ActivityPayment> activity_payments;
-    List<AgreementPayment> agreement_payments;
+    public string PaymentId { get; set; }
+    public string PayerId { get; set; }
+    public string PayeeId { get; set; }
+    public string PayerAddr { get; set; }
+    public string PayeeAddr { get; set; }
+    public string PaymentPlatform { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime Timestamp { get; set; }
+    public List<ActivityPayment> ActivityPayments { get; set; }
+    public List<AgreementPayment> AgreementPayments { get; set; }
 
-    string transaction_id;
-    byte[] signature;
+    public string TransactionId { get; set; }
+    public byte[] Signature { get; set; }
 
-    bool ValidateSignature()
+    public bool ValidateSignature()
     {
         return false;
     }
