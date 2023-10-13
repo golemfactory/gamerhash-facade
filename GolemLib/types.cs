@@ -29,21 +29,45 @@ public record class GolemUsage : GolemPrice
     }
 }
 
-public class ApplicationState
-{ }
-
-public class GolemConfiguration
-{
-    public string WalletAddress { get; set; }
-    public GolemPrice Price { get; set; }
-}
-
 public enum JobStatus
 {
     Idle,
     DownloadingModel,
     Computing,
     Finished,
+}
+
+public enum PaymentStatus
+{
+    /// <summary>
+    /// Provider sends Invoice to Requestor almost immediately after job was finished.
+    /// If this won't happen in period of few minutes, it indicates incorrect Provider's
+    /// behavior or Provider just can't reach Requestor anymore.
+    /// </summary>
+    InvoiceSent,
+    /// <summary>
+    /// Requestor accepted Invoice and transfer was scheduled on blockchain.
+    /// 
+    /// Period between acceptance and blockchain confirmation can be long.
+    /// We should assume, that if payment wasn't settled during 24h from acceptance,
+    /// it indicates incorrect behavior on Requestor side (but most probably not malicious).
+    /// 
+    /// Invoice should be accepted by Requestor within a few minutes after receiving.
+    /// If it wasn't it can either indicate incorrect network behavior or malicious
+    /// Requestor avoiding payments.
+    /// Reaction to such situations needs further discussions.
+    /// </summary>
+    Accepted,
+    /// <summary>
+    /// Payment was confirmed on blockchain.
+    /// </summary>
+    Settled,
+    /// <summary>
+    /// Requestor could reject Invoice in case of incorrect Provider behavior.
+    /// Note that this ability is not implemented in current yagna version,
+    /// so this status always indicates bad bahavior in the network.
+    /// </summary>
+    Rejected,
 }
 
 /// <summary>

@@ -16,14 +16,13 @@ public class MockGolem : IGolem
 
     public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public string WalletAddress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public ApplicationState AppState { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public uint SetNetworkSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
     public GolemStatus Status => throw new NotImplementedException();
 
     public string NodeId => throw new NotImplementedException();
 
-    public GolemJob? CurrentJob => throw new NotImplementedException();
+    public Job? CurrentJob => throw new NotImplementedException();
 
     public event EventHandler<JobStarted> OnJobStarted;
     public event EventHandler<JobFinished> OnJobFinished;

@@ -13,14 +13,18 @@ public interface IGolem : INotifyPropertyChanged
 
     public GolemPrice Price { get; set; }
     public string WalletAddress { get; set; }
-    public ApplicationState AppState { get; set; }
     /// <summary>
-    /// Benchmarked network speed in B/s
+    /// Benchmarked network speed in B/s.
     /// </summary>
     /// <param name="speed"></param>
     public uint SetNetworkSpeed { get; set; }
     public GolemStatus Status { get; }
-    public GolemJob? CurrentJob { get; }
+    /// <summary>
+    /// You can either listen to PropertyChanged notifications for this property
+    /// or use `OnJobStarted` and `OnJobFinished` events.
+    /// This property is designed to work better with WPF binding contexts.
+    /// </summary>
+    public Job? CurrentJob { get; }
 
     /// <summary>
     /// Node identification in Golem network.

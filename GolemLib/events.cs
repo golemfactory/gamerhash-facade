@@ -5,7 +5,7 @@ using GolemLib.Types;
 
 public class JobEvent : EventArgs
 {
-    public GolemJob Job { get; }
+    public Job Job { get; }
 }
 
 public class JobStarted : JobEvent { }
