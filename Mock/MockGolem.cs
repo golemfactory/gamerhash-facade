@@ -25,10 +25,11 @@ public class MockGolem : IGolem
 
     public Job? CurrentJob => throw new NotImplementedException();
 
-    public event EventHandler<JobStarted> OnJobStarted;
-    public event EventHandler<JobFinished> OnJobFinished;
-    public event EventHandler<PaymentConfirmed> OnPaymentConfirmed;
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public event PropertyChangedEventHandler? PropertyChanged
+    {
+        add { }
+        remove { }
+    }
 
     public Task BlacklistNode(string node_id)
     {
