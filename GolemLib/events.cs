@@ -5,15 +5,10 @@ using GolemLib.Types;
 
 public class JobEvent : EventArgs
 {
-    public string Id { get; }
+    public GolemJob Job { get; }
 }
 
 public class JobStarted : JobEvent { }
-
-public class JobStatusChanged : JobEvent
-{
-    public JobStatus Status { get; }
-}
 
 public class JobFinished : JobEvent
 {

@@ -23,8 +23,9 @@ public class MockGolem : IGolem
 
     public string NodeId => throw new NotImplementedException();
 
+    public GolemJob? CurrentJob => throw new NotImplementedException();
+
     public event EventHandler<JobStarted> OnJobStarted;
-    public event EventHandler<JobStatusChanged> OnJobStatusChanged;
     public event EventHandler<JobFinished> OnJobFinished;
     public event EventHandler<PaymentConfirmed> OnPaymentConfirmed;
     public event PropertyChangedEventHandler? PropertyChanged;

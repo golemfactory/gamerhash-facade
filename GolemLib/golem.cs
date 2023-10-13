@@ -7,7 +7,6 @@ using System.ComponentModel;
 public interface IGolem : INotifyPropertyChanged
 {
     public event EventHandler<Events.JobStarted> OnJobStarted;
-    public event EventHandler<Events.JobStatusChanged> OnJobStatusChanged;
     public event EventHandler<Events.JobFinished> OnJobFinished;
     public event EventHandler<Events.PaymentConfirmed> OnPaymentConfirmed;
 
@@ -21,18 +20,12 @@ public interface IGolem : INotifyPropertyChanged
     /// <param name="speed"></param>
     public uint SetNetworkSpeed { get; set; }
     public GolemStatus Status { get; }
+    public GolemJob? CurrentJob { get; }
 
     /// <summary>
     /// Node identification in Golem network.
     /// </summary>
     public string NodeId { get; }
-
-    public Task<GolemUsage> CurrentUsage(string job_id);
-    public async Task<decimal> CurrentReward(string job_id)
-    {
-        var usage = await this.CurrentUsage(job_id);
-        return usage.Reward(this.Price);
-    }
 
     public Task StartYagna();
     /// <summary>
