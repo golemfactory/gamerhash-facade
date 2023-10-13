@@ -91,33 +91,33 @@ public enum GolemStatus
 [JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
 public record class ActivityPayment
 {
-    public string ActivityId { get; set; }
-    public decimal Amount { get; set; }
+    public required string ActivityId { get; init; }
+    public required decimal Amount { get; init; }
 }
 
 [JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
 public record class AgreementPayment
 {
-    public string AgreementId { get; set; }
-    public decimal Amount { get; set; }
+    public required string AgreementId { get; init; }
+    public required decimal Amount { get; init; }
 }
 
 [JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
 public record class Payment
 {
-    public string PaymentId { get; set; }
-    public string PayerId { get; set; }
-    public string PayeeId { get; set; }
-    public string PayerAddr { get; set; }
-    public string PayeeAddr { get; set; }
-    public string PaymentPlatform { get; set; }
-    public decimal Amount { get; set; }
-    public DateTime Timestamp { get; set; }
-    public List<ActivityPayment> ActivityPayments { get; set; }
-    public List<AgreementPayment> AgreementPayments { get; set; }
+    public required string PaymentId { get; init; }
+    public required string PayerId { get; init; }
+    public required string PayeeId { get; init; }
+    public required string PayerAddr { get; init; }
+    public required string PayeeAddr { get; init; }
+    public required string PaymentPlatform { get; init; }
+    public required decimal Amount { get; init; }
+    public required DateTime Timestamp { get; init; }
+    public required List<ActivityPayment> ActivityPayments { get; init; }
+    public required List<AgreementPayment> AgreementPayments { get; init; }
 
-    public string TransactionId { get; set; }
-    public byte[] Signature { get; set; }
+    public required string TransactionId { get; init; }
+    public required byte[] Signature { get; init; }
 
     public bool ValidateSignature()
     {

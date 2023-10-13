@@ -51,6 +51,21 @@ public interface IGolem : INotifyPropertyChanged
     /// </summary>
     /// <returns></returns>
     public Task Resume();
+
+    /// <summary>
+    /// Don't accept tasks from this Node.
+    /// Use in case of malicious Requestors.
+    /// </summary>
+    /// <param name="node_id"></param>
+    /// <returns></returns>
     public Task BlacklistNode(string node_id);
+    /// <summary>
+    /// List all jobs that were running during period of time.
+    /// In normal flow events api should be used to track jobs, but in case of application
+    /// crash events can be lost and there might be a need to verify historical jobs.
+    /// </summary>
+    /// <param name="since">Only jobs started after this timestamp will be returned.</param>
+    /// <returns></returns>
+    public Task<List<Job>> ListJobs(DateTime since);
 }
 

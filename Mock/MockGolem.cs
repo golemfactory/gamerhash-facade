@@ -1,6 +1,7 @@
 ﻿namespace Mock;
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using GolemLib;
@@ -35,6 +36,11 @@ public class MockGolem : IGolem
     }
 
     public Task<GolemUsage> CurrentUsage(string job_id)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<List<Job>> ListJobs(DateTime since)
     {
         throw new NotImplementedException();
     }
