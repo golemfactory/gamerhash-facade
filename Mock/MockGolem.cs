@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using GolemLib;
-using GolemLib.Events;
 using GolemLib.Types;
 
 public class MockGolem : IGolem

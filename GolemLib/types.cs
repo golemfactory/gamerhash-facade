@@ -10,7 +10,7 @@ using Newtonsoft.Json.Serialization;
 /// Represents price settings in Golem pricing model.
 /// TODO: We will find out later which of these options make the most sense.
 /// </summary>
-public record class GolemPrice
+public class GolemPrice
 {
     public decimal GpuPerHour { get; set; }
     public decimal EnvPerHour { get; set; }
@@ -18,7 +18,7 @@ public record class GolemPrice
     public decimal StartPrice { get; set; }
 }
 
-public record class GolemUsage : GolemPrice
+public class GolemUsage : GolemPrice
 {
     public decimal Reward(GolemPrice prices)
     {
@@ -89,21 +89,21 @@ public enum GolemStatus
 }
 
 [JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
-public record class ActivityPayment
+public class ActivityPayment
 {
     public required string ActivityId { get; init; }
     public required decimal Amount { get; init; }
 }
 
 [JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
-public record class AgreementPayment
+public class AgreementPayment
 {
     public required string AgreementId { get; init; }
     public required decimal Amount { get; init; }
 }
 
 [JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
-public record class Payment
+public class Payment
 {
     public required string PaymentId { get; init; }
     public required string PayerId { get; init; }
@@ -118,9 +118,4 @@ public record class Payment
 
     public required string TransactionId { get; init; }
     public required byte[] Signature { get; init; }
-
-    public bool ValidateSignature()
-    {
-        return false;
-    }
 }

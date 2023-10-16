@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using GolemLib;
 using GolemLib.Types;
 
@@ -5,18 +6,25 @@ namespace Mock;
 
 public class MockJob : Job
 {
-    public MockJob(string id, GolemPrice price) : base(id, price) { }
+    public string Id { get => throw new NotImplementedException(); init => throw new NotImplementedException(); }
+    public GolemPrice Price { get => throw new NotImplementedException(); init => throw new NotImplementedException(); }
 
-    public override JobStatus Status => throw new NotImplementedException();
+    public JobStatus Status => throw new NotImplementedException();
 
-    public override PaymentStatus? PaymentStatus => throw new NotImplementedException();
+    public PaymentStatus? PaymentStatus => throw new NotImplementedException();
 
-    public override Task<GolemUsage> CurrentUsage()
+    public event PropertyChangedEventHandler? PropertyChanged
+    {
+        add { throw new NotImplementedException(); }
+        remove { throw new NotImplementedException(); }
+    }
+
+    public Task<GolemUsage> CurrentUsage()
     {
         throw new NotImplementedException();
     }
 
-    public override Task<Payment> PaymentConfirmation()
+    public Task<Payment> PaymentConfirmation()
     {
         throw new NotImplementedException();
     }

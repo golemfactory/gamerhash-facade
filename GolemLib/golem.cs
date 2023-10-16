@@ -6,23 +6,6 @@ using System.ComponentModel;
 
 public interface IGolem : INotifyPropertyChanged
 {
-    public event EventHandler<Events.JobStarted> OnJobStarted
-    {
-        add { }
-        remove { }
-    }
-    public event EventHandler<Events.JobFinished> OnJobFinished
-    {
-        add { }
-        remove { }
-    }
-    public event EventHandler<Events.PaymentConfirmed> OnPaymentConfirmed
-    {
-        add { }
-        remove { }
-    }
-
-
     public GolemPrice Price { get; set; }
     public string WalletAddress { get; set; }
     /// <summary>
