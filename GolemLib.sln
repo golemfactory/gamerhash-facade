@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GolemLib", "GolemLib\GolemLib.csproj", "{40CD8A07-4E06-49EA-8B3E-A7D087596015}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mock", "Mock\Mock.csproj", "{F5CD0298-6B71-4782-9729-BAEB86FDD112}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{40CD8A07-4E06-49EA-8B3E-A7D087596015}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{40CD8A07-4E06-49EA-8B3E-A7D087596015}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{40CD8A07-4E06-49EA-8B3E-A7D087596015}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F5CD0298-6B71-4782-9729-BAEB86FDD112}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5CD0298-6B71-4782-9729-BAEB86FDD112}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F5CD0298-6B71-4782-9729-BAEB86FDD112}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F5CD0298-6B71-4782-9729-BAEB86FDD112}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
