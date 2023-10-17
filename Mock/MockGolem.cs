@@ -16,7 +16,7 @@ public class MockGolem : IGolem
 
     public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public string WalletAddress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public uint SetNetworkSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+    public uint NetworkSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
     public GolemStatus Status => throw new NotImplementedException();
 

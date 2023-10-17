@@ -12,7 +12,7 @@ public interface IGolem : INotifyPropertyChanged
     /// Benchmarked network speed in B/s.
     /// </summary>
     /// <param name="speed"></param>
-    public uint SetNetworkSpeed { get; set; }
+    public uint NetworkSpeed { get; set; }
     public GolemStatus Status { get; }
     /// <summary>
     /// You can either listen to PropertyChanged notifications for this property

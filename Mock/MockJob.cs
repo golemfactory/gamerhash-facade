@@ -13,6 +13,8 @@ public class MockJob : Job
 
     public PaymentStatus? PaymentStatus => throw new NotImplementedException();
 
+    public string RequestorId => throw new NotImplementedException();
+
     public event PropertyChangedEventHandler? PropertyChanged
     {
         add { throw new NotImplementedException(); }

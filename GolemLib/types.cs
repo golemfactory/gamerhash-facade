@@ -18,6 +18,9 @@ public class GolemPrice
     public decimal StartPrice { get; set; }
 }
 
+/// <summary>
+/// Resources usage reported by ExeUnit.
+/// </summary>
 public class GolemUsage : GolemPrice
 {
     public decimal Reward(GolemPrice prices)
