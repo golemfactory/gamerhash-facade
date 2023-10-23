@@ -4,7 +4,7 @@ using GolemLib.Types;
 
 namespace Mock;
 
-public class MockJob : Job
+public class MockJob : IJob
 {
     public string Id { get => throw new NotImplementedException(); init => throw new NotImplementedException(); }
     public GolemPrice Price { get => throw new NotImplementedException(); init => throw new NotImplementedException(); }

@@ -19,7 +19,7 @@ public interface IGolem : INotifyPropertyChanged
     /// or use `OnJobStarted` and `OnJobFinished` events.
     /// This property is designed to work better with WPF binding contexts.
     /// </summary>
-    public Job? CurrentJob { get; }
+    public IJob? CurrentJob { get; }
 
     /// <summary>
     /// Node identification in Golem network.
@@ -61,6 +61,6 @@ public interface IGolem : INotifyPropertyChanged
     /// </summary>
     /// <param name="since">Only jobs started after this timestamp will be returned.</param>
     /// <returns></returns>
-    public Task<List<Job>> ListJobs(DateTime since);
+    public Task<List<IJob>> ListJobs(DateTime since);
 }
 

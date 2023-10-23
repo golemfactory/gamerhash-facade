@@ -3,7 +3,7 @@ using GolemLib.Types;
 
 namespace GolemLib;
 
-public interface Job : INotifyPropertyChanged
+public interface IJob : INotifyPropertyChanged
 {
     /// <summary>
     /// Internally should be implemented as Agreement id.
