@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using Golem;
 using Golem.Yagna;
+using Golem.Yagna.Types;
 using GolemLib;
 using GolemLib.Types;
 
@@ -9,6 +10,7 @@ namespace Golem
     public class Golem : GolemLib.IGolem
     {
         private YagnaService Yagna { get; set; }
+        private Provider Provider { get; set; }
 
         public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string WalletAddress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -39,8 +41,20 @@ namespace Golem
 
         public Task StartYagna()
         {
-            var yagnaOptions = new YagnaStartupOptions();
+            var yagnaOptions = new YagnaStartupOptions
+            {
+                Debug = true,
+                OpenConsole = true,
+                ForceAppKey = "0x6b0f51cfaae644ee848dfa455dabea5d"
+            };
             Yagna.Run(yagnaOptions);
+
+            var keys = Yagna.AppKeyService.List();
+            if(keys is not null && keys.Count == 0)
+            {
+                Provider.Run(keys[0].Id, Network.Goerli, true, true);
+            }
+
             return Task.CompletedTask;
         }
 

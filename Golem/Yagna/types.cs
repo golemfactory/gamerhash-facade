@@ -26,6 +26,7 @@ namespace Golem.Yagna.Types
             public static readonly Network Rinkeby = new Network("rinkeby");
             public static readonly Network Polygon = new Network("polygon");
             public static readonly Network Mumbai = new Network("mumbai");
+            public static readonly Network Goerli = new Network("goerli");
         }
 
         public class PaymentDriver

@@ -31,6 +31,8 @@ namespace FacadeApp
             var golem = new Golem.Golem(golemPath);
 
             golem.StartYagna();
+
+            Console.WriteLine("Done");
         }
     }
 }

@@ -2,3 +2,8 @@ GolemLib/bin/
 GolemLib/obj/
 Mock/bin/
 Mock/obj/
+/.vs
+/FacadeApp/bin/Debug/net7.0
+/FacadeApp/obj
+/Golem/bin/Debug/net7.0
+/Golem/obj

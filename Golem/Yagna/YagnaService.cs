@@ -170,7 +170,7 @@ namespace Golem.Yagna
 
         public IdInfo? Id => Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
 
-        public PaymentService Payment
+        public PaymentService PaymentService
         {
             get
             {
@@ -178,7 +178,7 @@ namespace Golem.Yagna
             }
         }
 
-        public AppKeyService AppKey
+        public AppKeyService AppKeyService
         {
             get
             {
@@ -200,6 +200,8 @@ namespace Golem.Yagna
                 FileName = this._yaExePath,
                 Arguments = $"service run {debugFlag}",
             };
+
+            startInfo.EnvironmentVariables.Add("GSB_URL", "tcp://127.0.0.1:11501");
 
             if (options.PrivateKey != null)
             {
