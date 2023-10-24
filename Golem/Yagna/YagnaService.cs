@@ -92,18 +92,9 @@ namespace Golem.Yagna
     {
         private string _yaExePath;
 
-        public YagnaService()
+        public YagnaService(string golemPath)
         {
-            var appBaseDir = AppContext.BaseDirectory;
-            if (appBaseDir == null)
-            {
-                appBaseDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            }
-            if (appBaseDir == null)
-            {
-                throw new ArgumentException();
-            }
-            _yaExePath = Path.Combine(appBaseDir, "yagna.exe");
+            _yaExePath = Path.Combine(golemPath, "yagna.exe");
             if (!File.Exists(_yaExePath))
             {
                 throw new Exception($"File not found: {_yaExePath}");
@@ -220,7 +211,7 @@ namespace Golem.Yagna
                 startInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_APPKEY", options.ForceAppKey);
             }
 
-            var certs = Path.Combine(Path.GetDirectoryName(_yaExePath), "cacert.pem");
+            var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
             if (File.Exists(certs))
             {
                 startInfo.EnvironmentVariables.Add("SSL_CERT_FILE", certs);
