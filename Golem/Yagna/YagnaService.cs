@@ -249,12 +249,13 @@ namespace Golem.Yagna
             return process;
         }
 
-        public void Stop()
+        public async Task Stop()
         {
             if (YagnaProcess == null)
                 return;
 
             YagnaProcess.Kill();
+            await YagnaProcess.WaitForExitAsync();
         }
     }
 

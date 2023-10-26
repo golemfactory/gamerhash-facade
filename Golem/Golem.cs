@@ -65,10 +65,9 @@ namespace Golem
             return Task.CompletedTask;
         }
 
-        public Task StopYagna()
+        public async Task StopYagna()
         {
-            Yagna.Stop();
-            return Task.CompletedTask;
+            await Yagna.Stop();
         }
 
         public Task<bool> Suspend()
