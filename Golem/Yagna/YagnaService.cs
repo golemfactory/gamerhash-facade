@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using Golem.Yagna.Types;
+using System.Text.Json;
+using Golem.Tools;
+using System.Text.Json.Serialization;
 
 namespace Golem.Yagna
 {
@@ -19,37 +19,20 @@ namespace Golem.Yagna
     }
 
 
-    [JsonObject(MemberSerialization.OptIn)]
-    internal class Table
-    {
-        [JsonProperty("headers")]
-        public string[] Headers { get; set; }
 
-        [JsonProperty("values")]
-        public List<JValue[]> Values { get; set; }
-
-        [JsonConstructor]
-        public Table(string[] headers, List<JValue[]> values)
-        {
-            this.Headers = headers;
-            this.Values = values;
-        }
-
-    }
-
-    [JsonObject(MemberSerialization.OptIn)]
+    //[JsonObject(MemberSerialization.OptIn)]
     public class IdInfo
     {
-        [JsonProperty("alias")]
+        [JsonPropertyName("alias")]
         public string? Alias { get; set; }
 
-        [JsonProperty("default")]
+        [JsonPropertyName("default")]
         public bool IsDefault { get; set; }
 
-        [JsonProperty("locked")]
+        [JsonPropertyName("locked")]
         public bool IsLocked { get; set; }
 
-        [JsonProperty("nodeId")]
+        [JsonPropertyName("nodeId")]
         public string Address { get; set; }
 
         public IdInfo(bool _isDefault, bool _isLocked, string? _alias, string _address)
@@ -60,32 +43,32 @@ namespace Golem.Yagna
             Address = _address;
         }
 
-        internal IdInfo(string[] _headers, JValue[] _row)
-        {
-            Address = "";
-            for (var i = 0; i < _headers.Length; ++i)
-            {
-                var value = _row[i];
-                switch (_headers[i])
-                {
-                    case "default":
-                        IsDefault = value.Value != null && value.Value.ToString() == "X";
-                        break;
-                    case "locked":
-                        IsLocked = value.Value != null && value.Value.ToString() == "X";
-                        break;
-                    case "alias":
-                        Alias = value.Value as string;
-                        break;
-                    case "address":
-                        if (value.Value != null)
-                        {
-                            Address = value.Value.ToString() ?? "";
-                        }
-                        break;
-                }
-            }
-        }
+        //internal IdInfo(string[] _headers, JValue[] _row)
+        //{
+        //    Address = "";
+        //    for (var i = 0; i < _headers.Length; ++i)
+        //    {
+        //        var value = _row[i];
+        //        switch (_headers[i])
+        //        {
+        //            case "default":
+        //                IsDefault = value.Value != null && value.Value.ToString() == "X";
+        //                break;
+        //            case "locked":
+        //                IsLocked = value.Value != null && value.Value.ToString() == "X";
+        //                break;
+        //            case "alias":
+        //                Alias = value.Value as string;
+        //                break;
+        //            case "address":
+        //                if (value.Value != null)
+        //                {
+        //                    Address = value.Value.ToString() ?? "";
+        //                }
+        //                break;
+        //        }
+        //    }
+        //}
     }
 
     public class YagnaService
@@ -117,9 +100,15 @@ namespace Golem.Yagna
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                CreateNoWindow = true,
+                CreateNoWindow = false,
                 Arguments = String.Join(" ", (from arg in arguments where arg != null select _escapeArgument(arg)))
             };
+
+            startInfo.EnvironmentVariables.Add("GSB_URL", "tcp://127.0.0.1:11501");
+            startInfo.EnvironmentVariables.Add("YAGNA_API_URL", "http://127.0.0.1:11502");
+            startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
+            startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
+            startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
 
             var p = new Process
             {
@@ -150,13 +139,19 @@ namespace Golem.Yagna
         internal T? Exec<T>(params string[] arguments) where T : class
         {
             var text = ExecToText(arguments);
-            return JsonConvert.DeserializeObject<T>(text);
+            var options = new JsonSerializerOptionsBuilder()
+                .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
+                .Build();
+            return JsonSerializer.Deserialize<T>(text, options);
         }
 
         internal async Task<T?> ExecAsync<T>(params string[] arguments) where T : class
         {
             var text = await ExecToTextAsync(arguments);
-            return JsonConvert.DeserializeObject<T>(text);
+            var options = new JsonSerializerOptionsBuilder()
+                .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
+                .Build();
+            return JsonSerializer.Deserialize<T>(text, options);
         }
 
 
@@ -202,6 +197,10 @@ namespace Golem.Yagna
             };
 
             startInfo.EnvironmentVariables.Add("GSB_URL", "tcp://127.0.0.1:11501");
+            startInfo.EnvironmentVariables.Add("YAGNA_API_URL", "http://127.0.0.1:11502");
+            startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
+            startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
+            startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
 
             if (options.PrivateKey != null)
             {
@@ -246,56 +245,21 @@ namespace Golem.Yagna
 
     public class KeyInfo
     {
-        public string Name { get; }
+        public string Name { get; set; }
 
-        public string? Key { get; }
+        public string? Key { get; set; }
 
-        public string Id { get; }
+        public string Id { get; set; }
 
-        public string? Role { get; }
+        public string? Role { get; set; }
 
-        public DateTime? Created { get; }
+        public DateTime? Created { get; set; }
 
         [JsonConstructor]
-        public KeyInfo(string identity, string name, string? role)
-        {
-            Id = identity;
-            Name = name;
-            Role = role;
-        }
-
-        internal KeyInfo(string[] _headers, JValue[] _row)
+        public KeyInfo()
         {
             Name = "";
-            Key = "";
             Id = "";
-            for (var i = 0; i < _headers.Length; ++i)
-            {
-                var value = _row[i];
-                switch (_headers[i])
-                {
-                    case "name":
-                        Name = value?.Value?.ToString() ?? "";
-                        break;
-                    case "key":
-                        Key = value?.Value?.ToString() ?? "";
-                        break;
-                    case "id":
-                        Id = value?.Value?.ToString() ?? "";
-                        break;
-                    case "role":
-                        Role = value?.Value?.ToString();
-                        break;
-
-                    case "created":
-                        var dt = value?.Value?.ToString();
-                        if (dt != null)
-                        {
-                            Created = DateTime.Parse(dt, null, DateTimeStyles.AssumeUniversal);
-                        }
-                        break;
-                }
-            }
         }
     }
 
@@ -352,13 +316,14 @@ namespace Golem.Yagna
         public List<KeyInfo> List()
         {
             var output = new List<KeyInfo>();
-            Table? table = null;
             int tries = 0;
-            while (table == null)
+            while (output.Count == 0)
             {
                 try
                 {
-                    table = Exec<Table>("list");
+                    var o = Exec<List<KeyInfo>>("list");
+                    if(o != null)
+                        output.AddRange(o);
                 }
                 catch (Exception e)
                 {
@@ -372,22 +337,13 @@ namespace Golem.Yagna
                     throw new Exception("Failed to obtain key list from yagna service");
                 }
             }
-            for (var i = 0; i < table?.Values.Count; ++i)
-            {
-                output.Add(new KeyInfo(table.Headers, table.Values[i]));
-            }
             return output;
         }
 
         public async Task<List<KeyInfo>> ListAsync()
         {
-            var output = new List<KeyInfo>();
-            var table = await ExecAsync<Table>("list");
-            for (var i = 0; i < table?.Values.Count; ++i)
-            {
-                output.Add(new KeyInfo(table.Headers, table.Values[i]));
-            }
-            return output;
+            var output = await ExecAsync<List<KeyInfo>>("list");
+            return output ?? new List<KeyInfo>();
         }
 
 
@@ -404,18 +360,8 @@ namespace Golem.Yagna
 
         public List<IdInfo> List()
         {
-            var table = _yagna.Exec<Table>("--json", "id", "list");
-            var ret = new List<IdInfo>();
-            if (table == null)
-            {
-                return ret;
-            }
-
-            foreach (var row in table.Values)
-            {
-                ret.Add(new IdInfo(table.Headers, row));
-            }
-            return ret;
+            var table = _yagna.Exec<List<IdInfo>>("--json", "id", "list");
+            return table ?? new List<IdInfo>();
         }
     }
 

@@ -1,53 +1,49 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using Newtonsoft.Json;
+﻿using System.Text;
 using System.Diagnostics;
-using Newtonsoft.Json.Linq;
-using System.Collections.Specialized;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Golem.Yagna.Types;
+using System.Text.Json.Serialization;
+using Golem.Tools;
+using System.Text.Json;
 
 namespace Golem.Yagna
 {
-    [JsonObject(MemberSerialization.OptIn)]
+    //[JsonObject(MemberSerialization.OptIn)]
     public class ExeUnitDesc
     {
-        [JsonProperty("name")]
+        [JsonPropertyName("name")]
         public string? Name { get; set; }
 
-        [JsonProperty("version")]
+        [JsonPropertyName("version")]
         public string? Version { get; set; }
 
-        [JsonProperty("supervisor-path")]
+        [JsonPropertyName("supervisor-path")]
         public string? SupervisiorPath { get; set; }
 
-        [JsonProperty("runtime-path")]
+        [JsonPropertyName("runtime-path")]
         public string? RuntimePath { get; set; }
 
-        [JsonProperty("extra-args")]
+        [JsonPropertyName("extra-args")]
         public List<string>? ExtraArgs { get; set; }
 
-        [JsonProperty("description")]
+        [JsonPropertyName("description")]
         public string? Description { get; set; }
 
-        [JsonProperty("properties")]
-        public JObject? Properties { get; set; }
+        [JsonPropertyName("properties")]
+        public object? Properties { get; set; }
     }
 
-    [JsonObject(MemberSerialization.OptIn)]
+    //[JsonObject(MemberSerialization.OptIn)]
     public class Config
     {
-        [JsonProperty("node_name")]
+        [JsonPropertyName("node_name")]
         public string? NodeName { get; set; }
 
-        [JsonProperty("subnet")]
+        [JsonPropertyName("subnet")]
         public string? Subnet { get; set; }
 
-        [JsonProperty("account")]
+        [JsonPropertyName("account")]
         public string? Account { get; set; }
 
     }
@@ -63,16 +59,16 @@ namespace Golem.Yagna
             UsageCoeffs = usageCoeffs;
         }
 
-        [JsonProperty("name")]
+        [JsonPropertyName("name")]
         public string Name { get; set; }
 
-        [JsonProperty("exeunit-name")]
+        [JsonPropertyName("exeunit-name")]
         public string ExeunitName { get; set; }
 
-        [JsonProperty("pricing-model")]
+        [JsonPropertyName("pricing-model")]
         public string? PricingModel { get; set; }
 
-        [JsonProperty("usage-coeffs")]
+        [JsonPropertyName("usage-coeffs")]
         public Dictionary<string, decimal> UsageCoeffs { get; set; }
     }
     public class Profile
@@ -86,13 +82,13 @@ namespace Golem.Yagna
             StorageGib = storageGib;
         }
 
-        [JsonProperty("cpu_threads")]
+        [JsonPropertyName("cpu_threads")]
         public int CpuThreads { get; set; }
 
-        [JsonProperty("mem_gib")]
+        [JsonPropertyName("mem_gib")]
         public double MemGib { get; set; }
 
-        [JsonProperty("storage_gib")]
+        [JsonPropertyName("storage_gib")]
         public double StorageGib { get; set; }
     }
     public class Provider
@@ -102,21 +98,11 @@ namespace Golem.Yagna
         private string _exeUnitsPath;
         private readonly ILogger? _logger;
 
-        public Provider(ILogger? logger = null)
+        public Provider(string golemPath, ILogger? logger = null)
         {
             _logger = logger;
-            var appBaseDir = AppContext.BaseDirectory;
-
-            if (appBaseDir == null)
-            {
-                appBaseDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            }
-            if (appBaseDir == null)
-            {
-                throw new ArgumentException();
-            }
-            _yaProviderPath = Path.Combine(appBaseDir, "ya-provider.exe");
-            _pluginsPath = Path.Combine(appBaseDir, "plugins");
+            _yaProviderPath = Path.Combine(golemPath, "ya-provider.exe");
+            _pluginsPath = Path.Combine(golemPath, "plugins");
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");
 
             if (!File.Exists(_yaProviderPath))
@@ -133,7 +119,10 @@ namespace Golem.Yagna
         private T? Exec<T>(string arguments) where T : class
         {
             var text = this.ExecToText(arguments);
-            return JsonConvert.DeserializeObject<T>(text);
+            var options = new JsonSerializerOptionsBuilder()
+                .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
+                .Build();
+            return JsonSerializer.Deserialize<T>(text, options);
         }
 
         private string ExecToText(string arguments)

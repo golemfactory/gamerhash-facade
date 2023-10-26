@@ -50,9 +50,16 @@ namespace Golem
             Yagna.Run(yagnaOptions);
 
             var keys = Yagna.AppKeyService.List();
-            if(keys is not null && keys.Count == 0)
+            if(keys is not null && keys.Count > 0)
             {
-                Provider.Run(keys[0].Id, Network.Goerli, true, true);
+                string id = keys[0].Id;
+                if (keys.Count > 1)
+                {
+                    var key = keys.Where(x => x.Name == "default").FirstOrDefault();
+                    if (key is not null)
+                        id = key.Id;
+                }
+                Provider.Run(id, Network.Goerli, true, true);
             }
 
             return Task.CompletedTask;
@@ -71,6 +78,7 @@ namespace Golem
         public Golem(string golemPath)
         {
             Yagna = new YagnaService(golemPath);
+            Provider = new Provider(golemPath);
         }
     }
 }

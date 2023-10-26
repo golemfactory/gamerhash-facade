@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 namespace Golem.Yagna.Types
 {
@@ -42,7 +40,7 @@ namespace Golem.Yagna.Types
             public static readonly PaymentDriver ZkSync = new PaymentDriver("zksync");
         }
 
-        [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
+        //[JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
         public class PaymentStatus
         {
             public decimal Amount { get; set; }
@@ -74,7 +72,7 @@ namespace Golem.Yagna.Types
         }
 
 
-        [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
+        //[JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
         public class StatusNotes
         {
             public StatValue? Requested { get; set; }
@@ -85,7 +83,7 @@ namespace Golem.Yagna.Types
 
         }
 
-        [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
+        //[JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
         public class StatValue
         {
             public decimal TotalAmount { get; set; }
