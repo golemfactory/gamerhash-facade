@@ -280,6 +280,12 @@ namespace Golem.Yagna
             //startInfo.EnvironmentVariables["DATA_DIR"] = "data_dir";
             startInfo.EnvironmentVariables["YAGNA_APPKEY"] = appKey;
 
+            startInfo.EnvironmentVariables.Add("GSB_URL", "tcp://127.0.0.1:11501");
+            startInfo.EnvironmentVariables.Add("YAGNA_API_URL", "http://127.0.0.1:11502");
+            startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
+            startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
+            startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
+
             var process = new Process
             {
                 StartInfo = startInfo

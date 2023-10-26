@@ -74,6 +74,7 @@ namespace Golem.Yagna
     public class YagnaService
     {
         private string _yaExePath;
+        private static Process? YagnaProcess { get; set; }
 
         public YagnaService(string golemPath)
         {
@@ -84,7 +85,7 @@ namespace Golem.Yagna
             }
         }
 
-        private string _escapeArgument(string argument)
+        private string EscapeArgument(string argument)
         {
             if (argument.Contains(" ") || argument.StartsWith("\""))
             {
@@ -92,7 +93,7 @@ namespace Golem.Yagna
             }
             return argument;
         }
-        private Process _createProcess(params string[] arguments)
+        private Process CreateProcess(params string[] arguments)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -101,7 +102,7 @@ namespace Golem.Yagna
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = false,
-                Arguments = String.Join(" ", (from arg in arguments where arg != null select _escapeArgument(arg)))
+                Arguments = String.Join(" ", (from arg in arguments where arg != null select EscapeArgument(arg)))
             };
 
             startInfo.EnvironmentVariables.Add("GSB_URL", "tcp://127.0.0.1:11501");
@@ -120,7 +121,7 @@ namespace Golem.Yagna
 
         internal string ExecToText(params string[] arguments)
         {
-            var process = _createProcess(arguments);
+            var process = CreateProcess(arguments);
             string output = process.StandardOutput.ReadToEnd();
             if (process.ExitCode != 0)
             {
@@ -132,7 +133,7 @@ namespace Golem.Yagna
 
         internal async Task<string> ExecToTextAsync(params string[] arguments)
         {
-            var process = _createProcess(arguments);
+            var process = CreateProcess(arguments);
             return await process.StandardOutput.ReadToEndAsync();
         }
 
@@ -181,9 +182,13 @@ namespace Golem.Yagna
             }
         }
 
-
         public Process Run(YagnaStartupOptions options)
         {
+            if (YagnaProcess != null)
+            {
+                //decide
+            }
+
             string debugFlag = "";
             if (options.Debug)
             {
@@ -239,7 +244,17 @@ namespace Golem.Yagna
             };
             process.Start();
 
+            YagnaProcess = process;
+
             return process;
+        }
+
+        public void Stop()
+        {
+            if (YagnaProcess == null)
+                return;
+
+            YagnaProcess.Kill();
         }
     }
 

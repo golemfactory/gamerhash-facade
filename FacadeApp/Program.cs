@@ -32,6 +32,8 @@ namespace FacadeApp
 
             golem.StartYagna();
 
+            golem.StopYagna();
+
             Console.WriteLine("Done");
         }
     }

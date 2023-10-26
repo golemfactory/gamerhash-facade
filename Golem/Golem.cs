@@ -67,7 +67,8 @@ namespace Golem
 
         public Task StopYagna()
         {
-            throw new NotImplementedException();
+            Yagna.Stop();
+            return Task.CompletedTask;
         }
 
         public Task<bool> Suspend()
