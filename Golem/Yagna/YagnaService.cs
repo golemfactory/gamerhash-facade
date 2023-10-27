@@ -254,7 +254,7 @@ namespace Golem.Yagna
             if (YagnaProcess == null)
                 return;
 
-            YagnaProcess.Kill();
+            YagnaProcess.Kill(true);
             await YagnaProcess.WaitForExitAsync();
         }
     }

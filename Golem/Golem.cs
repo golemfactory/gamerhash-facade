@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Golem;
 using Golem.Yagna;
 using Golem.Yagna.Types;
@@ -16,13 +17,24 @@ namespace Golem
         public string WalletAddress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public uint NetworkSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
-        public GolemStatus Status => throw new NotImplementedException();
+
+        private GolemStatus status;
+        public GolemStatus Status
+        {
+            get { return status; }
+            set {  status = value; OnPropertyChanged(); }
+        }
 
         public IJob? CurrentJob => throw new NotImplementedException();
 
         public string NodeId => throw new NotImplementedException();
 
         public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
 
         public Task BlacklistNode(string node_id)
         {
@@ -41,13 +53,20 @@ namespace Golem
 
         public Task StartYagna()
         {
+            Status = GolemStatus.Starting;
+
             var yagnaOptions = new YagnaStartupOptions
             {
                 Debug = true,
                 OpenConsole = true,
                 ForceAppKey = "0x6b0f51cfaae644ee848dfa455dabea5d"
             };
-            Yagna.Run(yagnaOptions);
+            var process = Yagna.Run(yagnaOptions);
+
+            if (!process.HasExited)
+                Status = GolemStatus.Ready;
+            else
+                Status = GolemStatus.Error;
 
             var keys = Yagna.AppKeyService.List();
             if(keys is not null && keys.Count > 0)
@@ -68,6 +87,7 @@ namespace Golem
         public async Task StopYagna()
         {
             await Yagna.Stop();
+            Status = GolemStatus.Off;
         }
 
         public Task<bool> Suspend()
