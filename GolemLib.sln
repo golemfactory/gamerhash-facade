@@ -9,7 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mock", "Mock\Mock.csproj", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FacadeApp", "FacadeApp\FacadeApp.csproj", "{8B1A5AC1-BC71-4565-BB56-A6DD22D967AF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Golem", "Golem\Golem.csproj", "{7C980FF1-986D-4059-BFB7-8B52AFC6D9F2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Golem", "Golem\Golem.csproj", "{7C980FF1-986D-4059-BFB7-8B52AFC6D9F2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Golem.IntegrationTests", "Golem.Tests\Golem.IntegrationTests.csproj", "{2061E082-5895-42B2-99D1-B4B547C79DE0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{7C980FF1-986D-4059-BFB7-8B52AFC6D9F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7C980FF1-986D-4059-BFB7-8B52AFC6D9F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7C980FF1-986D-4059-BFB7-8B52AFC6D9F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2061E082-5895-42B2-99D1-B4B547C79DE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2061E082-5895-42B2-99D1-B4B547C79DE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2061E082-5895-42B2-99D1-B4B547C79DE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2061E082-5895-42B2-99D1-B4B547C79DE0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

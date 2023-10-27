@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 using CommandLine;
 using GolemLib;
-using GolemLib.Types;
 
 namespace FacadeApp
 {
@@ -34,9 +28,9 @@ namespace FacadeApp
 
             golem.PropertyChanged += PropertyChangedHandler.For(nameof(IGolem.Status));
 
-            await golem.StartYagna();
+            await golem.Start();
 
-            await golem.StopYagna();
+            await golem.Stop();
 
             Console.WriteLine("Done");
         }
@@ -55,9 +49,8 @@ namespace FacadeApp
 
         private static void Status_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
         {
-            if (sender is not Golem.Golem || e.PropertyName != "Status")
+            if (sender is not Golem.Golem golem || e.PropertyName != "Status")
                 throw new NotSupportedException($"Type or {e.PropertyName} is not supported in this context");
-            var golem = sender as Golem.Golem;
 
             Console.WriteLine($"Property has changed: {e.PropertyName} to {golem.Status}");
         }

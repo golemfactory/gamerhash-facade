@@ -26,12 +26,12 @@ public interface IGolem : INotifyPropertyChanged
     /// </summary>
     public string NodeId { get; }
 
-    public Task StartYagna();
+    public Task Start();
     /// <summary>
     /// Shutdown all Golem processes even if any job is in progress.
     /// </summary>
     /// <returns></returns>
-    public Task StopYagna();
+    public Task Stop();
     /// <summary>
     /// Returns true if process can be suspended without stopping computations.
     /// When job is in progress, `Provider` will be stopped after it is finished.

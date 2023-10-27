@@ -51,7 +51,7 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Task StartYagna()
+        public Task Start()
         {
             Status = GolemStatus.Starting;
 
@@ -61,9 +61,9 @@ namespace Golem
                 OpenConsole = true,
                 ForceAppKey = "0x6b0f51cfaae644ee848dfa455dabea5d"
             };
-            var process = Yagna.Run(yagnaOptions);
+            var success = Yagna.Run(yagnaOptions);
 
-            if (!process.HasExited)
+            if (success)
                 Status = GolemStatus.Ready;
             else
                 Status = GolemStatus.Error;
@@ -84,7 +84,7 @@ namespace Golem
             return Task.CompletedTask;
         }
 
-        public async Task StopYagna()
+        public async Task Stop()
         {
             await Yagna.Stop();
             Status = GolemStatus.Off;

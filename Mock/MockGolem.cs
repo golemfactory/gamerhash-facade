@@ -50,12 +50,12 @@ public class MockGolem : IGolem
         throw new NotImplementedException();
     }
 
-    public Task StartYagna()
+    public Task Start()
     {
         throw new NotImplementedException();
     }
 
-    public Task StopYagna()
+    public Task Stop()
     {
         throw new NotImplementedException();
     }

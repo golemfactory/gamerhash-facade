@@ -42,33 +42,6 @@ namespace Golem.Yagna
             Alias = _alias;
             Address = _address;
         }
-
-        //internal IdInfo(string[] _headers, JValue[] _row)
-        //{
-        //    Address = "";
-        //    for (var i = 0; i < _headers.Length; ++i)
-        //    {
-        //        var value = _row[i];
-        //        switch (_headers[i])
-        //        {
-        //            case "default":
-        //                IsDefault = value.Value != null && value.Value.ToString() == "X";
-        //                break;
-        //            case "locked":
-        //                IsLocked = value.Value != null && value.Value.ToString() == "X";
-        //                break;
-        //            case "alias":
-        //                Alias = value.Value as string;
-        //                break;
-        //            case "address":
-        //                if (value.Value != null)
-        //                {
-        //                    Address = value.Value.ToString() ?? "";
-        //                }
-        //                break;
-        //        }
-        //    }
-        //}
     }
 
     public class YagnaService
@@ -182,11 +155,11 @@ namespace Golem.Yagna
             }
         }
 
-        public Process Run(YagnaStartupOptions options)
+        public bool Run(YagnaStartupOptions options)
         {
             if (YagnaProcess != null)
             {
-                //decide
+                return false;
             }
 
             string debugFlag = "";
@@ -242,11 +215,14 @@ namespace Golem.Yagna
             {
                 StartInfo = startInfo
             };
-            process.Start();
 
-            YagnaProcess = process;
-
-            return process;
+            if(process.Start())
+            {
+                YagnaProcess = process;
+                return !YagnaProcess.HasExited;
+            }
+            YagnaProcess = null;
+            return false;
         }
 
         public async Task Stop()
