@@ -63,22 +63,27 @@ namespace Golem
             };
             var success = Yagna.Run(yagnaOptions);
 
-            if (success)
-                Status = GolemStatus.Ready;
-            else
+            if (!success)
                 Status = GolemStatus.Error;
 
             var keys = Yagna.AppKeyService.List();
             if(keys is not null && keys.Count > 0)
             {
-                string id = keys[0].Id;
+                string key = keys[0].Key ?? "";
                 if (keys.Count > 1)
                 {
-                    var key = keys.Where(x => x.Name == "default").FirstOrDefault();
-                    if (key is not null)
-                        id = key.Id;
+                    var defaultKey = keys.Where(x => x.Name == "default").FirstOrDefault();
+                    if (defaultKey is not null)
+                        key = defaultKey.Key ?? key;
                 }
-                Provider.Run(id, Network.Goerli, true, true);
+                if(Provider.Run(key, Network.Goerli, true, true))
+                {
+                    Status = GolemStatus.Ready;
+                }
+                else
+                {
+                    Status = GolemStatus.Error;
+                }
             }
 
             return Task.CompletedTask;

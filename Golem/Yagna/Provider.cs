@@ -97,6 +97,7 @@ namespace Golem.Yagna
         private string _pluginsPath;
         private string _exeUnitsPath;
         private readonly ILogger? _logger;
+        private static Process? ProviderProcess { get; set; }
 
         public Provider(string golemPath, ILogger? logger = null)
         {
@@ -249,7 +250,7 @@ namespace Golem.Yagna
             info = this.ExecToText(cmd.ToString());
         }
 
-        public Process Run(string appKey, Network network, bool openConsole = false, bool enableDebugLogs = false)
+        public bool Run(string appKey, Network network, bool openConsole = false, bool enableDebugLogs = false)
         {
             string debugSwitch = "";
             if (enableDebugLogs)
@@ -291,7 +292,14 @@ namespace Golem.Yagna
                 StartInfo = startInfo
             };
 
-            return process;
+            if(process.Start())
+            {
+                ProviderProcess = process;
+                var o = process.StandardError.ReadToEnd();
+                return !ProviderProcess.HasExited;
+            }
+            ProviderProcess = null;
+            return false;
         }
 
         public class PresetCmd
