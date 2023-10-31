@@ -4,6 +4,7 @@ using Golem.Yagna.Types;
 using System.Text.Json;
 using Golem.Tools;
 using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 
 namespace Golem.Yagna
 {
@@ -305,26 +306,44 @@ namespace Golem.Yagna
             var opt = Exec<string>("drop", name);
         }
 
+        public KeyInfo? Get(string name)
+        {
+            var keys = List();
+            if (keys is not null && keys.Count > 0)
+            {
+                if (keys.Count > 1)
+                {
+                    return keys.Where(x => x.Name.Equals(name)).FirstOrDefault();
+                }
+                else if (keys.Count == 1)
+                {
+                    return keys.First();
+                }
+            }
+            return null;
+        }
+
         public List<KeyInfo> List()
         {
             var output = new List<KeyInfo>();
             int tries = 0;
             while (output.Count == 0)
             {
+                List<KeyInfo>? o;
                 try
                 {
-                    var o = Exec<List<KeyInfo>>("list");
-                    if(o != null)
-                        output.AddRange(o);
+                    o = Exec<List<KeyInfo>>("list");
                 }
                 catch (Exception e)
                 {
                     Console.Error.WriteLine(e.ToString());
-                    //do nothing
+                    o = null;
                 }
-                Thread.Sleep(1000);
-                tries++;
-                if (tries == 10)
+                if (o != null)
+                    output.AddRange(o);
+                else
+                    Thread.Sleep(1000);
+                if (++tries == 10)
                 {
                     throw new Exception("Failed to obtain key list from yagna service");
                 }

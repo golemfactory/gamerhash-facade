@@ -295,11 +295,19 @@ namespace Golem.Yagna
             if(process.Start())
             {
                 ProviderProcess = process;
-                var o = process.StandardError.ReadToEnd();
                 return !ProviderProcess.HasExited;
             }
             ProviderProcess = null;
             return false;
+        }
+
+        public async Task Stop()
+        {
+            if (ProviderProcess == null)
+                return;
+
+            ProviderProcess.Kill(true);
+            await ProviderProcess.WaitForExitAsync();
         }
 
         public class PresetCmd

@@ -63,27 +63,25 @@ namespace Golem
             };
             var success = Yagna.Run(yagnaOptions);
 
-            if (!success)
-                Status = GolemStatus.Error;
-
-            var keys = Yagna.AppKeyService.List();
-            if(keys is not null && keys.Count > 0)
+            if (success)
             {
-                string key = keys[0].Key ?? "";
-                if (keys.Count > 1)
+                var defaultKey = Yagna.AppKeyService.Get("default");
+                if (defaultKey is not null)
                 {
-                    var defaultKey = keys.Where(x => x.Name == "default").FirstOrDefault();
-                    if (defaultKey is not null)
-                        key = defaultKey.Key ?? key;
+                    var key = defaultKey.Key ?? "";
+                    if (Provider.Run(key, Network.Goerli, true, true))
+                    {
+                        Status = GolemStatus.Ready;
+                    }
+                    else
+                    {
+                        Status = GolemStatus.Error;
+                    }
                 }
-                if(Provider.Run(key, Network.Goerli, true, true))
-                {
-                    Status = GolemStatus.Ready;
-                }
-                else
-                {
-                    Status = GolemStatus.Error;
-                }
+            }
+            else
+            {
+                Status = GolemStatus.Error;
             }
 
             return Task.CompletedTask;
@@ -91,6 +89,7 @@ namespace Golem
 
         public async Task Stop()
         {
+            await Provider.Stop();
             await Yagna.Stop();
             Status = GolemStatus.Off;
         }

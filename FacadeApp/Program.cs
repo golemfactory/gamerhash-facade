@@ -30,6 +30,9 @@ namespace FacadeApp
 
             await golem.Start();
 
+
+            await Task.Delay(3000);
+
             await golem.Stop();
 
             Console.WriteLine("Done");
