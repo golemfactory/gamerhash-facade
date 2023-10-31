@@ -68,7 +68,27 @@ namespace Golem
                 var defaultKey = Yagna.AppKeyService.Get("default");
                 if (defaultKey is not null)
                 {
+                    var preset_name = "ai-dummy";
+                    var presets = Provider.ActivePresets;
+                    if (!presets.Contains(preset_name)) {
+                        // Duration=0.0001 CPU=0.0001 "Init price=0.0000000000000001"
+                        Dictionary<string, decimal> coefs = new Dictionary<string, decimal>();
+                        coefs.Add("Duration", 0.0001m);
+                        coefs.Add("CPU", 0.0001m);
+                        // coefs.Add("Init price", 0.0000000000000001m);
+                        var preset = new Preset(preset_name, "ai", coefs);
+                        string args, info;
+                        Provider.AddPreset(preset, out args, out info);
+                        Console.WriteLine($"Args {args}");
+                        Console.WriteLine($"Args {info}");
+                    }
+                    Provider.ActivatePreset(preset_name);
+
+                    foreach (string preset in presets) {
+                        Console.WriteLine($"Preset {preset}");
+                    }
                     var key = defaultKey.Key ?? "";
+                    Thread.Sleep(5_000);
                     if (Provider.Run(key, Network.Goerli, true, true))
                     {
                         Status = GolemStatus.Ready;

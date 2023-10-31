@@ -84,6 +84,7 @@ namespace Golem.Yagna
             startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
             startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
             startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
+            startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
 
             var p = new Process
             {
@@ -180,6 +181,7 @@ namespace Golem.Yagna
             startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
             startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
             startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
+            startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
 
             if (options.PrivateKey != null)
             {

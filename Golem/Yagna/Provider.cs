@@ -135,6 +135,7 @@ namespace Golem.Yagna
                 Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 CreateNoWindow = true
             };
             startInfo.Environment.Add("EXE_UNIT_PATH", this._exeUnitsPath);
@@ -146,6 +147,7 @@ namespace Golem.Yagna
             try
             {
                 process.Start();
+                var err = process.StandardError.ReadToEnd();
                 var result = process.StandardOutput.ReadToEnd();
                 _logger?.LogInformation("Execution result: {0}", result);
                 return result;
@@ -286,6 +288,7 @@ namespace Golem.Yagna
             startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
             startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
             startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
+            startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
 
             var process = new Process
             {
@@ -344,4 +347,3 @@ namespace Golem.Yagna
         }
     }
 }
-
