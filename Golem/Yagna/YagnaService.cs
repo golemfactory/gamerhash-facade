@@ -17,7 +17,7 @@ namespace Golem.Yagna
         public bool Debug { get; set; }
 
         public bool OpenConsole { get; set; }
-        public string? YagnaApiUrl { get; set; }
+        public string YagnaApiUrl { get; set; } = "";
     }
 
 

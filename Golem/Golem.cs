@@ -61,10 +61,9 @@ namespace Golem
         {
             Status = GolemStatus.Starting;
 
-            bool openConsole = true;
-            string appKey = "0x6b0f51cfaae644ee848dfa455dabea5d";
-
-            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole, appKey);
+            bool openConsole = false;
+            
+            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
             var success = await StartupYagnaAsync(yagnaOptions);
 
@@ -73,7 +72,7 @@ namespace Golem
                 var defaultKey = Yagna.AppKeyService.Get("default");
                 if (defaultKey is not null)
                 {
-                    if (StartupProvider(yagnaOptions.AppKey ?? "", yagnaOptions.YagnaApiUrl ?? ""))
+                    if (StartupProvider(yagnaOptions))
                     {
                         Status = GolemStatus.Ready;
                     }
@@ -166,7 +165,7 @@ namespace Golem
             return success;
         }
 
-        public bool StartupProvider(string appKey, string yagnaApiUrl)
+        public bool StartupProvider(YagnaStartupOptions yagnaOptions)
         {
             var preset_name = "ai-dummy";
             var presets = Provider.ActivePresets;
@@ -177,13 +176,15 @@ namespace Golem
                 {
                     { "Duration", 0.0001m },
                     { "CPU", 0.0001m },
-                    { "Init price", 0.0000000000000001m }
+                    //{ "Init price", 0.0000000000000001m }
                 };
+                // name "ai" as defined in plugins/*.json
                 var preset = new Preset(preset_name, "ai", coefs);
 
                 Provider.AddPreset(preset, out string args, out string info);
                 Console.WriteLine($"Args {args}");
                 Console.WriteLine($"Args {info}");
+
             }
             Provider.ActivatePreset(preset_name);
 
@@ -192,7 +193,7 @@ namespace Golem
                 Console.WriteLine($"Preset {preset}");
             }
             
-            return Provider.Run(appKey, Network.Goerli, yagnaApiUrl, true, true);
+            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, true, true);
         }
 
         void OnYagnaErrorDataRecv(object sender, DataReceivedEventArgs e)

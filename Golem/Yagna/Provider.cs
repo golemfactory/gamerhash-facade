@@ -141,7 +141,8 @@ namespace Golem.Yagna
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
-            startInfo.Environment.Add("EXE_UNIT_PATH", this._exeUnitsPath);
+
+            startInfo.EnvironmentVariables.Add("EXE_UNIT_PATH", this._exeUnitsPath);
 
             var process = new Process
             {
@@ -226,6 +227,14 @@ namespace Golem.Yagna
             get
             {
                 return this.Exec<List<string>>("--json preset active") ?? new List<string>();
+            }
+        }
+
+        public string AllPresets
+        {
+            get
+            {
+                return this.ExecToText("preset list");
             }
         }
 
@@ -354,3 +363,4 @@ namespace Golem.Yagna
         }
     }
 }
+
