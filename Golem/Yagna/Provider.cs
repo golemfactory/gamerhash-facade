@@ -313,7 +313,7 @@ namespace Golem.Yagna
 
         public async Task Stop()
         {
-            if (ProviderProcess == null)
+            if (ProviderProcess == null || ProviderProcess.HasExited)
                 return;
 
             ProviderProcess.Kill(true);

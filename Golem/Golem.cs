@@ -73,7 +73,7 @@ namespace Golem
                 var defaultKey = Yagna.AppKeyService.Get("default");
                 if (defaultKey is not null)
                 {
-                    if(StartupProvider(yagnaOptions.AppKey ?? "", yagnaOptions.YagnaApiUrl))
+                    if (StartupProvider(yagnaOptions.AppKey ?? "", yagnaOptions.YagnaApiUrl ?? ""))
                     {
                         Status = GolemStatus.Ready;
                     }

@@ -234,7 +234,7 @@ namespace Golem.Yagna
 
         public async Task Stop()
         {
-            if (YagnaProcess == null)
+            if (YagnaProcess == null || YagnaProcess.HasExited)
                 return;
 
             YagnaProcess.Kill(true);

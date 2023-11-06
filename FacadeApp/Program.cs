@@ -33,12 +33,28 @@ namespace FacadeApp
 
             golem.PropertyChanged += PropertyChangedHandler.For(nameof(IGolem.Status));
 
-            await golem.Start();
 
+            bool end = false;
 
-            await Task.Delay(3000);
+            do
+            {
+                Console.WriteLine("Star/Stop/End?");
+                var line = Console.ReadLine();
 
-            await golem.Stop();
+                switch (line)
+                {
+                    case "Start":
+                        await golem.Start();
+                        break;
+                    case "Stop":
+                        await golem.Stop();
+                        break;
+                    case "End":
+                        end = true;
+                        break;
+                    default: Console.WriteLine($"Didn't understand: {line}"); break;
+                }
+            } while (!end);
 
             Console.WriteLine("Done");
         }
