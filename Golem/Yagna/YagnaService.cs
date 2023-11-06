@@ -10,13 +10,14 @@ namespace Golem.Yagna
 {
     public class YagnaStartupOptions
     {
-        public string? ForceAppKey { get; set; }
+        public string? AppKey { get; set; }
 
         public string? PrivateKey { get; set; }
 
         public bool Debug { get; set; }
 
         public bool OpenConsole { get; set; }
+        public string? YagnaApiUrl { get; set; }
     }
 
 
@@ -84,7 +85,7 @@ namespace Golem.Yagna
             startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
             startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
             startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
-            startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
+            //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
 
             var p = new Process
             {
@@ -157,6 +158,8 @@ namespace Golem.Yagna
             }
         }
 
+        public bool HasExited => YagnaProcess?.HasExited ?? true;
+
         public bool Run(YagnaStartupOptions options)
         {
             if (YagnaProcess != null)
@@ -177,20 +180,21 @@ namespace Golem.Yagna
             };
 
             startInfo.EnvironmentVariables.Add("GSB_URL", "tcp://127.0.0.1:11501");
-            startInfo.EnvironmentVariables.Add("YAGNA_API_URL", "http://127.0.0.1:11502");
+            if(options.YagnaApiUrl is not null)
+                startInfo.EnvironmentVariables.Add("YAGNA_API_URL", options.YagnaApiUrl);
             startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
             startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
             startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
-            startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
+            //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
 
             if (options.PrivateKey != null)
             {
                 startInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_ID_SECRET", options.PrivateKey);
             }
 
-            if (options.ForceAppKey != null)
+            if (options.AppKey != null)
             {
-                startInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_APPKEY", options.ForceAppKey);
+                startInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_APPKEY", options.AppKey);
             }
 
             var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
@@ -236,6 +240,24 @@ namespace Golem.Yagna
             YagnaProcess.Kill(true);
             await YagnaProcess.WaitForExitAsync();
         }
+
+        public void BindOutputDataReceivedEvent(DataReceivedEventHandler handler)
+        {
+            if(YagnaProcess != null)
+            {
+                YagnaProcess.OutputDataReceived += handler;
+                YagnaProcess.BeginOutputReadLine();
+            }
+        }
+        
+        public void BindErrorDataReceivedEvent(DataReceivedEventHandler handler)
+        {
+            if(YagnaProcess != null)
+            {
+                YagnaProcess.ErrorDataReceived += handler;
+                YagnaProcess.BeginErrorReadLine();
+            }
+        }
     }
 
     public class KeyInfo
@@ -255,6 +277,19 @@ namespace Golem.Yagna
         {
             Name = "";
             Id = "";
+        }
+    }
+
+    public class MeInfo
+    {
+        public string? Name { get; set; }
+        public string? Identity { get; set; }
+
+        public string? Role { get; set; }
+
+        [JsonConstructor]
+        public MeInfo()
+        {
         }
     }
 

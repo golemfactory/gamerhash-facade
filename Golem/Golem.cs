@@ -1,6 +1,10 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Golem;
+using Golem.Tools;
 using Golem.Yagna;
 using Golem.Yagna.Types;
 using GolemLib;
@@ -12,6 +16,8 @@ namespace Golem
     {
         private YagnaService Yagna { get; set; }
         private Provider Provider { get; set; }
+
+        private readonly HttpClient HttpClient;
 
         public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string WalletAddress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -51,45 +57,23 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Task Start()
+        public async Task Start()
         {
             Status = GolemStatus.Starting;
 
-            var yagnaOptions = new YagnaStartupOptions
-            {
-                Debug = true,
-                OpenConsole = true,
-                ForceAppKey = "0x6b0f51cfaae644ee848dfa455dabea5d"
-            };
-            var success = Yagna.Run(yagnaOptions);
+            bool openConsole = true;
+            string appKey = "0x6b0f51cfaae644ee848dfa455dabea5d";
+
+            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole, appKey);
+
+            var success = await StartupYagnaAsync(yagnaOptions);
 
             if (success)
             {
                 var defaultKey = Yagna.AppKeyService.Get("default");
                 if (defaultKey is not null)
                 {
-                    var preset_name = "ai-dummy";
-                    var presets = Provider.ActivePresets;
-                    if (!presets.Contains(preset_name)) {
-                        // Duration=0.0001 CPU=0.0001 "Init price=0.0000000000000001"
-                        Dictionary<string, decimal> coefs = new Dictionary<string, decimal>();
-                        coefs.Add("Duration", 0.0001m);
-                        coefs.Add("CPU", 0.0001m);
-                        // coefs.Add("Init price", 0.0000000000000001m);
-                        var preset = new Preset(preset_name, "ai", coefs);
-                        string args, info;
-                        Provider.AddPreset(preset, out args, out info);
-                        Console.WriteLine($"Args {args}");
-                        Console.WriteLine($"Args {info}");
-                    }
-                    Provider.ActivatePreset(preset_name);
-
-                    foreach (string preset in presets) {
-                        Console.WriteLine($"Preset {preset}");
-                    }
-                    var key = defaultKey.Key ?? "";
-                    Thread.Sleep(5_000);
-                    if (Provider.Run(key, Network.Goerli, true, true))
+                    if(StartupProvider(yagnaOptions.AppKey ?? "", yagnaOptions.YagnaApiUrl))
                     {
                         Status = GolemStatus.Ready;
                     }
@@ -103,8 +87,6 @@ namespace Golem
             {
                 Status = GolemStatus.Error;
             }
-
-            return Task.CompletedTask;
         }
 
         public async Task Stop()
@@ -119,10 +101,107 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Golem(string golemPath)
+        public Golem(string golemPath, string? dataDir=null)
         {
             Yagna = new YagnaService(golemPath);
-            Provider = new Provider(golemPath);
+            Provider = new Provider(golemPath, dataDir);
+
+            HttpClient = new HttpClient
+            {
+                BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
+            };
+        }
+
+        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions)
+        {
+            var success = Yagna.Run(yagnaOptions);
+
+            if (!yagnaOptions.OpenConsole)
+            {
+                Yagna.BindErrorDataReceivedEvent(OnYagnaErrorDataRecv);
+                Yagna.BindOutputDataReceivedEvent(OnYagnaOutputDataRecv);
+            }
+
+            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
+
+            Thread.Sleep(700);
+
+            //yagna is starting and /me won't work until all services are running
+            for (int tries = 0; tries < 300; ++tries)
+            {
+                Thread.Sleep(300);
+
+                if (Yagna.HasExited) // yagna has stopped
+                {
+                    throw new Exception("Failed to start yagna ...");
+                }
+
+                try
+                {
+                    var response = HttpClient.GetAsync($"/me").Result;
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
+                    }
+                    var txt = await response.Content.ReadAsStringAsync();
+                    var options = new JsonSerializerOptionsBuilder()
+                                    .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
+                                    .Build();
+
+                    MeInfo? meInfo = JsonSerializer.Deserialize<MeInfo>(txt, options) ?? null;
+                    //sanity check
+                    if (meInfo != null)
+                    {
+                        return meInfo.Identity != null;
+                    }
+                    throw new Exception("Failed to get key");
+
+                }
+                catch (Exception)
+                {
+                    // consciously swallow the exception... presumably REST call error...
+                }
+            }
+
+            return success;
+        }
+
+        public bool StartupProvider(string appKey, string yagnaApiUrl)
+        {
+            var preset_name = "ai-dummy";
+            var presets = Provider.ActivePresets;
+            if (!presets.Contains(preset_name))
+            {
+                // Duration=0.0001 CPU=0.0001 "Init price=0.0000000000000001"
+                var coefs = new Dictionary<string, decimal>
+                {
+                    { "Duration", 0.0001m },
+                    { "CPU", 0.0001m },
+                    { "Init price", 0.0000000000000001m }
+                };
+                var preset = new Preset(preset_name, "ai", coefs);
+
+                Provider.AddPreset(preset, out string args, out string info);
+                Console.WriteLine($"Args {args}");
+                Console.WriteLine($"Args {info}");
+            }
+            Provider.ActivatePreset(preset_name);
+
+            foreach (string preset in presets)
+            {
+                Console.WriteLine($"Preset {preset}");
+            }
+            
+            return Provider.Run(appKey, Network.Goerli, yagnaApiUrl, true, true);
+        }
+
+        void OnYagnaErrorDataRecv(object sender, DataReceivedEventArgs e)
+        {
+            Console.WriteLine($"[Error]: {e.Data}");
+        }
+        void OnYagnaOutputDataRecv(object sender, DataReceivedEventArgs e)
+        {
+            Console.WriteLine($"[Data]: {e.Data}");
         }
     }
 }

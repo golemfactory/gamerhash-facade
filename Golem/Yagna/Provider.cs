@@ -93,18 +93,21 @@ namespace Golem.Yagna
     }
     public class Provider
     {
-        private string _yaProviderPath;
-        private string _pluginsPath;
-        private string _exeUnitsPath;
+        private readonly string _yaProviderPath;
+        private readonly string _pluginsPath;
+        private readonly string _exeUnitsPath;
+        private readonly string? _dataDir;
+
         private readonly ILogger? _logger;
         private static Process? ProviderProcess { get; set; }
 
-        public Provider(string golemPath, ILogger? logger = null)
+        public Provider(string golemPath, string? dataDir, ILogger? logger = null)
         {
             _logger = logger;
             _yaProviderPath = Path.Combine(golemPath, "ya-provider.exe");
             _pluginsPath = Path.Combine(golemPath, "plugins");
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");
+            _dataDir = dataDir;
 
             if (!File.Exists(_yaProviderPath))
             {
@@ -252,7 +255,7 @@ namespace Golem.Yagna
             info = this.ExecToText(cmd.ToString());
         }
 
-        public bool Run(string appKey, Network network, bool openConsole = false, bool enableDebugLogs = false)
+        public bool Run(string appKey, Network network, string? yagnaApiUrl, bool openConsole = false, bool enableDebugLogs = false)
         {
             string debugSwitch = "";
             if (enableDebugLogs)
@@ -280,15 +283,19 @@ namespace Golem.Yagna
 
             startInfo.EnvironmentVariables["MIN_AGREEMENT_EXPIRATION"] = "30s";
             startInfo.EnvironmentVariables["EXE_UNIT_PATH"] = _exeUnitsPath;
-            //startInfo.EnvironmentVariables["DATA_DIR"] = "data_dir";
+            if(_dataDir != null)
+            {
+                startInfo.EnvironmentVariables["DATA_DIR"] = _dataDir;
+            }
             startInfo.EnvironmentVariables["YAGNA_APPKEY"] = appKey;
 
             startInfo.EnvironmentVariables.Add("GSB_URL", "tcp://127.0.0.1:11501");
-            startInfo.EnvironmentVariables.Add("YAGNA_API_URL", "http://127.0.0.1:11502");
+            if(yagnaApiUrl != null)
+                startInfo.EnvironmentVariables.Add("YAGNA_API_URL", yagnaApiUrl);
             startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
             startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
             startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
-            startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
+            //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
 
             var process = new Process
             {

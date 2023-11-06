@@ -8,6 +8,8 @@ namespace FacadeApp
     {
         [Option('g', "golem", Required = true, HelpText = "Path to a folder with golem executables")]
         public string? GolemPath { get; set; }
+        [Option('d', "data_dir", Required = false, HelpText = "Path to the provider's data directory")]
+        public string? DataDir { get; set; }
     }
 
     internal class Program
@@ -15,16 +17,19 @@ namespace FacadeApp
         static async Task Main(string[] args)
         {
             string golemPath = "";
+            string? dataDir = null;
 
             Parser.Default.ParseArguments<FacadeAppArguments>(args)
                .WithParsed<FacadeAppArguments>(o =>
                {
                    golemPath = o.GolemPath ?? "";
+                   dataDir = o.DataDir;
                });
 
             Console.WriteLine("Path: " + golemPath);
+            Console.WriteLine("DataDir: " + (dataDir ?? ""));
 
-            var golem = new Golem.Golem(golemPath);
+            var golem = new Golem.Golem(golemPath, dataDir);
 
             golem.PropertyChanged += PropertyChangedHandler.For(nameof(IGolem.Status));
 
