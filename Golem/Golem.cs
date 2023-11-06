@@ -31,7 +31,7 @@ namespace Golem
             set {  status = value; OnPropertyChanged(); }
         }
 
-        public IJob? CurrentJob => throw new NotImplementedException();
+        public IJob? CurrentJob => null;
 
         public string NodeId => throw new NotImplementedException();
 
