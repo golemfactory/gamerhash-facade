@@ -68,36 +68,17 @@ namespace Golem.Yagna
             }
             return argument;
         }
-        private Process CreateProcess(params string[] arguments)
+        private Process CreateProcessAndStart(params string[] arguments)
         {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = this._yaExePath,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = false,
-                Arguments = String.Join(" ", (from arg in arguments where arg != null select EscapeArgument(arg)))
-            };
-
-            startInfo.EnvironmentVariables.Add("GSB_URL", "tcp://127.0.0.1:11501");
-            startInfo.EnvironmentVariables.Add("YAGNA_API_URL", "http://127.0.0.1:11502");
-            startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
-            startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
-            startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
-            //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
-
-            var p = new Process
-            {
-                StartInfo = startInfo
-            };
-            p.Start();
-            return p;
+            var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, "");
+            
+            process.Start();
+            return process;
         }
 
         internal string ExecToText(params string[] arguments)
         {
-            var process = CreateProcess(arguments);
+            var process = CreateProcessAndStart(arguments);
             string output = process.StandardOutput.ReadToEnd();
             if (process.ExitCode != 0)
             {
@@ -109,7 +90,7 @@ namespace Golem.Yagna
 
         internal async Task<string> ExecToTextAsync(params string[] arguments)
         {
-            var process = CreateProcess(arguments);
+            var process = CreateProcessAndStart(arguments);
             return await process.StandardOutput.ReadToEndAsync();
         }
 
@@ -173,55 +154,25 @@ namespace Golem.Yagna
                 debugFlag = "--debug";
             }
 
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = this._yaExePath,
-                Arguments = $"service run {debugFlag}",
-            };
+            var process = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", options.OpenConsole, "");
 
-            startInfo.EnvironmentVariables.Add("GSB_URL", "tcp://127.0.0.1:11501");
-            if(options.YagnaApiUrl is not null)
-                startInfo.EnvironmentVariables.Add("YAGNA_API_URL", options.YagnaApiUrl);
-            startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
-            startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
-            startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
             //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
 
             if (options.PrivateKey != null)
             {
-                startInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_ID_SECRET", options.PrivateKey);
+                process.StartInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_ID_SECRET", options.PrivateKey);
             }
 
             if (options.AppKey != null)
             {
-                startInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_APPKEY", options.AppKey);
+                process.StartInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_APPKEY", options.AppKey);
             }
 
             var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
             if (File.Exists(certs))
             {
-                startInfo.EnvironmentVariables.Add("SSL_CERT_FILE", certs);
+                process.StartInfo.EnvironmentVariables.Add("SSL_CERT_FILE", certs);
             }
-
-            if (options.OpenConsole)
-            {
-                startInfo.RedirectStandardOutput = false;
-                startInfo.RedirectStandardError = false;
-                startInfo.UseShellExecute = false;
-            }
-            else
-            {
-                startInfo.RedirectStandardOutput = true;
-                startInfo.RedirectStandardError = true;
-                startInfo.CreateNoWindow = true;
-                startInfo.UseShellExecute = false;
-            }
-
-
-            var process = new Process
-            {
-                StartInfo = startInfo
-            };
 
             if(process.Start())
             {

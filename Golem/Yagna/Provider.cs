@@ -6,6 +6,7 @@ using Golem.Yagna.Types;
 using System.Text.Json.Serialization;
 using Golem.Tools;
 using System.Text.Json;
+using System.Linq;
 
 namespace Golem.Yagna
 {
@@ -132,35 +133,39 @@ namespace Golem.Yagna
         private string ExecToText(string arguments)
         {
             _logger?.LogInformation("Executing: provider {0}", arguments);
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = this._yaProviderPath,
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            startInfo.EnvironmentVariables.Add("EXE_UNIT_PATH", this._exeUnitsPath);
-
-            var process = new Process
-            {
-                StartInfo = startInfo
-            };
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath);
             try
             {
-                process.Start();
-                var err = process.StandardError.ReadToEnd();
-                var result = process.StandardOutput.ReadToEnd();
-                _logger?.LogInformation("Execution result: {0}", result);
-                return result;
+                return ExecToText(process);
             }
             catch (IOException e)
             {
                 _logger?.LogError(e, "failed to execute {0}", arguments);
                 throw e;
             }
+        }
+        private string ExecToText(List<string> arguments)
+        {
+            _logger?.LogInformation($"Executing: provider {string.Join(", ", arguments)}");
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath);
+            try
+            {
+                return ExecToText(process);
+            }
+            catch (IOException e)
+            {
+                _logger?.LogError(e, "failed to execute {0}", arguments);
+                throw e;
+            }
+        }
+        private string ExecToText(Process process)
+        { 
+            process.Start();
+            var err = process.StandardError.ReadToEnd();
+            var result = process.StandardOutput.ReadToEnd();
+            _logger?.LogInformation("Execution result: {0}", result);
+            _logger?.LogInformation("Execution error: {0}", err);
+            return result;
         }
 
         public List<ExeUnitDesc> ExeUnitList()
@@ -271,45 +276,19 @@ namespace Golem.Yagna
             {
                 debugSwitch = "--debug ";
             }
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = _yaProviderPath,
-                Arguments = $"run {debugSwitch}--payment-network {network.Id}",
-                UseShellExecute = false
-            };
-            if (openConsole)
-            {
-                startInfo.RedirectStandardOutput = false;
-                startInfo.RedirectStandardError = false;
-                startInfo.CreateNoWindow = false;
-            }
-            else
-            {
-                startInfo.RedirectStandardOutput = true;
-                startInfo.RedirectStandardError = true;
-                startInfo.CreateNoWindow = true;
-            }
+            var arguments = $"run {debugSwitch}--payment-network {network.Id}";
 
-            startInfo.EnvironmentVariables["MIN_AGREEMENT_EXPIRATION"] = "30s";
-            startInfo.EnvironmentVariables["EXE_UNIT_PATH"] = _exeUnitsPath;
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, openConsole, _exeUnitsPath);
+
+            process.StartInfo.EnvironmentVariables["MIN_AGREEMENT_EXPIRATION"] = "30s";
+            
             if(_dataDir != null)
             {
-                startInfo.EnvironmentVariables["DATA_DIR"] = _dataDir;
+                process.StartInfo.EnvironmentVariables["DATA_DIR"] = _dataDir;
             }
-            startInfo.EnvironmentVariables["YAGNA_APPKEY"] = appKey;
+            process.StartInfo.EnvironmentVariables["YAGNA_APPKEY"] = appKey;
 
-            startInfo.EnvironmentVariables.Add("GSB_URL", "tcp://127.0.0.1:11501");
-            if(yagnaApiUrl != null)
-                startInfo.EnvironmentVariables.Add("YAGNA_API_URL", yagnaApiUrl);
-            startInfo.EnvironmentVariables.Add("SUBNET", "testnet");
-            startInfo.EnvironmentVariables.Add("YA_PAYMENT_NETWORK_GROUP", "testnet");
-            startInfo.EnvironmentVariables.Add("YA_NET_BIND_URL", "udp://0.0.0.0:12503");
             //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
-
-            var process = new Process
-            {
-                StartInfo = startInfo
-            };
 
             if(process.Start())
             {
