@@ -2,13 +2,16 @@
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Golem;
 using Golem.Tools;
 using Golem.Yagna;
 using Golem.Yagna.Types;
 using GolemLib;
 using GolemLib.Types;
+using GolemUI.Model;
 
 namespace Golem
 {
@@ -18,6 +21,7 @@ namespace Golem
         private Provider Provider { get; set; }
 
         private readonly HttpClient HttpClient;
+        private readonly Task ActivityLoop;
 
         public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string WalletAddress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -109,6 +113,8 @@ namespace Golem
             {
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
+
+            ActivityLoop = StartActivityLoop();
         }
 
         private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions)
@@ -203,6 +209,104 @@ namespace Golem
         void OnYagnaOutputDataRecv(object sender, DataReceivedEventArgs e)
         {
             Console.WriteLine($"[Data]: {e.Data}");
+        }
+
+        
+
+        private class TrackingEvent
+        {
+            public DateTime Ts { get; set; }
+
+            public List<ActivityState> Activities { get; set; } = new List<ActivityState>();
+        }
+
+        private async Task StartActivityLoop()
+        {
+            // _logger?.LogInformation("Starting");
+            // var token = _tokenSource.Token;
+
+            var options = new JsonSerializerOptions()
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+            };
+
+            // token.Register(webClient.CancelAsync);
+
+            DateTime newReconnect = DateTime.Now;
+            while(true)
+            // while (!token.IsCancellationRequested)
+            {
+                var now = DateTime.Now;
+                if (newReconnect > now)
+                {
+                    await Task.Delay(newReconnect - now);
+                }
+                newReconnect = now + TimeSpan.FromMinutes(2);
+                // if (token.IsCancellationRequested)
+                // {
+                //     token.ThrowIfCancellationRequested();
+                // }
+
+                try
+                {
+                    var stream = await HttpClient.GetStreamAsync("/activity-api/v1/_monitor");
+                    using StreamReader reader = new StreamReader(stream);
+                    // token.Register(() =>
+                    // {
+                    //     // _logger?.LogDebug("stop");
+                    //     reader.Close();
+
+                    // });
+                    StringBuilder dataBuilder = new StringBuilder();
+                    while (true)
+                    {
+                        // if (token.IsCancellationRequested)
+                        // {
+                        //     token.ThrowIfCancellationRequested();
+                        // }
+                        var line = await reader.ReadLineAsync();
+                        if (line.StartsWith("data:"))
+                        {
+                            dataBuilder.Append(line.Substring(5).TrimStart());
+                        }
+                        else if (line == "")
+                        {
+                            var json = dataBuilder.ToString();
+                            dataBuilder.Clear();
+                            // _logger?.LogTrace("got json {0}", json);
+                            try
+                            {
+                                var ev = JsonSerializer.Deserialize<TrackingEvent>(json, options);
+                                _activities = ev?.Activities ?? new List<ActivityState>();
+                                LastUpdate = ev?.Ts ?? null;
+                                try
+                                {
+                                    OnPropertyChanged("Activities");
+                                }
+                                catch (Exception e)
+                                {
+                                    _logger?.LogError(e, "Failed to send notification");
+                                }
+                            }
+                            catch (JsonException e)
+                            {
+                                // _logger?.LogError(e, "Invalid monitoring event: {0}", json);
+                                break;
+                            }
+                        }
+                    }
+                }
+                catch (HttpRequestException e)
+                {
+                    // _logger?.LogError(e, "failed to get exe-units status");
+                }
+                catch (IOException e)
+                {
+                    // _logger?.LogError(e, "status loop failure");
+                }
+            }
         }
     }
 }
