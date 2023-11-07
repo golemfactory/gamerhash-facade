@@ -2,8 +2,6 @@ namespace GolemLib.Types;
 
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 
 /// <summary>
@@ -91,21 +89,18 @@ public enum GolemStatus
     Error,
 }
 
-[JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
 public class ActivityPayment
 {
     public required string ActivityId { get; init; }
     public required decimal Amount { get; init; }
 }
 
-[JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
 public class AgreementPayment
 {
     public required string AgreementId { get; init; }
     public required decimal Amount { get; init; }
 }
 
-[JsonObject(NamingStrategyType = typeof(SnakeCaseNamingStrategy))]
 public class Payment
 {
     public required string PaymentId { get; init; }

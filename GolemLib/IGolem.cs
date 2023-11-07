@@ -19,19 +19,19 @@ public interface IGolem : INotifyPropertyChanged
     /// or use `OnJobStarted` and `OnJobFinished` events.
     /// This property is designed to work better with WPF binding contexts.
     /// </summary>
-    public Job? CurrentJob { get; }
+    public IJob? CurrentJob { get; }
 
     /// <summary>
     /// Node identification in Golem network.
     /// </summary>
     public string NodeId { get; }
 
-    public Task StartYagna();
+    public Task Start();
     /// <summary>
     /// Shutdown all Golem processes even if any job is in progress.
     /// </summary>
     /// <returns></returns>
-    public Task StopYagna();
+    public Task Stop();
     /// <summary>
     /// Returns true if process can be suspended without stopping computations.
     /// When job is in progress, `Provider` will be stopped after it is finished.
@@ -61,6 +61,6 @@ public interface IGolem : INotifyPropertyChanged
     /// </summary>
     /// <param name="since">Only jobs started after this timestamp will be returned.</param>
     /// <returns></returns>
-    public Task<List<Job>> ListJobs(DateTime since);
+    public Task<List<IJob>> ListJobs(DateTime since);
 }
 

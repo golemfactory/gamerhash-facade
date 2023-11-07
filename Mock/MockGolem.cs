@@ -22,7 +22,7 @@ public class MockGolem : IGolem
 
     public string NodeId => throw new NotImplementedException();
 
-    public Job? CurrentJob => throw new NotImplementedException();
+    public IJob? CurrentJob => throw new NotImplementedException();
 
     public event PropertyChangedEventHandler? PropertyChanged
     {
@@ -40,7 +40,7 @@ public class MockGolem : IGolem
         throw new NotImplementedException();
     }
 
-    public Task<List<Job>> ListJobs(DateTime since)
+    public Task<List<IJob>> ListJobs(DateTime since)
     {
         throw new NotImplementedException();
     }
@@ -50,12 +50,12 @@ public class MockGolem : IGolem
         throw new NotImplementedException();
     }
 
-    public Task StartYagna()
+    public Task Start()
     {
         throw new NotImplementedException();
     }
 
-    public Task StopYagna()
+    public Task Stop()
     {
         throw new NotImplementedException();
     }

@@ -1,4 +1,11 @@
+/.vs
 GolemLib/bin/
 GolemLib/obj/
 Mock/bin/
 Mock/obj/
+/FacadeApp/bin/
+/FacadeApp/obj/
+/Golem/bin/
+/Golem/obj/
+/Golem.Tests/bin/
+/Golem.Tests/obj/

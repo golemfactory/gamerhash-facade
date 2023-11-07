@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FacadeApp": {
+      "commandName": "Project",
+      "commandLineArgs": "-g c:\\git\\yagna\\target\\debug"
+    }
+  }
+}
