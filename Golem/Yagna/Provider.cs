@@ -288,8 +288,6 @@ namespace Golem.Yagna
             }
             process.StartInfo.EnvironmentVariables["YAGNA_APPKEY"] = appKey;
 
-            //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
-
             if (process.Start())
             {
                 ProviderProcess = process;
@@ -342,4 +340,3 @@ namespace Golem.Yagna
         }
     }
 }
-
