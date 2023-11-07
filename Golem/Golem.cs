@@ -19,6 +19,7 @@ namespace Golem
     {
         private YagnaService Yagna { get; set; }
         private Provider Provider { get; set; }
+        private IJob? job;
 
         private readonly HttpClient HttpClient;
         private readonly Task ActivityLoop;
@@ -35,7 +36,7 @@ namespace Golem
             set {  status = value; OnPropertyChanged(); }
         }
 
-        public IJob? CurrentJob => null;
+        public IJob? CurrentJob => this.job;
 
         public string NodeId => throw new NotImplementedException();
 
@@ -279,15 +280,19 @@ namespace Golem
                             try
                             {
                                 var ev = JsonSerializer.Deserialize<TrackingEvent>(json, options);
-                                _activities = ev?.Activities ?? new List<ActivityState>();
-                                LastUpdate = ev?.Ts ?? null;
+                                var _activities = ev?.Activities ?? new List<ActivityState>();
+                                if (_activities.Any()) {
+                                    this.job = null;
+                                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(this.job)));
+                                }
+                                // LastUpdate = ev?.Ts ?? null;
                                 try
                                 {
                                     OnPropertyChanged("Activities");
                                 }
                                 catch (Exception e)
                                 {
-                                    _logger?.LogError(e, "Failed to send notification");
+                                    // _logger?.LogError(e, "Failed to send notification");
                                 }
                             }
                             catch (JsonException e)

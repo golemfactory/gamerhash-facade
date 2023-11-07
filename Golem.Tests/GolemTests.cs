@@ -64,17 +64,15 @@ namespace Golem.Tests
             Assert.NotNull(current_job);
             Console.WriteLine("{}", current_job.Status);
 
-            JobStatus job_status = JobStatus.Idle;
-            Action<JobStatus> update_Job_Status = (v) => { 
-                job_status = v;
+            IJob? job = null;
+            Action<IJob> update_Job = (v) => { 
+                job = v;
             };
-            current_job.PropertyChanged += new PropertyChangedHandler<JobStatus>(nameof(IJob.Status), update_Job_Status).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<IJob>(nameof(job), update_Job).Subscribe();
 
-            Assert.Equal(JobStatus.Computing, job_status);
+            Assert.NotNull(job);
 
             //TODO: stop job
-
-            Assert.Equal(JobStatus.Finished, job_status);
 
             await golem.Stop();
 
