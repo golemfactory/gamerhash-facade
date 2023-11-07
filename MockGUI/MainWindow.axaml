@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="MockGUI.MainWindow"
+        Title="MockGUI">
+
+    <StackPanel>
+        <TextBlock Margin="0 5" FontSize="34" FontWeight="Bold">AI Provider</TextBlock>
+        <StackPanel Orientation="Horizontal">
+            <StackPanel Margin="20">
+                <TextBlock Margin="0 5" FontSize="18" FontWeight="Bold">Golem Viewer</TextBlock>
+            </StackPanel>
+            <StackPanel Margin="20">
+                <TextBlock Margin="0 5" FontSize="18" FontWeight="Bold">Control Panel</TextBlock>
+                <Button Width="160">Start</Button>
+                <Button Width="160">Stop</Button>
+                <Button Width="160">Suspend</Button>
+                <Button Width="160">Resume</Button>
+            </StackPanel>
+        </StackPanel>
+        
+
+    </StackPanel>
+</Window>

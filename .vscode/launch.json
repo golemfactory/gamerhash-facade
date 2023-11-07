@@ -5,10 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "C#: FacadeApp Debug",
+            "name": "C#: MockGUI Debug",
             "type": "dotnet",
+            "program": "${workspaceFolder}/MockGUI/bin/Debug/net7.0/MockGUI.dll",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/FacadeApp/FacadeApp.csproj"
+            "projectPath": "${workspaceFolder}/MockGUI/MockGUI.csproj",
+            "preLaunchTask": "build",
         },
         {
             // Use IntelliSense to find out which attributes exist for C# debugging
@@ -31,6 +33,5 @@
             "type": "coreclr",
             "request": "attach"
         },
-        
     ],
 }
