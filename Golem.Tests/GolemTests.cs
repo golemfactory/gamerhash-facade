@@ -9,7 +9,9 @@ namespace Golem.Tests
     public class GolemTests
     {
         string golemPath = "d:\\code\\yagna\\target\\debug";
-        ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+               builder.AddSimpleConsole(options => options.SingleLine = true)
+            );
 
         [Fact]
         public async Task StartStop_VerifyStatusAsync()
@@ -18,7 +20,8 @@ namespace Golem.Tests
             var golem = new Golem(golemPath, null, loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
-            Action<GolemStatus> updateStatus = (v) => { 
+            Action<GolemStatus> updateStatus = (v) =>
+            {
                 status = v;
             };
 
@@ -40,12 +43,13 @@ namespace Golem.Tests
         public async Task Job_verifyStatusAsync()
         {
             Console.WriteLine("Path: " + golemPath);
-
+            var logger = loggerFactory.CreateLogger(nameof(GolemTests));
             var golem = new Golem(golemPath, null, loggerFactory);
-            
+
             GolemStatus status = GolemStatus.Off;
 
-            Action<GolemStatus> updateStatus = (v) => { 
+            Action<GolemStatus> updateStatus = (v) =>
+            {
                 status = v;
             };
 
@@ -66,7 +70,8 @@ namespace Golem.Tests
             Console.WriteLine("{}", current_job.Status);
 
             IJob? job = null;
-            Action<IJob> update_Job = (v) => { 
+            Action<IJob> update_Job = (v) =>
+            {
                 job = v;
             };
             golem.PropertyChanged += new PropertyChangedHandler<IJob>(nameof(job), update_Job).Subscribe();

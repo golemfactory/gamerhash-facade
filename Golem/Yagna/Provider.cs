@@ -106,7 +106,7 @@ namespace Golem.Yagna
         public Provider(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
-            _logger = loggerFactory.CreateLogger(nameof(Provider));
+            _logger =  loggerFactory.CreateLogger<Provider>();
             _yaProviderPath = Path.Combine(golemPath, "ya-provider.exe");
             _pluginsPath = Path.Combine(golemPath, "../plugins");
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");

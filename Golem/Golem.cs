@@ -115,7 +115,7 @@ namespace Golem
         public Golem(string golemPath, string? dataDir=null, ILoggerFactory? loggerFactory = null)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
-            _logger = loggerFactory.CreateLogger(nameof(Golem));
+            _logger = loggerFactory.CreateLogger<Golem>();
 
             Yagna = new YagnaService(golemPath, loggerFactory);
             Provider = new Provider(golemPath, dataDir, loggerFactory);

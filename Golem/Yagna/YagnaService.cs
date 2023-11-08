@@ -57,7 +57,7 @@ namespace Golem.Yagna
         public YagnaService(string golemPath, ILoggerFactory? loggerFactory = null)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
-            _logger = loggerFactory.CreateLogger(nameof(YagnaService));
+            _logger =  loggerFactory.CreateLogger<YagnaService>();
             
             _yaExePath = Path.Combine(golemPath, "yagna.exe");
             if (!File.Exists(_yaExePath))

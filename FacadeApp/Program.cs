@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using CommandLine;
 using GolemLib;
+using Microsoft.Extensions.Logging;
 
 namespace FacadeApp
 {
@@ -16,6 +17,12 @@ namespace FacadeApp
     {
         static async Task Main(string[] args)
         {
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+               builder.AddSimpleConsole(options => options.SingleLine = true)
+            );
+
+            var logger = loggerFactory.CreateLogger<Program>();
+
             string golemPath = "";
             string? dataDir = null;
 
@@ -26,10 +33,10 @@ namespace FacadeApp
                    dataDir = o.DataDir;
                });
 
-            Console.WriteLine("Path: " + golemPath);
-            Console.WriteLine("DataDir: " + (dataDir ?? ""));
+            logger.LogInformation("Path: " + golemPath);
+            logger.LogInformation("DataDir: " + (dataDir ?? ""));
 
-            var golem = new Golem.Golem(golemPath, dataDir);
+            var golem = new Golem.Golem(golemPath, dataDir, loggerFactory);
 
             golem.PropertyChanged += PropertyChangedHandler.For(nameof(IGolem.Status));
 
@@ -64,7 +71,7 @@ namespace FacadeApp
     {
         public static PropertyChangedEventHandler For(string name)
         {
-            switch(name)
+            switch (name)
             {
                 case "Status": return Status_PropertyChangedHandler;
             }
