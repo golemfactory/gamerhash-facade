@@ -2,19 +2,20 @@ using Golem;
 using Golem.IntegrationTests.Tools;
 using GolemLib;
 using GolemLib.Types;
+using Microsoft.Extensions.Logging;
 
 namespace Golem.Tests
 {
     public class GolemTests
     {
         string golemPath = "d:\\code\\yagna\\target\\debug";
+        ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 
         [Fact]
         public async Task StartStop_VerifyStatusAsync()
         {
             Console.WriteLine("Path: " + golemPath);
-
-            var golem = new Golem(golemPath);
+            var golem = new Golem(golemPath, null, loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) => { 
@@ -40,7 +41,7 @@ namespace Golem.Tests
         {
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(golemPath);
+            var golem = new Golem(golemPath, null, loggerFactory);
             
             GolemStatus status = GolemStatus.Off;
 

@@ -12,6 +12,8 @@ using Golem.Yagna.Types;
 using GolemLib;
 using GolemLib.Types;
 using GolemUI.Model;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
@@ -21,8 +23,10 @@ namespace Golem
         private Provider Provider { get; set; }
         private IJob? job;
 
+        private readonly ILogger? _logger;
+
         private readonly HttpClient HttpClient;
-        private readonly Task ActivityLoop;
+        private Task? ActivityLoop;
 
         public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string WalletAddress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -30,6 +34,9 @@ namespace Golem
 
 
         private GolemStatus status;
+        private string golemPath;
+        private ILoggerFactory loggerFactory;
+
         public GolemStatus Status
         {
             get { return status; }
@@ -105,17 +112,24 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Golem(string golemPath, string? dataDir=null)
+        public Golem(string golemPath, string? dataDir=null, ILoggerFactory? loggerFactory = null)
         {
-            Yagna = new YagnaService(golemPath);
-            Provider = new Provider(golemPath, dataDir);
+            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            _logger = loggerFactory.CreateLogger(nameof(Golem));
+
+            Yagna = new YagnaService(golemPath, loggerFactory);
+            Provider = new Provider(golemPath, dataDir, loggerFactory);
 
             HttpClient = new HttpClient
             {
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
+        }
 
-            ActivityLoop = StartActivityLoop();
+        public Golem(string golemPath, ILoggerFactory loggerFactory)
+        {
+            this.golemPath = golemPath;
+            this.loggerFactory = loggerFactory;
         }
 
         private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions)
@@ -131,6 +145,8 @@ namespace Golem
             HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
 
             Thread.Sleep(700);
+
+            this.ActivityLoop = StartActivityLoop();
 
             //yagna is starting and /me won't work until all services are running
             for (int tries = 0; tries < 300; ++tries)
@@ -223,7 +239,7 @@ namespace Golem
 
         private async Task StartActivityLoop()
         {
-            // _logger?.LogInformation("Starting");
+            _logger?.LogInformation("Starting");
             // var token = _tokenSource.Token;
 
             var options = new JsonSerializerOptions()
@@ -256,7 +272,7 @@ namespace Golem
                     using StreamReader reader = new StreamReader(stream);
                     // token.Register(() =>
                     // {
-                    //     // _logger?.LogDebug("stop");
+                    //     _logger?.LogDebug("stop");
                     //     reader.Close();
 
                     // });
@@ -276,7 +292,7 @@ namespace Golem
                         {
                             var json = dataBuilder.ToString();
                             dataBuilder.Clear();
-                            // _logger?.LogTrace("got json {0}", json);
+                            _logger?.LogTrace("got json {0}", json);
                             try
                             {
                                 var ev = JsonSerializer.Deserialize<TrackingEvent>(json, options);
@@ -292,12 +308,12 @@ namespace Golem
                                 }
                                 catch (Exception e)
                                 {
-                                    // _logger?.LogError(e, "Failed to send notification");
+                                    _logger?.LogError(e, "Failed to send notification");
                                 }
                             }
                             catch (JsonException e)
                             {
-                                // _logger?.LogError(e, "Invalid monitoring event: {0}", json);
+                                _logger?.LogError(e, "Invalid monitoring event: {0}", json);
                                 break;
                             }
                         }
@@ -305,11 +321,11 @@ namespace Golem
                 }
                 catch (HttpRequestException e)
                 {
-                    // _logger?.LogError(e, "failed to get exe-units status");
+                    _logger?.LogError(e, "failed to get exe-units status");
                 }
                 catch (IOException e)
                 {
-                    // _logger?.LogError(e, "status loop failure");
+                    _logger?.LogError(e, "status loop failure");
                 }
             }
         }

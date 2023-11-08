@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using Golem.Tools;
 using System.Text.Json;
 using System.Linq;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem.Yagna
 {
@@ -102,9 +103,10 @@ namespace Golem.Yagna
         private readonly ILogger? _logger;
         private static Process? ProviderProcess { get; set; }
 
-        public Provider(string golemPath, string? dataDir, ILogger? logger = null)
+        public Provider(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
-            _logger = logger;
+            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            _logger = loggerFactory.CreateLogger(nameof(Provider));
             _yaProviderPath = Path.Combine(golemPath, "ya-provider.exe");
             _pluginsPath = Path.Combine(golemPath, "../plugins");
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");

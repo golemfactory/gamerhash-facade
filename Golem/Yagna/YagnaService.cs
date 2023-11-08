@@ -5,6 +5,8 @@ using System.Text.Json;
 using Golem.Tools;
 using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace Golem.Yagna
 {
@@ -50,9 +52,13 @@ namespace Golem.Yagna
     {
         private string _yaExePath;
         private static Process? YagnaProcess { get; set; }
+        private readonly ILogger? _logger;
 
-        public YagnaService(string golemPath)
+        public YagnaService(string golemPath, ILoggerFactory? loggerFactory = null)
         {
+            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            _logger = loggerFactory.CreateLogger(nameof(YagnaService));
+            
             _yaExePath = Path.Combine(golemPath, "yagna.exe");
             if (!File.Exists(_yaExePath))
             {
