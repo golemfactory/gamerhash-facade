@@ -12,7 +12,7 @@ using Golem.Yagna;
 using Golem.Yagna.Types;
 using GolemLib;
 using GolemLib.Types;
-using GolemUI.Model;
+using Golem.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -27,7 +27,7 @@ namespace Golem
 
         private readonly ILogger? _logger;
         private readonly CancellationTokenSource _tokenSource;
-        
+
         private readonly HttpClient HttpClient;
 
         public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -42,7 +42,11 @@ namespace Golem
         public GolemStatus Status
         {
             get { return status; }
-            set {  status = value; OnPropertyChanged(); }
+            set
+            {
+                status = value;
+                OnPropertyChanged();
+            }
         }
 
         public IJob? CurrentJob { get; private set; }
@@ -76,7 +80,7 @@ namespace Golem
             Status = GolemStatus.Starting;
 
             bool openConsole = false;
-            
+
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
             var success = await StartupYagnaAsync(yagnaOptions);
@@ -115,7 +119,7 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Golem(string golemPath, string? dataDir=null, ILoggerFactory? loggerFactory = null)
+        public Golem(string golemPath, string? dataDir = null, ILoggerFactory? loggerFactory = null)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<Golem>();
@@ -219,7 +223,7 @@ namespace Golem
             {
                 Console.WriteLine($"Preset {preset}");
             }
-            
+
             return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, true, true);
         }
 
@@ -232,7 +236,7 @@ namespace Golem
             Console.WriteLine($"[Data]: {e.Data}");
         }
 
-        
+
 
         private class TrackingEvent
         {
@@ -301,7 +305,8 @@ namespace Golem
                             {
                                 var ev = JsonSerializer.Deserialize<TrackingEvent>(json, options);
                                 var _activities = ev?.Activities ?? new List<ActivityState>();
-                                if (_activities.Any()) {
+                                if (_activities.Any())
+                                {
                                     this.CurrentJob = null;
                                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(this.CurrentJob)));
                                 }
