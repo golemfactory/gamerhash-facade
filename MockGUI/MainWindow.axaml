@@ -4,37 +4,88 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="MockGUI.MainWindow"
-        Title="MockGUI">
+        Title="Facade tester">
+    <Window.Styles>
+        <Style Selector="TextBlock.Label">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0 2 20 2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBlock.Section">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0 15 5 15"/>
+        </Style>
+        <Style Selector="Border.Panel">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Silver"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+    </Window.Styles>
 
-    <StackPanel>
+    <StackPanel Margin="40">
         <TextBlock Margin="0 5" FontSize="34" FontWeight="Bold">AI Provider</TextBlock>
         <StackPanel Orientation="Horizontal">
-            <StackPanel Margin="20">
-                <TextBlock Margin="0 5" FontSize="18" FontWeight="Bold">Node Info</TextBlock>
-                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
-                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="0 5 20 0" FontSize="12" FontWeight="Bold">Status</TextBlock>
-                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.Status}"/>
+            <Border Classes="Panel">
+                <StackPanel Margin="20">
+                    <TextBlock Classes="Section">Node Info</TextBlock>
+                    <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Status</TextBlock>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.Status}"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="0 5 20 0" FontSize="12" FontWeight="Bold">Node id</TextBlock>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NodeId}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Classes="Label">Node id</TextBlock>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NodeId}"/>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Margin="0 5 20 0" FontSize="12" FontWeight="Bold">Wallet Address</TextBlock>
-                    <TextBox Grid.Row="2" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.WalletAddress, Mode=TwoWay}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Wallet Address</TextBlock>
+                        <TextBox Grid.Row="2" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.WalletAddress, Mode=TwoWay}"/>
 
-                    <TextBlock Grid.Row="3" Grid.Column="0" Margin="0 5 20 0" FontSize="12" FontWeight="Bold">Network Speed</TextBlock>
-                    <TextBox Grid.Row="3" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NetworkSpeed, Mode=TwoWay}"/>
-                </Grid>
-            </StackPanel>
-            <StackPanel Margin="20">
-                <TextBlock Margin="0 5" FontSize="18" FontWeight="Bold">Control Panel</TextBlock>
-                <Button Width="160" Command="{Binding OnStartCommand}">Start</Button>
-                <Button Width="160" Command="{Binding OnStopCommand}">Stop</Button>
-                <Button Width="160" Command="{Binding OnSuspendCommand}">Suspend</Button>
-                <Button Width="160" Command="{Binding OnResumeCommand}">Resume</Button>
-            </StackPanel>
-            <StackPanel Margin="20">
-                <TextBlock Margin="0 5" FontSize="18" FontWeight="Bold">Task Viewer</TextBlock>
-            </StackPanel>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Network Speed</TextBlock>
+                        <TextBox Grid.Row="3" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NetworkSpeed, Mode=TwoWay}"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Classes="Label">Price</TextBlock>
+                        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                            <StackPanel>
+                                <TextBlock FontSize="12" FontWeight="Bold">Start Price</TextBlock>
+                                <NumericUpDown Value="{Binding Golem.Price.StartPrice, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
+                            </StackPanel>
+                            
+                            <StackPanel>
+                                <TextBlock FontSize="12" FontWeight="Bold">Price per hour</TextBlock>
+                                <NumericUpDown Value="{Binding Golem.Price.EnvPerHour, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
+                            </StackPanel>
+                            
+                            <StackPanel>
+                                <TextBlock FontSize="12" FontWeight="Bold">GPU usage</TextBlock>
+                                <NumericUpDown Value="{Binding Golem.Price.GpuPerHour, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
+                            </StackPanel>
+
+                            <StackPanel>
+                                <TextBlock FontSize="12" FontWeight="Bold">Num Requests</TextBlock>
+                                <NumericUpDown Value="{Binding Golem.Price.NumRequests, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            <Border Classes="Panel">
+                <StackPanel Margin="20">
+                    <TextBlock Classes="Section">Control Panel</TextBlock>
+                    <Button Width="160" Command="{Binding OnStartCommand}">Start</Button>
+                    <Button Width="160" Command="{Binding OnStopCommand}">Stop</Button>
+                    <Button Width="160" Command="{Binding OnSuspendCommand}">Suspend</Button>
+                    <Button Width="160" Command="{Binding OnResumeCommand}">Resume</Button>
+                </StackPanel>
+            </Border>
+            <Border Classes="Panel">
+                <StackPanel Margin="20">
+                    <TextBlock Classes="Section">Task Viewer</TextBlock>
+
+                </StackPanel>
+            </Border>
         </StackPanel>
         
 
