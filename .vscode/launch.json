@@ -25,7 +25,11 @@
             "cwd": "${workspaceFolder}/FacadeApp",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
-            "stopAtEntry": false
+            "stopAtEntry": false,
+            "env": {
+                // "Logging__LogLevel__Default": "Debug",
+                // "Logging__LogLevel__Microsoft": "Information"
+            }
         },
         {
             "name": ".NET Core Attach",

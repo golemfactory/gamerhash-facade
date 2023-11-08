@@ -239,7 +239,7 @@ namespace Golem
 
         private async Task StartActivityLoop()
         {
-            _logger?.LogInformation("Starting");
+            _logger?.LogInformation("Starting monitoring activities");
             // var token = _tokenSource.Token;
 
             var options = new JsonSerializerOptions()
@@ -255,11 +255,13 @@ namespace Golem
             while(true)
             // while (!token.IsCancellationRequested)
             {
+                _logger?.LogInformation("Monitoring activities");
                 var now = DateTime.Now;
                 if (newReconnect > now)
                 {
                     await Task.Delay(newReconnect - now);
                 }
+                //TODO is it ok? make it configurable
                 newReconnect = now + TimeSpan.FromMinutes(2);
                 // if (token.IsCancellationRequested)
                 // {
@@ -272,7 +274,7 @@ namespace Golem
                     using StreamReader reader = new StreamReader(stream);
                     // token.Register(() =>
                     // {
-                    //     _logger?.LogDebug("stop");
+                    //     _logger?.LogInformation("stop");
                     //     reader.Close();
 
                     // });
@@ -287,12 +289,13 @@ namespace Golem
                         if (line.StartsWith("data:"))
                         {
                             dataBuilder.Append(line.Substring(5).TrimStart());
+                            _logger?.LogInformation("got line {0}", line);
                         }
                         else if (line == "")
                         {
                             var json = dataBuilder.ToString();
                             dataBuilder.Clear();
-                            _logger?.LogTrace("got json {0}", json);
+                            _logger?.LogInformation("got json {0}", json);
                             try
                             {
                                 var ev = JsonSerializer.Deserialize<TrackingEvent>(json, options);
