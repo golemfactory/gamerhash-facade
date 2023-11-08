@@ -10,14 +10,30 @@
         <TextBlock Margin="0 5" FontSize="34" FontWeight="Bold">AI Provider</TextBlock>
         <StackPanel Orientation="Horizontal">
             <StackPanel Margin="20">
-                <TextBlock Margin="0 5" FontSize="18" FontWeight="Bold">Golem Viewer</TextBlock>
+                <TextBlock Margin="0 5" FontSize="18" FontWeight="Bold">Node Info</TextBlock>
+                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Margin="0 5 20 0" FontSize="12" FontWeight="Bold">Status</TextBlock>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.Status}"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="0 5 20 0" FontSize="12" FontWeight="Bold">Node id</TextBlock>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NodeId}"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Margin="0 5 20 0" FontSize="12" FontWeight="Bold">Wallet Address</TextBlock>
+                    <TextBox Grid.Row="2" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.WalletAddress, Mode=TwoWay}"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Margin="0 5 20 0" FontSize="12" FontWeight="Bold">Network Speed</TextBlock>
+                    <TextBox Grid.Row="3" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NetworkSpeed, Mode=TwoWay}"/>
+                </Grid>
             </StackPanel>
             <StackPanel Margin="20">
                 <TextBlock Margin="0 5" FontSize="18" FontWeight="Bold">Control Panel</TextBlock>
-                <Button Width="160">Start</Button>
-                <Button Width="160">Stop</Button>
-                <Button Width="160">Suspend</Button>
-                <Button Width="160">Resume</Button>
+                <Button Width="160" Command="{Binding OnStartCommand}">Start</Button>
+                <Button Width="160" Command="{Binding OnStopCommand}">Stop</Button>
+                <Button Width="160" Command="{Binding OnSuspendCommand}">Suspend</Button>
+                <Button Width="160" Command="{Binding OnResumeCommand}">Resume</Button>
+            </StackPanel>
+            <StackPanel Margin="20">
+                <TextBlock Margin="0 5" FontSize="18" FontWeight="Bold">Task Viewer</TextBlock>
             </StackPanel>
         </StackPanel>
         

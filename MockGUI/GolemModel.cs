@@ -17,6 +17,26 @@ namespace MockGUI.ViewModels
 
             Golem = new Golem.Golem(binaries, datadir);
         }
+
+        public void OnStartCommand()
+        {
+            this.Golem.Start();
+        }
+
+        public void OnStopCommand()
+        {
+            this.Golem.Stop();
+        }
+
+        public void OnSuspendCommand()
+        {
+            this.Golem.Suspend();
+        }
+
+        public void OnResumeCommand()
+        {
+            this.Golem.Resume();
+        }
     }
 }
 
