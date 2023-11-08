@@ -106,7 +106,7 @@ namespace Golem.Yagna
         {
             _logger = logger;
             _yaProviderPath = Path.Combine(golemPath, "ya-provider.exe");
-            _pluginsPath = Path.Combine(golemPath, "plugins");
+            _pluginsPath = Path.Combine(golemPath, "../plugins");
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");
             _dataDir = dataDir;
 
@@ -159,7 +159,7 @@ namespace Golem.Yagna
             }
         }
         private string ExecToText(Process process)
-        { 
+        {
             process.Start();
             var err = process.StandardError.ReadToEnd();
             var result = process.StandardOutput.ReadToEnd();
@@ -281,8 +281,8 @@ namespace Golem.Yagna
             var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, openConsole, _exeUnitsPath);
 
             process.StartInfo.EnvironmentVariables["MIN_AGREEMENT_EXPIRATION"] = "30s";
-            
-            if(_dataDir != null)
+
+            if (_dataDir != null)
             {
                 process.StartInfo.EnvironmentVariables["DATA_DIR"] = _dataDir;
             }
@@ -290,7 +290,7 @@ namespace Golem.Yagna
 
             //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
 
-            if(process.Start())
+            if (process.Start())
             {
                 ProviderProcess = process;
                 return !ProviderProcess.HasExited;

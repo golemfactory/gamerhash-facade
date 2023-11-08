@@ -1,14 +1,22 @@
 using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using System.IO;
 using GolemLib;
 
 namespace MockGUI.ViewModels
 {
     public class GolemViewModel : INotifyPropertyChanged
     {
-        public IGolem golem { get; } = new Golem.Golem("/home/nieznanysprawiciel/.local/bin/", null);
+        public IGolem Golem { get; init; }
 
         public event PropertyChangedEventHandler? PropertyChanged;
+
+        public GolemViewModel(string modulesDir)
+        {
+            var binaries = Path.Combine(modulesDir, "golem");
+            var datadir = Path.Combine(modulesDir, "golem-data");
+
+            Golem = new Golem.Golem(binaries, datadir);
+        }
     }
 }
 
