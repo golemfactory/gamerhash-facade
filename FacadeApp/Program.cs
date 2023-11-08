@@ -36,7 +36,7 @@ namespace FacadeApp
             logger.LogInformation("Path: " + golemPath);
             logger.LogInformation("DataDir: " + (dataDir ?? ""));
 
-            var golem = new Golem.Golem(golemPath, dataDir, loggerFactory);
+            IGolem golem = new Golem.Golem(golemPath, dataDir, loggerFactory);
 
             golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
 

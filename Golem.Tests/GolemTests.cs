@@ -17,7 +17,7 @@ namespace Golem.Tests
         public async Task StartStop_VerifyStatusAsync()
         {
             Console.WriteLine("Path: " + golemPath);
-            var golem = new Golem(golemPath, null, loggerFactory);
+            IGolem golem = new Golem(golemPath, null, loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
@@ -44,7 +44,7 @@ namespace Golem.Tests
         {
             Console.WriteLine("Path: " + golemPath);
             var logger = loggerFactory.CreateLogger(nameof(GolemTests));
-            var golem = new Golem(golemPath, null, loggerFactory);
+            IGolem golem = new Golem(golemPath, null, loggerFactory);
 
             GolemStatus status = GolemStatus.Off;
 

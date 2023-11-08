@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Golem;
 using Golem.Tools;
 using Golem.Yagna;
@@ -55,22 +56,22 @@ namespace Golem
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-        public Task BlacklistNode(string node_id)
+        Task IGolem.BlacklistNode(string node_id)
         {
             throw new NotImplementedException();
         }
 
-        public Task<List<IJob>> ListJobs(DateTime since)
+        Task<List<IJob>> IGolem.ListJobs(DateTime since)
         {
             throw new NotImplementedException();
         }
 
-        public Task Resume()
+        Task IGolem.Resume()
         {
             throw new NotImplementedException();
         }
 
-        public async Task Start()
+        async Task IGolem.Start()
         {
             Status = GolemStatus.Starting;
 
@@ -101,7 +102,7 @@ namespace Golem
             }
         }
 
-        public async Task Stop()
+        async Task IGolem.Stop()
         {
             await Provider.Stop();
             await Yagna.Stop();
@@ -109,7 +110,7 @@ namespace Golem
             Status = GolemStatus.Off;
         }
 
-        public Task<bool> Suspend()
+        Task<bool> IGolem.Suspend()
         {
             throw new NotImplementedException();
         }
@@ -334,7 +335,7 @@ namespace Golem
 
         public async ValueTask DisposeAsync()
         {
-            await Stop();
+            await (this as IGolem).Stop();
         }
     }
 }
