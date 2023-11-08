@@ -17,16 +17,17 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
-    public class Golem : GolemLib.IGolem
+    public class Golem : IGolem, IAsyncDisposable
     {
         private YagnaService Yagna { get; set; }
         private Provider Provider { get; set; }
-        private IJob? job;
+
+        private Task? activityLoop;
 
         private readonly ILogger? _logger;
-
+        private readonly CancellationTokenSource _tokenSource;
+        
         private readonly HttpClient HttpClient;
-        private Task? ActivityLoop;
 
         public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public string WalletAddress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -43,7 +44,7 @@ namespace Golem
             set {  status = value; OnPropertyChanged(); }
         }
 
-        public IJob? CurrentJob => this.job;
+        public IJob? CurrentJob { get; private set; }
 
         public string NodeId => throw new NotImplementedException();
 
@@ -104,6 +105,7 @@ namespace Golem
         {
             await Provider.Stop();
             await Yagna.Stop();
+            _tokenSource.Cancel();
             Status = GolemStatus.Off;
         }
 
@@ -116,6 +118,7 @@ namespace Golem
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<Golem>();
+            _tokenSource = new CancellationTokenSource();
 
             Yagna = new YagnaService(golemPath, loggerFactory);
             Provider = new Provider(golemPath, dataDir, loggerFactory);
@@ -146,7 +149,7 @@ namespace Golem
 
             Thread.Sleep(700);
 
-            this.ActivityLoop = StartActivityLoop();
+            this.activityLoop = StartActivityLoop();
 
             //yagna is starting and /me won't work until all services are running
             for (int tries = 0; tries < 300; ++tries)
@@ -240,7 +243,7 @@ namespace Golem
         private async Task StartActivityLoop()
         {
             _logger?.LogInformation("Starting monitoring activities");
-            // var token = _tokenSource.Token;
+            var token = _tokenSource.Token;
 
             var options = new JsonSerializerOptions()
             {
@@ -249,11 +252,10 @@ namespace Golem
                 Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
             };
 
-            // token.Register(webClient.CancelAsync);
+            token.Register(HttpClient.CancelPendingRequests);
 
             DateTime newReconnect = DateTime.Now;
-            while(true)
-            // while (!token.IsCancellationRequested)
+            while (!token.IsCancellationRequested)
             {
                 _logger?.LogInformation("Monitoring activities");
                 var now = DateTime.Now;
@@ -261,30 +263,28 @@ namespace Golem
                 {
                     await Task.Delay(newReconnect - now);
                 }
-                //TODO is it ok? make it configurable
                 newReconnect = now + TimeSpan.FromMinutes(2);
-                // if (token.IsCancellationRequested)
-                // {
-                //     token.ThrowIfCancellationRequested();
-                // }
+                if (token.IsCancellationRequested)
+                {
+                    token.ThrowIfCancellationRequested();
+                }
 
                 try
                 {
                     var stream = await HttpClient.GetStreamAsync("/activity-api/v1/_monitor");
                     using StreamReader reader = new StreamReader(stream);
-                    // token.Register(() =>
-                    // {
-                    //     _logger?.LogInformation("stop");
-                    //     reader.Close();
-
-                    // });
+                    token.Register(() =>
+                    {
+                        _logger?.LogInformation("stop");
+                        reader.Close();
+                    });
                     StringBuilder dataBuilder = new StringBuilder();
                     while (true)
                     {
-                        // if (token.IsCancellationRequested)
-                        // {
-                        //     token.ThrowIfCancellationRequested();
-                        // }
+                        if (token.IsCancellationRequested)
+                        {
+                            token.ThrowIfCancellationRequested();
+                        }
                         var line = await reader.ReadLineAsync();
                         if (line.StartsWith("data:"))
                         {
@@ -301,10 +301,9 @@ namespace Golem
                                 var ev = JsonSerializer.Deserialize<TrackingEvent>(json, options);
                                 var _activities = ev?.Activities ?? new List<ActivityState>();
                                 if (_activities.Any()) {
-                                    this.job = null;
-                                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(this.job)));
+                                    this.CurrentJob = null;
+                                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(this.CurrentJob)));
                                 }
-                                // LastUpdate = ev?.Ts ?? null;
                                 try
                                 {
                                     OnPropertyChanged("Activities");
@@ -331,6 +330,11 @@ namespace Golem
                     _logger?.LogError(e, "status loop failure");
                 }
             }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await Stop();
         }
     }
 }
