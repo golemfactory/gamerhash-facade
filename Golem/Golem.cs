@@ -120,14 +120,13 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Golem(string golemPath, string? dataDir=null, ILoggerFactory? loggerFactory=null)
+        public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory=null)
         {
+            var prov_datadir = Path.Combine(dataDir, "provider");
+            var yagna_datadir = Path.Combine(dataDir, "yagna");
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<Golem>();
             _tokenSource = new CancellationTokenSource();
-
-            var prov_datadir = Path.Combine(dataDir, "provider");
-            var yagna_datadir = Path.Combine(dataDir, "yagna");
 
             Yagna = new YagnaService(golemPath, yagna_datadir, loggerFactory);
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
