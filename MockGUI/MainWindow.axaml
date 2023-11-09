@@ -1,0 +1,150 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="MockGUI.MainWindow"
+        xmlns:facade="using:GolemLib"
+        Title="Facade tester">
+    <Window.Styles>
+        <Style Selector="TextBlock.Label">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0 2 20 2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBlock.Section">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0 15 5 15"/>
+        </Style>
+        <Style Selector="Border.Panel">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Silver"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+    </Window.Styles>
+
+    <Window.DataTemplates>
+        <DataTemplate DataType="{x:Type facade:IJob}">
+        <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Id</TextBlock>
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Id}"/>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Classes="Label">Requestor Id</TextBlock>
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding RequestorId}"/>
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Job Status</TextBlock>
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding JobStatus}"/>
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Paymeent Status</TextBlock>
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PaymentStatus}"/>
+        </Grid>
+        </DataTemplate>
+    </Window.DataTemplates>
+
+    <StackPanel Margin="40">
+        <TextBlock Margin="0 5" FontSize="34" FontWeight="Bold">AI Provider</TextBlock>
+        <StackPanel Orientation="Horizontal">
+            <StackPanel>
+                <Border Classes="Panel">
+                    <StackPanel Margin="20">
+                        <TextBlock Classes="Section">Node Info</TextBlock>
+                        <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Status</TextBlock>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.Status}"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Classes="Label">Node id</TextBlock>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NodeId}"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Wallet Address</TextBlock>
+                            <TextBox Grid.Row="2" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.WalletAddress, Mode=TwoWay}"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Network Speed</TextBlock>
+                            <TextBox Grid.Row="3" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NetworkSpeed, Mode=TwoWay}"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Classes="Label">Price</TextBlock>
+                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                                <StackPanel>
+                                    <TextBlock FontSize="12" FontWeight="Bold">Start Price</TextBlock>
+                                    <NumericUpDown Value="{Binding Golem.Price.StartPrice, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
+                                </StackPanel>
+                                
+                                <StackPanel>
+                                    <TextBlock FontSize="12" FontWeight="Bold">Price per hour</TextBlock>
+                                    <NumericUpDown Value="{Binding Golem.Price.EnvPerHour, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
+                                </StackPanel>
+                                
+                                <StackPanel>
+                                    <TextBlock FontSize="12" FontWeight="Bold">GPU usage</TextBlock>
+                                    <NumericUpDown Value="{Binding Golem.Price.GpuPerHour, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
+                                </StackPanel>
+
+                                <StackPanel>
+                                    <TextBlock FontSize="12" FontWeight="Bold">Num Requests</TextBlock>
+                                    <NumericUpDown Value="{Binding Golem.Price.NumRequests, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                <StackPanel Orientation="Horizontal">
+                    <Border Classes="Panel">
+                        <StackPanel Margin="20">
+                            <TextBlock Classes="Section">Control Panel</TextBlock>
+                            <Button Width="160" Command="{Binding OnStartCommand}">Start</Button>
+                            <Button Width="160" Command="{Binding OnStopCommand}">Stop</Button>
+                            <Button Width="160" Command="{Binding OnSuspendCommand}">Suspend</Button>
+                            <Button Width="160" Command="{Binding OnResumeCommand}">Resume</Button>
+
+                            <Button Margin="0 30" Width="160" Command="{Binding OnRunExample}">Run example</Button>
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="Panel">
+                        <StackPanel Margin="20">
+                            <TextBlock Classes="Section">Current Task</TextBlock>
+                            <Canvas Height="25" Width="25" HorizontalAlignment="Left">
+                                <Ellipse
+                                    Width="25"
+                                    Height="25"
+                                    Fill="Red"
+                                    IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNull}}"/>
+
+                                <Ellipse
+                                    Width="25"
+                                    Height="25"
+                                    Fill="Green"
+                                    IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+
+                            </Canvas>
+                            <ContentControl Content="{Binding Golem.CurrentJob}"/>
+
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+            <Border Classes="Panel">
+                <StackPanel Margin="20">
+                    <TextBlock Classes="Section">Tasks History</TextBlock>
+                    
+                    <Border Classes="Panel">
+                        <StackPanel>
+                            <TextBlock Classes="Label">Since:</TextBlock>
+                            <CalendarDatePicker Width="250" SelectedDate="{Binding DateSince}"/>
+                            <TimePicker SelectedTime="{Binding TimeSince}" Width="250" ClockIdentifier="24HourClock" MinuteIncrement="5"/>
+
+                            <Button Width="160" HorizontalAlignment="Center" Command="{Binding OnListJobs}">List Jobs</Button>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="Panel">
+                        <ItemsControl ItemsSource="{Binding JobsHistory}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </StackPanel>
+</Window>
