@@ -303,21 +303,36 @@ namespace Golem
                             _logger?.LogInformation("got json {0}", json);
                             try
                             {
-                                var ev = JsonSerializer.Deserialize<TrackingEvent>(json, options);
-                                var _activities = ev?.Activities ?? new List<ActivityState>();
-                                if (_activities.Any())
+                                var @event = JsonSerializer.Deserialize<TrackingEvent>(json, options);
+                                var _activities = @event?.Activities ?? new List<ActivityState>();
+                                if (!_activities.Any())
                                 {
-                                    this.CurrentJob = null;
-                                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(this.CurrentJob)));
+                                    _logger?.LogInformation("No activities");
+                                    EmitJobEvent(null);
+                                    continue;
                                 }
-                                try
+                                var _active_activities = _activities.FindAll(activity => activity.State != ActivityState.StateType.Terminated);
+                                if (!_active_activities.Any())
                                 {
-                                    OnPropertyChanged("Activities");
+                                    _logger?.LogInformation("All activities terminated: {}", _activities);
+                                    EmitJobEvent(null);
+                                    continue;
                                 }
-                                catch (Exception e)
+                                if (_active_activities.Count > 1)
                                 {
-                                    _logger?.LogError(e, "Failed to send notification");
+                                    _logger?.LogWarning("Multiple non terminated activities: {}", _active_activities);
+                                    //TODO what now?
                                 }
+                                //TODO take latest? the one with specific status?
+                                ActivityState _activity = _activities.First();
+                                if (_activity.AgreementId == null)
+                                {
+                                    _logger?.LogInformation("Activity without agreement id: {}", _activity);
+                                    EmitJobEvent(null);
+                                    continue;
+                                }
+                                var new_job = new Job() { Id = _activity.AgreementId };
+                                EmitJobEvent(new_job);
                             }
                             catch (JsonException e)
                             {
@@ -336,6 +351,22 @@ namespace Golem
                     _logger?.LogError(e, "status loop failure");
                 }
             }
+        }
+
+        private void EmitJobEvent(Job? job)
+        {
+            if (CurrentJob != job) {
+                CurrentJob = job;
+                _logger?.LogInformation("New job: {}", job);
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentJob)));
+            } else {
+                _logger?.LogInformation("Job has not changed.");
+            }
+        }
+
+        private async Task<IJob> QueryAgreement(string agreement_id)
+        {
+            throw new NotImplementedException("NYI");
         }
 
         public async ValueTask DisposeAsync()
