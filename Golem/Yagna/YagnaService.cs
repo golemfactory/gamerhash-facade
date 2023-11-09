@@ -18,6 +18,7 @@ namespace Golem.Yagna
 
         public bool OpenConsole { get; set; }
         public string YagnaApiUrl { get; set; } = "";
+        public Network Network { get; set; } = Network.Goerli;
     }
 
 

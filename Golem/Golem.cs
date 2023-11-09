@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Golem;
+using Golem.GolemUI.Src;
 using Golem.Tools;
 using Golem.Yagna;
 using Golem.Yagna.Types;
@@ -12,15 +13,16 @@ using GolemLib.Types;
 
 namespace Golem
 {
-    public class Golem : GolemLib.IGolem
+    public class Golem : IGolem, IAsyncDisposable
     {
         private YagnaService Yagna { get; set; }
         private Provider Provider { get; set; }
+        private ProviderConfigService ProviderConfig { get; set; }
 
         private readonly HttpClient HttpClient;
 
         public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public string WalletAddress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        
         public uint NetworkSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
 
@@ -34,6 +36,11 @@ namespace Golem
         public IJob? CurrentJob => throw new NotImplementedException();
 
         public string NodeId => throw new NotImplementedException();
+
+        public string WalletAddress {
+            get => ProviderConfig.WalletAddress;
+            set => ProviderConfig.WalletAddress = value;
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -104,12 +111,15 @@ namespace Golem
         {
             Yagna = new YagnaService(golemPath);
             Provider = new Provider(golemPath, dataDir);
+            ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork);
 
             HttpClient = new HttpClient
             {
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
         }
+
+        
 
         private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions)
         {
@@ -203,6 +213,11 @@ namespace Golem
         void OnYagnaOutputDataRecv(object sender, DataReceivedEventArgs e)
         {
             Console.WriteLine($"[Data]: {e.Data}");
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await Stop();
         }
     }
 }

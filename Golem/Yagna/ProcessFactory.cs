@@ -47,7 +47,8 @@ namespace Golem.Yagna
                 { "SUBNET", "testnet" },
                 { "YA_PAYMENT_NETWORK_GROUP", "testnet" },
                 { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
-                { "EXE_UNIT_PATH", exeUnitPath }
+                { "EXE_UNIT_PATH", exeUnitPath },
+                //{ "YA_NET_RELAY_HOST", "10.0.2.2:7464" },
             };
             return env;
         }
