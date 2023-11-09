@@ -49,11 +49,13 @@ namespace Golem.Yagna
     public class YagnaService
     {
         private string _yaExePath;
+        private readonly string? _dataDir;
         private static Process? YagnaProcess { get; set; }
 
-        public YagnaService(string golemPath)
+        public YagnaService(string golemPath, string? dataDir)
         {
             _yaExePath = Path.Combine(golemPath, "yagna.exe");
+            _dataDir = dataDir;
             if (!File.Exists(_yaExePath))
             {
                 throw new Exception($"File not found: {_yaExePath}");
@@ -71,7 +73,7 @@ namespace Golem.Yagna
         private Process CreateProcessAndStart(params string[] arguments)
         {
             var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, "");
-            
+
             process.Start();
             return process;
         }
@@ -80,6 +82,7 @@ namespace Golem.Yagna
         {
             var process = CreateProcessAndStart(arguments);
             string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
             if (process.ExitCode != 0)
             {
                 var error = process.StandardError.ReadToEnd();
@@ -154,6 +157,7 @@ namespace Golem.Yagna
                 debugFlag = "--debug";
             }
 
+
             var process = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", options.OpenConsole, "");
 
             //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
@@ -168,13 +172,19 @@ namespace Golem.Yagna
                 process.StartInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_APPKEY", options.AppKey);
             }
 
+            if (_dataDir != null)
+            {
+                process.StartInfo.EnvironmentVariables["YAGNA_DATADIR"] = _dataDir;
+            }
+
+
             var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
             if (File.Exists(certs))
             {
                 process.StartInfo.EnvironmentVariables.Add("SSL_CERT_FILE", certs);
             }
 
-            if(process.Start())
+            if (process.Start())
             {
                 YagnaProcess = process;
                 return !YagnaProcess.HasExited;
@@ -194,16 +204,16 @@ namespace Golem.Yagna
 
         public void BindOutputDataReceivedEvent(DataReceivedEventHandler handler)
         {
-            if(YagnaProcess != null)
+            if (YagnaProcess != null)
             {
                 YagnaProcess.OutputDataReceived += handler;
                 YagnaProcess.BeginOutputReadLine();
             }
         }
-        
+
         public void BindErrorDataReceivedEvent(DataReceivedEventHandler handler)
         {
-            if(YagnaProcess != null)
+            if (YagnaProcess != null)
             {
                 YagnaProcess.ErrorDataReceived += handler;
                 YagnaProcess.BeginErrorReadLine();
