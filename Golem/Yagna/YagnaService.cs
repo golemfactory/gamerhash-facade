@@ -82,6 +82,7 @@ namespace Golem.Yagna
         {
             var process = CreateProcessAndStart(arguments);
             string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
             if (process.ExitCode != 0)
             {
                 var error = process.StandardError.ReadToEnd();
