@@ -100,10 +100,10 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Golem(string golemPath, string dataDir)
+        public Golem(string golemPath, string? dataDir)
         {
-            var prov_datadir = Path.Combine(dataDir, "provider");
-            var yagna_datadir = Path.Combine(dataDir, "yagna");
+            var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : null;
+            var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : null;
 
             Yagna = new YagnaService(golemPath, yagna_datadir);
             Provider = new Provider(golemPath, prov_datadir);
