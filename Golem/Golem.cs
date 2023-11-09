@@ -201,28 +201,29 @@ namespace Golem
 
         public bool StartupProvider(YagnaStartupOptions yagnaOptions)
         {
-            var preset_name = "ai-dummy";
+            var runtime_name = "ai-dummy";
             var presets = Provider.ActivePresets;
-            if (!presets.Contains(preset_name))
+            if (!presets.Contains(runtime_name))
             {
                 // Duration=0.0001 CPU=0.0001 "Init price=0.0000000000000001"
                 var coefs = new Dictionary<string, decimal>
                 {
                     { "Duration", 0.0001m },
                     { "CPU", 0.0001m },
-                    //{ "Init price", 0.0000000000000001m }
+                    // { "Init price", 0.0000000000000001m },
                 };
                 // name "ai" as defined in plugins/*.json
-                var preset = new Preset(preset_name, "ai", coefs);
+                var preset = new Preset(runtime_name, runtime_name, coefs);
 
                 Provider.AddPreset(preset, out string args, out string info);
                 Console.WriteLine($"Args {args}");
                 Console.WriteLine($"Args {info}");
 
             }
-            Provider.ActivatePreset(preset_name);
-
-            foreach (string preset in presets)
+            Provider.ActivatePreset(runtime_name);
+            Provider.DeactivatePreset("default");
+            var updated_presets = Provider.Presets.ConvertAll<string>(p => p.Name);
+            foreach (string preset in updated_presets)
             {
                 Console.WriteLine($"Preset {preset}");
             }

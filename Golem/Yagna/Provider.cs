@@ -108,7 +108,7 @@ namespace Golem.Yagna
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger =  loggerFactory.CreateLogger<Provider>();
             _yaProviderPath = Path.Combine(golemPath, "ya-provider.exe");
-            _pluginsPath = Path.Combine(golemPath, "../plugins");
+            _pluginsPath = Path.Combine(golemPath, "..", "plugins");
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");
             _dataDir = dataDir;
 
@@ -135,7 +135,11 @@ namespace Golem.Yagna
         private string ExecToText(string arguments)
         {
             _logger?.LogInformation("Executing: provider {0}", arguments);
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath);
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath); 
+            if (_dataDir != null)
+            {
+                process.StartInfo.EnvironmentVariables["DATA_DIR"] = _dataDir;
+            }
             try
             {
                 return ExecToText(process);
@@ -146,20 +150,24 @@ namespace Golem.Yagna
                 throw e;
             }
         }
-        private string ExecToText(List<string> arguments)
-        {
-            _logger?.LogInformation($"Executing: provider {string.Join(", ", arguments)}");
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath);
-            try
-            {
-                return ExecToText(process);
-            }
-            catch (IOException e)
-            {
-                _logger?.LogError(e, "failed to execute {0}", arguments);
-                throw e;
-            }
-        }
+
+        // private List<T>? ExecToType<T>(string arguments)
+        // {
+        //     _logger?.LogInformation("Executing: provider {0}", arguments);
+        //     var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath);
+        //     process.StartInfo.EnvironmentVariables["RUST_LOG"] = "none";
+        //     try
+        //     {
+        //         var json_text = ExecToText(process);
+        //         return JsonSerializer.Deserialize<List<T>>(json_text);
+        //     }
+        //     catch (IOException e)
+        //     {
+        //         _logger?.LogError(e, "failed to execute {0}", arguments);
+        //         throw e;
+        //     }
+        // }
+
         private string ExecToText(Process process)
         {
             process.Start();
@@ -237,13 +245,13 @@ namespace Golem.Yagna
             }
         }
 
-        public string AllPresets
-        {
-            get
-            {
-                return this.ExecToText("preset list");
-            }
-        }
+        // public IList<Preset>? ListPresets
+        // {
+        //     get
+        //     {
+        //         return this.ExecToType<Preset>($"preset list --json");
+        //     }
+        // }
 
         public string ActivatePreset(string presetName)
         {
