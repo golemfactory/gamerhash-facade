@@ -111,14 +111,17 @@
                                     Width="25"
                                     Height="25"
                                     Fill="Red"
-                                    IsVisible="{Binding Golem.Job, Converter={x:Static ObjectConverters.IsNull}}"/>
+                                    IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNull}}"/>
+
                                 <Ellipse
                                     Width="25"
                                     Height="25"
                                     Fill="Green"
-                                    IsVisible="{Binding Golem.Job, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                    IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+
                             </Canvas>
-                            <ContentControl Content="{Binding Golem.Job}"/>
+                            <ContentControl Content="{Binding Golem.CurrentJob}"/>
+
                         </StackPanel>
                     </Border>
                 </StackPanel>
