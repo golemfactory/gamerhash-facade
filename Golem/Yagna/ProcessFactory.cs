@@ -45,7 +45,6 @@ namespace Golem.Yagna
                 { "YA_NET_RELAY_HOST", "127.0.0.1:17464" },
                 { "GSB_URL", "tcp://127.0.0.1:11501" },
                 { "YAGNA_API_URL", "http://127.0.0.1:11502" },
-                { "SUBNET", "testnet" },
                 { "YA_PAYMENT_NETWORK_GROUP", "testnet" },
                 { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
                 { "EXE_UNIT_PATH", exeUnitPath }

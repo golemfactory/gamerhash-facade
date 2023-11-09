@@ -81,6 +81,7 @@ namespace Golem
 
             bool openConsole = false;
 
+
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
             var success = await StartupYagnaAsync(yagnaOptions);
@@ -119,14 +120,17 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Golem(string golemPath, string? dataDir = null, ILoggerFactory? loggerFactory = null)
+        public Golem(string golemPath, string? dataDir=null, ILoggerFactory? loggerFactory=null)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<Golem>();
             _tokenSource = new CancellationTokenSource();
 
-            Yagna = new YagnaService(golemPath, loggerFactory);
-            Provider = new Provider(golemPath, dataDir, loggerFactory);
+            var prov_datadir = Path.Combine(dataDir, "provider");
+            var yagna_datadir = Path.Combine(dataDir, "yagna");
+
+            Yagna = new YagnaService(golemPath, yagna_datadir, loggerFactory);
+            Provider = new Provider(golemPath, prov_datadir, loggerFactory);
 
             HttpClient = new HttpClient
             {
