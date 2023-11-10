@@ -2,14 +2,17 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Text;
+using ICSharpCode.SharpZipLib.GZip;
+using ICSharpCode.SharpZipLib.Tar;
 
 namespace Golem.IntegrationTests.Tools
 {
     public class PackageBuilder
     {
-        const string GITHUB_RELEASE_URL = "https://github.com/{2}/releases/download/{0}/golem-provider-{1}-{0}";
+        const string GITHUB_RELEASE_URL = "https://github.com/{2}/releases/download/{0}/{3}-{1}-{0}";
         const string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc3";
-        const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc6";
+        const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc14";
 
         public static string InitTestDirectory(string name)
         {
@@ -31,11 +34,39 @@ namespace Golem.IntegrationTests.Tools
             var system = System();
             BuildDirectoryStructure(dir);
 
-            var builds = await DownloadArtifact(BinariesDir(dir), CURRENT_GOLEM_VERSION, "golemfactory/yagna", system);
+            await DownloadGolem(dir, CURRENT_GOLEM_VERSION, system);
+            await DownloadExeUnit(dir, "runtime", CURRENT_RUNTIME_VERSION, system);
+            await DownloadExeUnit(dir, "dummy-framework", CURRENT_RUNTIME_VERSION, system);
+
+            return dir;
+        }
+
+        static async Task DownloadGolem(string dir, string tag, string system = "windows")
+        {
+            var builds = await DownloadArtifact(BinariesDir(dir), "golem-provider", tag, "golemfactory/yagna", system);
             var extract_to = Path.GetDirectoryName(builds) ?? "";
 
-            ZipFile.ExtractToDirectory(builds, extract_to);
-            return dir;
+
+            Extract(builds, extract_to);
+
+            // Double ChangeExtension call to get rid of tar.gz
+            var extract_package_dir = Path.ChangeExtension(Path.ChangeExtension(builds, null), null);
+            CopyFilesRecursively(extract_package_dir, BinariesDir(dir));
+            Directory.Delete(extract_package_dir, true);
+        }
+
+        static async Task DownloadExeUnit(string dir, string artifact, string tag, string system = "windows")
+        {
+            var builds = await DownloadArtifact(ExeUnitsDir(dir), artifact, tag, "golemfactory/ya-runtime-ai", system);
+            var extract_to = Path.GetDirectoryName(builds) ?? "";
+
+
+            Extract(builds, extract_to);
+
+            // Double ChangeExtension call to get rid of tar.gz
+            var extract_package_dir = Path.ChangeExtension(Path.ChangeExtension(builds, null), null);
+            CopyFilesRecursively(extract_package_dir, ExeUnitsDir(dir));
+            Directory.Delete(extract_package_dir, true);
         }
 
         public static void BuildDirectoryStructure(string gamerhash_dir)
@@ -44,6 +75,22 @@ namespace Golem.IntegrationTests.Tools
             Directory.CreateDirectory(ProviderDataDir(gamerhash_dir));
             Directory.CreateDirectory(YagnaDataDir(gamerhash_dir));
             Directory.CreateDirectory(ExeUnitsDir(gamerhash_dir));
+        }
+
+        // Based on: https://stackoverflow.com/a/3822913
+        private static void CopyFilesRecursively(string sourcePath, string targetPath)
+        {
+            //Now Create all of the directories
+            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+            {
+                Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
+            }
+
+            //Copy all the files & Replaces any files with the same name
+            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+            {
+                File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
+            }
         }
 
         public static string System()
@@ -110,14 +157,51 @@ namespace Golem.IntegrationTests.Tools
             return target_file;
         }
 
-        static async Task<string> DownloadArtifact(string target_dir, string tag, string repository, string system = "windows")
+        static void Extract(string file, string target_dir)
         {
-            var url = String.Format(GITHUB_RELEASE_URL, tag, system, repository);
-            url += system is "windows" ? ".zip" : ".tar.gz";
+            var ext = Path.GetExtension(file);
+            switch (ext)
+            {
+                case ".zip":
+                    ZipFile.ExtractToDirectory(file, target_dir);
+                    break;
+                case ".gz":
+                    ExtractTGZ(file, target_dir);
+                    break;
+                default:
+                    throw new Exception("Uknonwn archive format. File: " + file);
+            }
+
+            File.Delete(file);
+        }
+
+        // Based on: https://stackoverflow.com/a/52200001
+        static void ExtractTGZ(String gzArchiveName, String destFolder)
+        {
+            Stream inStream = File.OpenRead(gzArchiveName);
+            Stream gzipStream = new GZipInputStream(inStream);
+
+            TarArchive tarArchive = TarArchive.CreateInputTarArchive(gzipStream, Encoding.UTF8);
+            tarArchive.ExtractContents(destFolder);
+            tarArchive.Close();
+
+            gzipStream.Close();
+            inStream.Close();
+        }
+
+
+        static async Task<string> DownloadArtifact(string target_dir, string artifact, string tag, string repository, string system = "windows")
+        {
+            var ext = system is "windows" ? ".zip" : ".tar.gz";
+            var url = String.Format(GITHUB_RELEASE_URL, tag, system, repository, artifact);
+            url += ext;
 
             Console.WriteLine(String.Format("Download URL: {0}", url));
             return await Download(target_dir, url);
         }
+
+
+
     }
 
 
