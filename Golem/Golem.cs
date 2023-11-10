@@ -367,9 +367,19 @@ namespace Golem
             }
         }
 
-        private async Task<IJob> QueryAgreement(string agreement_id)
+        public async Task<YagnaAgreement?> GetAgreement(string agreementID)
         {
-            throw new NotImplementedException("NYI");
+            try
+            {
+                var txt = await HttpClient.GetStringAsync($"/market-api/v1/agreements/{agreementID}");
+                YagnaAgreement? aggr = JsonSerializer.Deserialize<YagnaAgreement>(txt) ?? null;
+                return aggr;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError("Failed to get agreement {}. Err: {}", agreementID, ex.Message);
+                return null;
+            }
         }
 
         public async ValueTask DisposeAsync()

@@ -127,7 +127,7 @@ namespace Golem.Yagna.Types
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(this.Id, this.RequestorId, this.Status, this.PaymentStatus);
+            return HashCode.Combine(Id, RequestorId, Status, PaymentStatus);
         }
 
         public override bool Equals(object? obj)
