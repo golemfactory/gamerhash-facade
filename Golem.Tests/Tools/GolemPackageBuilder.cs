@@ -34,16 +34,16 @@ namespace Golem.IntegrationTests.Tools
             var system = System();
             BuildDirectoryStructure(dir);
 
-            await DownloadGolem(dir, CURRENT_GOLEM_VERSION, system);
-            await DownloadExeUnit(dir, "runtime", CURRENT_RUNTIME_VERSION, system);
-            await DownloadExeUnit(dir, "dummy-framework", CURRENT_RUNTIME_VERSION, system);
+            await DownloadExtractPackage(BinariesDir(dir), "golem-provider", "golemfactory/yagna", CURRENT_GOLEM_VERSION, system);
+            await DownloadExtractPackage(ExeUnitsDir(dir), "runtime", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION, system);
+            await DownloadExtractPackage(ExeUnitsDir(dir), "dummy-framework", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION, system);
 
             return dir;
         }
 
-        static async Task DownloadGolem(string dir, string tag, string system = "windows")
+        static async Task DownloadExtractPackage(string dir, string artifact, string repo, string tag, string system = "windows")
         {
-            var builds = await DownloadArtifact(BinariesDir(dir), "golem-provider", tag, "golemfactory/yagna", system);
+            var builds = await DownloadArtifact(dir, artifact, tag, repo, system);
             var extract_to = Path.GetDirectoryName(builds) ?? "";
 
 
@@ -51,21 +51,7 @@ namespace Golem.IntegrationTests.Tools
 
             // Double ChangeExtension call to get rid of tar.gz
             var extract_package_dir = Path.ChangeExtension(Path.ChangeExtension(builds, null), null);
-            CopyFilesRecursively(extract_package_dir, BinariesDir(dir));
-            Directory.Delete(extract_package_dir, true);
-        }
-
-        static async Task DownloadExeUnit(string dir, string artifact, string tag, string system = "windows")
-        {
-            var builds = await DownloadArtifact(ExeUnitsDir(dir), artifact, tag, "golemfactory/ya-runtime-ai", system);
-            var extract_to = Path.GetDirectoryName(builds) ?? "";
-
-
-            Extract(builds, extract_to);
-
-            // Double ChangeExtension call to get rid of tar.gz
-            var extract_package_dir = Path.ChangeExtension(Path.ChangeExtension(builds, null), null);
-            CopyFilesRecursively(extract_package_dir, ExeUnitsDir(dir));
+            CopyFilesRecursively(extract_package_dir, dir);
             Directory.Delete(extract_package_dir, true);
         }
 
