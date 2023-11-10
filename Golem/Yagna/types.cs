@@ -124,6 +124,24 @@ namespace Golem.Yagna.Types
         {
             return new Task<Payment>(() => throw new NotImplementedException());
         }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(this.Id, this.RequestorId, this.Status, this.PaymentStatus);
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj == null)
+            {
+                return false;
+            }
+            Job? job = obj as Job;
+            return Id.Equals(job?.Id)
+                && RequestorId.Equals(job.RequestorId)
+                && Status.Equals(job.Status)
+                && PaymentStatus.Equals(job.PaymentStatus);
+        }
     }
 
 }

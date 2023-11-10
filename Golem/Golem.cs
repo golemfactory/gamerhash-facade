@@ -212,7 +212,6 @@ namespace Golem
                     { "CPU", 0.0001m },
                     // { "Init price", 0.0000000000000001m },
                 };
-                // name "ai" as defined in plugins/*.json
                 var preset = new Preset(runtime_name, runtime_name, coefs);
 
                 Provider.AddPreset(preset, out string args, out string info);
