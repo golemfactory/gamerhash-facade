@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -89,6 +90,18 @@ namespace Golem.Yagna
             }
 
             return startInfo;
+        }
+
+        public static string BinName(string name)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return Path.ChangeExtension(name, ".exe");
+            }
+            else
+            {
+                return Path.GetFileNameWithoutExtension(name);
+            }
         }
     }
 }

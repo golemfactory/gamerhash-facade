@@ -1,10 +1,8 @@
 ﻿using System.Diagnostics;
-using System.Globalization;
 using Golem.Yagna.Types;
 using System.Text.Json;
 using Golem.Tools;
 using System.Text.Json.Serialization;
-using System.ComponentModel.DataAnnotations;
 
 namespace Golem.Yagna
 {
@@ -54,7 +52,7 @@ namespace Golem.Yagna
 
         public YagnaService(string golemPath, string? dataDir)
         {
-            _yaExePath = Path.Combine(golemPath, "yagna.exe");
+            _yaExePath = Path.Combine(golemPath, ProcessFactory.BinName("yagna"));
             _dataDir = dataDir;
             if (!File.Exists(_yaExePath))
             {

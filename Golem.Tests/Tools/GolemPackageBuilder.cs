@@ -38,6 +38,8 @@ namespace Golem.IntegrationTests.Tools
             await DownloadExtractPackage(ExeUnitsDir(dir), "runtime", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION, system);
             await DownloadExtractPackage(ExeUnitsDir(dir), "dummy-framework", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION, system);
 
+            Directory.SetCurrentDirectory(dir);
+
             return dir;
         }
 
