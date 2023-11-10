@@ -51,8 +51,12 @@ namespace Golem.IntegrationTests.Tools
 
             Extract(builds, extract_to);
 
-            // Double ChangeExtension call to get rid of tar.gz
-            var extract_package_dir = Path.ChangeExtension(Path.ChangeExtension(builds, null), null);
+            var extract_package_dir = Path.ChangeExtension(builds, null);
+            if (Path.GetExtension(extract_package_dir) == ".tar")
+            {
+                extract_package_dir = Path.ChangeExtension(extract_package_dir, null);
+            }
+
             CopyFilesRecursively(extract_package_dir, dir);
             Directory.Delete(extract_package_dir, true);
         }
