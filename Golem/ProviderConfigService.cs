@@ -26,7 +26,7 @@ namespace Golem
             {
                 get
                 {
-                    return _provider.Config?.Account ?? "unknown";
+                    return _provider.Config?.Account ?? "";
                 }
                 set
                 {

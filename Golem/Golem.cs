@@ -21,9 +21,9 @@ namespace Golem
 
         private readonly HttpClient HttpClient;
 
-        public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public GolemPrice Price { get; set; }
         
-        public uint NetworkSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public uint NetworkSpeed { get; set; }
 
 
         private GolemStatus status;
@@ -33,9 +33,11 @@ namespace Golem
             set {  status = value; OnPropertyChanged(); }
         }
 
-        public IJob? CurrentJob => throw new NotImplementedException();
+        public IJob? CurrentJob => null;
 
-        public string NodeId => throw new NotImplementedException();
+        public string NodeId {
+            get { return Yagna.Id?.ToString() ?? ""; }
+        }
 
         public string WalletAddress {
             get => ProviderConfig.WalletAddress;
@@ -76,7 +78,7 @@ namespace Golem
 
             if (success)
             {
-                var defaultKey = Yagna.AppKeyService.Get("default");
+                var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
                 if (defaultKey is not null)
                 {
                     if (StartupProvider(yagnaOptions))
@@ -93,6 +95,9 @@ namespace Golem
             {
                 Status = GolemStatus.Error;
             }
+
+            OnPropertyChanged("WalletAddress");
+            OnPropertyChanged("NodeId");
         }
 
         public async Task Stop()
@@ -110,6 +115,7 @@ namespace Golem
         public Golem(string golemPath, string? dataDir=null)
         {
             Yagna = new YagnaService(golemPath);
+
             Provider = new Provider(golemPath, dataDir);
             ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork);
 
@@ -200,6 +206,10 @@ namespace Golem
 
             foreach (string preset in presets)
             {
+                if(preset != preset_name)
+                {
+                    Provider.DeactivatePreset(preset);
+                }
                 Console.WriteLine($"Preset {preset}");
             }
             

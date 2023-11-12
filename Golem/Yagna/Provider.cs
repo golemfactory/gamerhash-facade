@@ -99,7 +99,28 @@ namespace Golem.Yagna
         private readonly string _exeUnitsPath;
         private readonly string? _dataDir;
 
+        private Dictionary<string, string> _env;
+        private Dictionary<string, string> Env
+        {
+            get 
+            {
+                if(_env.Count == 0)
+                {
+                    var builder = new EnvironmentBuilder()
+                                        .WithExeUnitPath(_exeUnitsPath);
+
+                    if(_dataDir != null)
+                        builder = builder.WithDataDir(_dataDir);
+
+                    _env = builder.Build();
+                }
+                return _env;
+            }
+        }
+
         private readonly ILogger? _logger;
+        
+
         private static Process? ProviderProcess { get; set; }
 
         public Provider(string golemPath, string? dataDir, ILogger? logger = null)
@@ -109,6 +130,7 @@ namespace Golem.Yagna
             _pluginsPath = Path.Combine(golemPath, "../plugins");
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");
             _dataDir = dataDir;
+            _env = new Dictionary<string, string>();
 
             if (!File.Exists(_yaProviderPath))
             {
@@ -133,7 +155,10 @@ namespace Golem.Yagna
         private string ExecToText(string arguments)
         {
             _logger?.LogInformation("Executing: provider {0}", arguments);
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath);
+
+
+
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, Env);
             try
             {
                 return ExecToText(process);
@@ -147,7 +172,7 @@ namespace Golem.Yagna
         private string ExecToText(List<string> arguments)
         {
             _logger?.LogInformation($"Executing: provider {string.Join(", ", arguments)}");
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath);
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, Env);
             try
             {
                 return ExecToText(process);
@@ -278,14 +303,10 @@ namespace Golem.Yagna
             }
             var arguments = $"run {debugSwitch}--payment-network {network.Id}";
 
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, openConsole, _exeUnitsPath);
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, openConsole, Env);
 
             process.StartInfo.EnvironmentVariables["MIN_AGREEMENT_EXPIRATION"] = "30s";
 
-            if (_dataDir != null)
-            {
-                process.StartInfo.EnvironmentVariables["DATA_DIR"] = _dataDir;
-            }
             process.StartInfo.EnvironmentVariables["YAGNA_APPKEY"] = appKey;
 
             //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");

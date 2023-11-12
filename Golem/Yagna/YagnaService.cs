@@ -26,24 +26,30 @@ namespace Golem.Yagna
     //[JsonObject(MemberSerialization.OptIn)]
     public class IdInfo
     {
-        [JsonPropertyName("alias")]
+        // [JsonPropertyName("alias")]
         public string? Alias { get; set; }
 
-        [JsonPropertyName("default")]
+        // [JsonPropertyName("default")]
         public bool IsDefault { get; set; }
 
-        [JsonPropertyName("locked")]
+        // [JsonPropertyName("locked")]
         public bool IsLocked { get; set; }
 
-        [JsonPropertyName("nodeId")]
-        public string Address { get; set; }
+        // [JsonPropertyName("nodeId")]
+        public string NodeId { get; set; }
 
-        public IdInfo(bool _isDefault, bool _isLocked, string? _alias, string _address)
+        public IdInfo(bool _isDefault, bool _isLocked, string? _alias, string _nodeId)
         {
             IsDefault = _isDefault;
             IsLocked = _isLocked;
             Alias = _alias;
-            Address = _address;
+            NodeId = _nodeId;
+        }
+
+        [JsonConstructor]
+        public IdInfo()
+        {
+            NodeId = "";
         }
     }
 
@@ -52,9 +58,19 @@ namespace Golem.Yagna
         private string _yaExePath;
         private static Process? YagnaProcess { get; set; }
 
+        private EnvironmentBuilder Env
+        {
+            get
+            {
+                var env = new EnvironmentBuilder();
+                return env;
+            }
+        }
+
         public YagnaService(string golemPath)
         {
             _yaExePath = Path.Combine(golemPath, "yagna.exe");
+
             if (!File.Exists(_yaExePath))
             {
                 throw new Exception($"File not found: {_yaExePath}");
@@ -71,7 +87,7 @@ namespace Golem.Yagna
         }
         private Process CreateProcessAndStart(params string[] arguments)
         {
-            var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, "");
+            var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, Env.Build());
             
             process.Start();
             return process;
@@ -80,6 +96,7 @@ namespace Golem.Yagna
         internal string ExecToText(params string[] arguments)
         {
             var process = CreateProcessAndStart(arguments);
+            process.WaitForExit();
             string output = process.StandardOutput.ReadToEnd();
             if (process.ExitCode != 0)
             {
@@ -122,7 +139,15 @@ namespace Golem.Yagna
             }
         }
 
-        public IdInfo? Id => Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
+        // public IdInfo? Id => Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
+
+        public IdInfo? Id {
+            get
+            {
+                var a= Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
+                return null;
+            }
+        } 
 
         public PaymentService PaymentService
         {
@@ -155,25 +180,14 @@ namespace Golem.Yagna
                 debugFlag = "--debug";
             }
 
-            var process = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", options.OpenConsole, "");
-
-            //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
-
-            if (options.PrivateKey != null)
-            {
-                process.StartInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_ID_SECRET", options.PrivateKey);
-            }
-
-            if (options.AppKey != null)
-            {
-                process.StartInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_APPKEY", options.AppKey);
-            }
-
             var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
-            if (File.Exists(certs))
-            {
-                process.StartInfo.EnvironmentVariables.Add("SSL_CERT_FILE", certs);
-            }
+
+            EnvironmentBuilder environment = Env;
+            environment = options.PrivateKey!=null ? environment.WithPrivateKey(options.PrivateKey) : environment;
+            environment = options.AppKey!=null ? environment.WithAppKey(options.AppKey) : environment;
+            environment = File.Exists(certs) ? environment.WithSslCertFile(certs) : environment;
+
+            var process = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", options.OpenConsole, environment.Build());
 
             if(process.Start())
             {
