@@ -106,7 +106,7 @@ namespace Golem.Yagna
         public Provider(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
-            _logger =  loggerFactory.CreateLogger<Provider>();
+            _logger = loggerFactory.CreateLogger<Provider>();
             _yaProviderPath = Path.Combine(golemPath, "ya-provider.exe");
             _pluginsPath = Path.Combine(golemPath, "..", "plugins");
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");
@@ -135,7 +135,7 @@ namespace Golem.Yagna
         private string ExecToText(string arguments)
         {
             _logger?.LogInformation("Executing: provider {0}", arguments);
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath); 
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath);
             if (_dataDir != null)
             {
                 process.StartInfo.EnvironmentVariables["DATA_DIR"] = _dataDir;
