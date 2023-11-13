@@ -100,7 +100,7 @@ namespace Golem.Yagna.Types
         public required string Id { get; init; }
 
         //TODO
-        public string RequestorId => "";
+        public string RequestorId { get; init; }
 
         //TODO
         public GolemPrice Price { get => new GolemPrice(); init => this.Price = new GolemPrice(); }

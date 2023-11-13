@@ -109,6 +109,7 @@ namespace Golem
 
         async Task IGolem.Stop()
         {
+            _logger.LogInformation("Stopping Golem");
             await Provider.Stop();
             await Yagna.Stop();
             _tokenSource.Cancel();
@@ -292,7 +293,7 @@ namespace Golem
         class ActivityLoop
         {
             private const string _dataPrefix = "data:";
-            private static readonly TimeSpan s_reconnectDelay = TimeSpan.FromSeconds(120);
+            private static readonly TimeSpan s_reconnectDelay = TimeSpan.FromSeconds(10);
             private static readonly JsonSerializerOptions s_serializerOptions = new JsonSerializerOptions()
             {
                 PropertyNameCaseInsensitive = true,
@@ -311,48 +312,69 @@ namespace Golem
                 _logger = logger;
             }
 
-            public async Task Start(Action<Job> EmitJobEvent)
+            public async Task Start(Action<Job?> EmitJobEvent)
             {
                 _logger?.LogInformation("Starting monitoring activities");
 
                 DateTime newReconnect = DateTime.Now;
-                while (!_token.IsCancellationRequested)
+                try
                 {
-                    _logger?.LogInformation("Monitoring activities");
-                    var now = DateTime.Now;
-                    if (newReconnect > now)
+                    while (!_token.IsCancellationRequested)
                     {
-                        await Task.Delay(newReconnect - now);
-                    }
-                    newReconnect = now + s_reconnectDelay;
-                    if (_token.IsCancellationRequested)
-                    {
-                        _token.ThrowIfCancellationRequested();
-                    }
-
-                    try
-                    {
-                        var stream = await _httpClient.GetStreamAsync("/activity-api/v1/_monitor");
-                        using StreamReader reader = new StreamReader(stream);
-
-                        await foreach (string json in EnumerateMessages(reader).WithCancellation(_token))
+                        _logger?.LogInformation("Monitoring activities");
+                        var now = DateTime.Now;
+                        if (newReconnect > now)
                         {
-                            _logger?.LogInformation("got json {0}", json);
-                            var activity_state = parseMessage(json);
-                            if (activity_state == null)
-                            {
-                                EmitJobEvent(null);
-                                continue;
-                            }
-                            var new_job = new Job() { Id = activity_state.AgreementId };
-                            EmitJobEvent(new_job);
+                            await Task.Delay(newReconnect - now);
+                        }
+                        newReconnect = now + s_reconnectDelay;
+                        if (_token.IsCancellationRequested)
+                        {
+                            _token.ThrowIfCancellationRequested();
+                        }
 
+                        try
+                        {
+                            var stream = await _httpClient.GetStreamAsync("/activity-api/v1/_monitor");
+                            using StreamReader reader = new StreamReader(stream);
+
+                            await foreach (string json in EnumerateMessages(reader).WithCancellation(_token))
+                            {
+                                _logger?.LogInformation("got json {0}", json);
+                                var activity_state = parseMessage(json);
+                                if (activity_state == null)
+                                {
+                                    EmitJobEvent(null);
+                                    continue;
+                                }
+                                var agreement = await GetAgreement(activity_state.AgreementId);
+                                if (agreement == null)
+                                {
+                                    EmitJobEvent(null);
+                                    continue;
+                                }
+                                var new_job = new Job()
+                                {
+                                    Id = activity_state.AgreementId,
+                                    RequestorId = agreement.Demand.RequestorId
+                                };
+                                EmitJobEvent(new_job);
+
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            _logger?.LogError(e, "Activity request failure");
                         }
                     }
-                    catch (Exception e)
-                    {
-                        _logger?.LogError(e, "status loop failure");
-                    }
+                }
+                catch (Exception e)
+                {
+                    _logger?.LogError(e, "Activity monitoring loop failure");
+                }
+                finally
+                {
+                    EmitJobEvent(null);
                 }
             }
 
@@ -426,23 +448,21 @@ namespace Golem
                 yield break;
             }
 
-            // public async Task<YagnaAgreement?> GetAgreement(string agreementID)
-            // {
-            //     try
-            //     {
-
-            //         var txt = await _client.GetStringAsync($"{_baseUrl}/market-api/v1/agreements/{agreementID}");
-
-            //         YagnaAgreement? aggr = JsonConvert.DeserializeObject<YagnaAgreement>(txt) ?? null;
-
-            //         return aggr;
-            //     }
-            //     catch (Exception ex)
-            //     {
-            //         _logger.LogError("Failed GetAgreementInfo: " + ex.Message);
-            //         return null;
-            //     }
-            // }
+            public async Task<YagnaAgreement?> GetAgreement(string agreementID)
+            {
+                try
+                {
+                    var response = await _httpClient.GetStringAsync($"/market-api/v1/agreements/{agreementID}");
+                    _logger?.LogInformation("got agreement {0}", response);
+                    YagnaAgreement? agreement = JsonSerializer.Deserialize<YagnaAgreement>(response, s_serializerOptions) ?? null;
+                    return agreement;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Failed GetAgreementInfo: " + ex.Message);
+                    return null;
+                }
+            }
         }
     }
 }
