@@ -80,14 +80,14 @@ namespace Golem.Yagna
         private Dictionary<string, string> _env;
         private Dictionary<string, string> Env
         {
-            get 
+            get
             {
-                if(_env.Count == 0)
+                if (_env.Count == 0)
                 {
                     var builder = new EnvironmentBuilder()
                                         .WithExeUnitPath(_exeUnitsPath);
 
-                    if(_dataDir != null)
+                    if (_dataDir != null)
                         builder = builder.WithDataDir(_dataDir);
 
                     _env = builder.Build();
@@ -97,7 +97,7 @@ namespace Golem.Yagna
         }
 
         private readonly ILogger? _logger;
-        
+
 
         private static Process? ProviderProcess { get; set; }
 
@@ -219,7 +219,7 @@ namespace Golem.Yagna
         public void UpdateDefaultProfile(String param, String value)
         {
             this.ExecToText("profile update " + param + " " + value + " default");
-        }        
+        }
 
         public bool Run(string appKey, Network network, string? yagnaApiUrl, bool openConsole = false, bool enableDebugLogs = false)
         {
@@ -254,6 +254,7 @@ namespace Golem.Yagna
 
             ProviderProcess.Kill(true);
             await ProviderProcess.WaitForExitAsync();
+            ProviderProcess = null;
         }
     }
 }

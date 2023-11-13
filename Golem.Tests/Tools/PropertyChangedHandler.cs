@@ -30,13 +30,13 @@ namespace Golem.IntegrationTests.Tools
 
             var value = property.GetValue(sender);
 
-            if(value is null)
+            if (value is null)
                 return;
 
             Handler((T)value);
 
             if (sender is not Golem golem || e.PropertyName != PropertyName)
-                throw new NotSupportedException($"Type or {e.PropertyName} is not supported in this context");
+                return;
 
             Console.WriteLine($"Property has changed: {e.PropertyName} to {golem.Status}");
         }

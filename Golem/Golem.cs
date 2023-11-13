@@ -22,7 +22,8 @@ namespace Golem
         private readonly HttpClient HttpClient;
 
         private GolemPrice price;
-        public GolemPrice Price {
+        public GolemPrice Price
+        {
             get
             {
                 return price;
@@ -33,7 +34,7 @@ namespace Golem
                 OnPropertyChanged();
             }
         }
-        
+
         public uint NetworkSpeed { get; set; }
 
 
@@ -46,14 +47,17 @@ namespace Golem
 
         public IJob? CurrentJob => null;
 
-        public string NodeId {
+        public string NodeId
+        {
             get { return Yagna.Id?.NodeId ?? ""; }
         }
 
-        public string WalletAddress {
-            get {
+        public string WalletAddress
+        {
+            get
+            {
                 var walletAddress = ProviderConfig.WalletAddress;
-                if(walletAddress ==null || walletAddress.Length==0)
+                if (walletAddress == null || walletAddress.Length == 0)
                     walletAddress = Yagna.Id?.NodeId;
                 return walletAddress ?? "";
             }
@@ -148,16 +152,16 @@ namespace Golem
         {
             var success = Yagna.Run(yagnaOptions);
 
-            if(!success)
-                return false;
-
-            var account = WalletAddress;
-
             if (!yagnaOptions.OpenConsole)
             {
                 Yagna.BindErrorDataReceivedEvent(OnYagnaErrorDataRecv);
                 Yagna.BindOutputDataReceivedEvent(OnYagnaOutputDataRecv);
             }
+
+            if (!success)
+                return false;
+
+            var account = WalletAddress;
 
             HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
 
@@ -189,7 +193,7 @@ namespace Golem
                     //sanity check
                     if (meInfo != null)
                     {
-                        if(account == null || account.Length == 0)
+                        if (account == null || account.Length == 0)
                             account = meInfo.Identity;
                         break;
                     }
@@ -231,7 +235,7 @@ namespace Golem
 
             foreach (string preset in presets)
             {
-                if(preset != Provider.PresetConfig.DefaultPresetName)
+                if (preset != Provider.PresetConfig.DefaultPresetName)
                 {
                     Provider.PresetConfig.DeactivatePreset(preset);
                 }
@@ -243,7 +247,7 @@ namespace Golem
 
         void OnYagnaErrorDataRecv(object sender, DataReceivedEventArgs e)
         {
-            Console.WriteLine($"[Error]: {e.Data}");
+            Console.WriteLine($"{e.Data}");
         }
         void OnYagnaOutputDataRecv(object sender, DataReceivedEventArgs e)
         {

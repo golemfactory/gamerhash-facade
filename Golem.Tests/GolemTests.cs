@@ -5,6 +5,7 @@ using GolemLib.Types;
 
 namespace Golem.Tests
 {
+    [Collection("Sequential")]
     public class GolemTests
     {
         [Fact]

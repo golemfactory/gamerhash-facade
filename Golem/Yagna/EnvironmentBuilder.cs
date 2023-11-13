@@ -12,7 +12,7 @@ namespace Golem.Yagna
             // { "DATA_DIR", dataDir },
             // { "YA_NET_RELAY_HOST", "10.0.2.2:7464" },
         };
-                
+
         public EnvironmentBuilder WithGsbUrl(string s)
         {
             env["GSB_URL"] = s;
@@ -46,6 +46,12 @@ namespace Golem.Yagna
         public EnvironmentBuilder WithDataDir(string s)
         {
             env["DATA_DIR"] = s;
+            return this;
+        }
+
+        public EnvironmentBuilder WithYagnaDataDir(string s)
+        {
+            env["YAGNA_DATADIR"] = s;
             return this;
         }
 
