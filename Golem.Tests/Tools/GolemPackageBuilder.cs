@@ -50,7 +50,6 @@ namespace Golem.IntegrationTests.Tools
             var builds = await DownloadArtifact(dir, artifact, tag, repo, system);
             var extract_to = Path.GetDirectoryName(builds) ?? "";
 
-
             Extract(builds, extract_to);
 
             var extract_package_dir = Path.ChangeExtension(builds, null);
@@ -160,7 +159,9 @@ namespace Golem.IntegrationTests.Tools
             switch (ext)
             {
                 case ".zip":
-                    ZipFile.ExtractToDirectory(file, target_dir);
+                    var extract_dir_name = Path.GetFileNameWithoutExtension(file);
+                    var extract_package_dir = Path.Combine(target_dir, extract_dir_name);
+                    ZipFile.ExtractToDirectory(file, extract_package_dir);
                     break;
                 case ".gz":
                     ExtractTGZ(file, target_dir);
