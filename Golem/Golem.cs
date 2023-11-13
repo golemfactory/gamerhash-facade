@@ -36,7 +36,7 @@ namespace Golem
         public IJob? CurrentJob => null;
 
         public string NodeId {
-            get { return Yagna.Id?.ToString() ?? ""; }
+            get { return Yagna.Id?.NodeId ?? ""; }
         }
 
         public string WalletAddress {
@@ -131,6 +131,11 @@ namespace Golem
         {
             var success = Yagna.Run(yagnaOptions);
 
+            if(!success)
+                return false;
+
+            var account = WalletAddress;
+
             if (!yagnaOptions.OpenConsole)
             {
                 Yagna.BindErrorDataReceivedEvent(OnYagnaErrorDataRecv);
@@ -167,7 +172,9 @@ namespace Golem
                     //sanity check
                     if (meInfo != null)
                     {
-                        return meInfo.Identity != null;
+                        if(account == null || account.Length == 0)
+                            account = meInfo.Identity;
+                        break;
                     }
                     throw new Exception("Failed to get key");
 
@@ -177,6 +184,8 @@ namespace Golem
                     // consciously swallow the exception... presumably REST call error...
                 }
             }
+
+            Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
 
             return success;
         }

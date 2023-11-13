@@ -98,9 +98,10 @@ namespace Golem.Yagna
             var process = CreateProcessAndStart(arguments);
             process.WaitForExit();
             string output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
+
             if (process.ExitCode != 0)
-            {
-                var error = process.StandardError.ReadToEnd();
+            {    
                 throw new Exception("Yagna call failed");
             }
             return output;
@@ -144,8 +145,7 @@ namespace Golem.Yagna
         public IdInfo? Id {
             get
             {
-                var a= Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
-                return null;
+                return Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
             }
         } 
 
@@ -391,7 +391,7 @@ namespace Golem.Yagna
 
         public void Init(Network network, string driver, string account)
         {
-            _yagna.Exec<PaymentStatus>("payment", "init", "--receiver", "--network", network.Id, "--driver", driver, "--account", account);
+            _yagna.ExecToText("payment", "init", "--receiver", "--network", network.Id, "--driver", driver, "--account", account);
         }
 
         public async Task<PaymentStatus?> Status(Network network, string driver, string account)
