@@ -2,6 +2,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using ICSharpCode.SharpZipLib.GZip;
 using ICSharpCode.SharpZipLib.Tar;
@@ -57,8 +59,11 @@ namespace Golem.IntegrationTests.Tools
                 extract_package_dir = Path.ChangeExtension(extract_package_dir, null);
             }
 
+            SetPermissions(extract_package_dir);
+
             CopyFilesRecursively(extract_package_dir, dir);
             Directory.Delete(extract_package_dir, true);
+
         }
 
         public static void BuildDirectoryStructure(string gamerhash_dir)
@@ -179,6 +184,31 @@ namespace Golem.IntegrationTests.Tools
 
             gzipStream.Close();
             inStream.Close();
+        }
+
+        public static void SetFilePermissions(string fileName)
+        {
+            // Get a FileSecurity object that represents the
+            // current security settings.
+            var file = new FileInfo(fileName);
+            if (OperatingSystem.IsWindows())
+            {
+                FileSecurity fSecurity = FileSystemAclExtensions.GetAccessControl(file);
+                fSecurity.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), FileSystemRights.ExecuteFile, AccessControlType.Allow));
+                FileSystemAclExtensions.SetAccessControl(file, fSecurity);
+            }
+            else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                file.UnixFileMode |= UnixFileMode.UserExecute | UnixFileMode.OtherExecute | UnixFileMode.GroupExecute;
+            }
+        }
+
+        public static void SetPermissions(string directory)
+        {
+            foreach (var file in Directory.EnumerateFiles(directory))
+            {
+                SetFilePermissions(file);
+            }
         }
 
 

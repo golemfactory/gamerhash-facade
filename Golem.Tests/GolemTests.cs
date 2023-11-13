@@ -7,29 +7,29 @@ namespace Golem.Tests
 {
     public class GolemTests
     {
-        // [Fact]
-        // public async Task StartStop_VerifyStatusAsync()
-        // {
-        //     string golemPath = await PackageBuilder.BuildTestDirectory("StartStop_VerifyStatusAsync");
-        //     Console.WriteLine("Path: " + golemPath);
+        [Fact]
+        public async Task StartStop_VerifyStatusAsync()
+        {
+            string golemPath = await PackageBuilder.BuildTestDirectory("StartStop_VerifyStatusAsync");
+            Console.WriteLine("Path: " + golemPath);
 
-        //     var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath));
-        //     GolemStatus status = GolemStatus.Off;
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath));
+            GolemStatus status = GolemStatus.Off;
 
-        //     Action<GolemStatus> updateStatus = (v) =>
-        //     {
-        //         status = v;
-        //     };
+            Action<GolemStatus> updateStatus = (v) =>
+            {
+                status = v;
+            };
 
-        //     golem.PropertyChanged += new PropertyChangedHandler<GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
 
-        //     await golem.Start();
+            await golem.Start();
 
-        //     Assert.Equal(GolemStatus.Ready, status);
-        //     await golem.Stop();
+            Assert.Equal(GolemStatus.Ready, status);
+            await golem.Stop();
 
-        //     Assert.Equal(GolemStatus.Off, status);
-        // }
+            Assert.Equal(GolemStatus.Off, status);
+        }
 
         [Fact]
         public async Task TestDownloadArtifacts()
