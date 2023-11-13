@@ -16,6 +16,7 @@ namespace Golem.Yagna
 
         public bool OpenConsole { get; set; }
         public string YagnaApiUrl { get; set; } = "";
+        public Network Network { get; set; } = Network.Goerli;
     }
 
 
@@ -23,24 +24,30 @@ namespace Golem.Yagna
     //[JsonObject(MemberSerialization.OptIn)]
     public class IdInfo
     {
-        [JsonPropertyName("alias")]
+        // [JsonPropertyName("alias")]
         public string? Alias { get; set; }
 
-        [JsonPropertyName("default")]
+        // [JsonPropertyName("default")]
         public bool IsDefault { get; set; }
 
-        [JsonPropertyName("locked")]
+        // [JsonPropertyName("locked")]
         public bool IsLocked { get; set; }
 
-        [JsonPropertyName("nodeId")]
-        public string Address { get; set; }
+        // [JsonPropertyName("nodeId")]
+        public string NodeId { get; set; }
 
-        public IdInfo(bool _isDefault, bool _isLocked, string? _alias, string _address)
+        public IdInfo(bool _isDefault, bool _isLocked, string? _alias, string _nodeId)
         {
             IsDefault = _isDefault;
             IsLocked = _isLocked;
             Alias = _alias;
-            Address = _address;
+            NodeId = _nodeId;
+        }
+
+        [JsonConstructor]
+        public IdInfo()
+        {
+            NodeId = "";
         }
     }
 
@@ -49,6 +56,19 @@ namespace Golem.Yagna
         private string _yaExePath;
         private readonly string? _dataDir;
         private static Process? YagnaProcess { get; set; }
+
+        private EnvironmentBuilder Env
+        {
+            get
+            {
+                var env = new EnvironmentBuilder();
+                return env;
+            }
+        }
+
+        // public YagnaService(string golemPath)
+        // {
+        //     _yaExePath = Path.Combine(golemPath, "yagna.exe");
 
         public YagnaService(string golemPath, string? dataDir)
         {
@@ -70,8 +90,8 @@ namespace Golem.Yagna
         }
         private Process CreateProcessAndStart(params string[] arguments)
         {
-            var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, "");
-
+            var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, Env.Build());
+            
             process.Start();
             return process;
         }
@@ -79,11 +99,11 @@ namespace Golem.Yagna
         internal string ExecToText(params string[] arguments)
         {
             var process = CreateProcessAndStart(arguments);
-            string output = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
+            string output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
             if (process.ExitCode != 0)
-            {
-                var error = process.StandardError.ReadToEnd();
+            {    
                 throw new Exception("Yagna call failed");
             }
             return output;
@@ -122,7 +142,14 @@ namespace Golem.Yagna
             }
         }
 
-        public IdInfo? Id => Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
+        // public IdInfo? Id => Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
+
+        public IdInfo? Id {
+            get
+            {
+                return Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
+            }
+        } 
 
         public PaymentService PaymentService
         {
@@ -155,32 +182,14 @@ namespace Golem.Yagna
                 debugFlag = "--debug";
             }
 
-
-            var process = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", options.OpenConsole, "");
-
-            //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
-
-            if (options.PrivateKey != null)
-            {
-                process.StartInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_ID_SECRET", options.PrivateKey);
-            }
-
-            if (options.AppKey != null)
-            {
-                process.StartInfo.EnvironmentVariables.Add("YAGNA_AUTOCONF_APPKEY", options.AppKey);
-            }
-
-            if (_dataDir != null)
-            {
-                process.StartInfo.EnvironmentVariables["YAGNA_DATADIR"] = _dataDir;
-            }
-
-
             var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
-            if (File.Exists(certs))
-            {
-                process.StartInfo.EnvironmentVariables.Add("SSL_CERT_FILE", certs);
-            }
+
+            EnvironmentBuilder environment = Env;
+            environment = options.PrivateKey!=null ? environment.WithPrivateKey(options.PrivateKey) : environment;
+            environment = options.AppKey!=null ? environment.WithAppKey(options.AppKey) : environment;
+            environment = File.Exists(certs) ? environment.WithSslCertFile(certs) : environment;
+
+            var process = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", options.OpenConsole, environment.Build());
 
             if (process.Start())
             {
@@ -384,7 +393,7 @@ namespace Golem.Yagna
 
         public void Init(Network network, string driver, string account)
         {
-            _yagna.Exec<PaymentStatus>("payment", "init", "--receiver", "--network", network.Id, "--driver", driver, "--account", account);
+            _yagna.ExecToText("payment", "init", "--receiver", "--network", network.Id, "--driver", driver, "--account", account);
         }
 
         public async Task<PaymentStatus?> Status(Network network, string driver, string account)
