@@ -56,6 +56,7 @@ namespace Golem.Yagna
     public class YagnaService
     {
         private string _yaExePath;
+        private readonly string? _dataDir;
         private static Process? YagnaProcess { get; set; }
 
         private EnvironmentBuilder Env
@@ -67,10 +68,14 @@ namespace Golem.Yagna
             }
         }
 
-        public YagnaService(string golemPath)
+        // public YagnaService(string golemPath)
+        // {
+        //     _yaExePath = Path.Combine(golemPath, "yagna.exe");
+
+        public YagnaService(string golemPath, string? dataDir)
         {
             _yaExePath = Path.Combine(golemPath, "yagna.exe");
-
+            _dataDir = dataDir;
             if (!File.Exists(_yaExePath))
             {
                 throw new Exception($"File not found: {_yaExePath}");
@@ -99,7 +104,6 @@ namespace Golem.Yagna
             process.WaitForExit();
             string output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
-
             if (process.ExitCode != 0)
             {    
                 throw new Exception("Yagna call failed");
@@ -189,7 +193,7 @@ namespace Golem.Yagna
 
             var process = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", options.OpenConsole, environment.Build());
 
-            if(process.Start())
+            if (process.Start())
             {
                 YagnaProcess = process;
                 return !YagnaProcess.HasExited;
@@ -209,16 +213,16 @@ namespace Golem.Yagna
 
         public void BindOutputDataReceivedEvent(DataReceivedEventHandler handler)
         {
-            if(YagnaProcess != null)
+            if (YagnaProcess != null)
             {
                 YagnaProcess.OutputDataReceived += handler;
                 YagnaProcess.BeginOutputReadLine();
             }
         }
-        
+
         public void BindErrorDataReceivedEvent(DataReceivedEventHandler handler)
         {
-            if(YagnaProcess != null)
+            if (YagnaProcess != null)
             {
                 YagnaProcess.ErrorDataReceived += handler;
                 YagnaProcess.BeginErrorReadLine();

@@ -14,7 +14,7 @@ namespace Golem.Tests
         {
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(golemPath);
+            var golem = new Golem(golemPath, null);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) => { 
@@ -37,7 +37,7 @@ namespace Golem.Tests
         {
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(golemPath);
+            var golem = new Golem(golemPath, null);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) => {

@@ -41,7 +41,7 @@ namespace Golem
         public GolemStatus Status
         {
             get { return status; }
-            set {  status = value; OnPropertyChanged(); }
+            set { status = value; OnPropertyChanged(); }
         }
 
         public IJob? CurrentJob => null;
@@ -88,7 +88,7 @@ namespace Golem
             Status = GolemStatus.Starting;
 
             bool openConsole = false;
-            
+
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
             var success = await StartupYagnaAsync(yagnaOptions);
@@ -129,11 +129,13 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Golem(string golemPath, string? dataDir=null)
+        public Golem(string golemPath, string? dataDir)
         {
-            Yagna = new YagnaService(golemPath);
+            var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : null;
+            var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : null;
 
-            Provider = new Provider(golemPath, dataDir);
+            Yagna = new YagnaService(golemPath, yagna_datadir);
+            Provider = new Provider(golemPath, prov_datadir);
             ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork);
 
             HttpClient = new HttpClient
@@ -235,7 +237,7 @@ namespace Golem
                 }
                 Console.WriteLine($"Preset {preset}");
             }
-            
+
             return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, true, true);
         }
 
