@@ -251,7 +251,7 @@ namespace Golem
         {
             var token = _tokenSource.Token;
             token.Register(_httpClient.CancelPendingRequests);
-            return new ActivityLoop(this, token, _logger).Start();
+            return new ActivityLoop(_httpClient, token, _logger).Start(EmitJobEvent);
         }
 
         private void EmitJobEvent(Job? job)
@@ -291,7 +291,6 @@ namespace Golem
 
         class ActivityLoop
         {
-
             private const string _dataPrefix = "data:";
             private static readonly TimeSpan s_reconnectDelay = TimeSpan.FromSeconds(120);
             private static readonly JsonSerializerOptions s_serializerOptions = new JsonSerializerOptions()
@@ -301,18 +300,18 @@ namespace Golem
                 Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
             };
 
-            private readonly Golem _golem;
+            private readonly HttpClient _httpClient;
             private readonly CancellationToken _token;
             private readonly ILogger _logger;
 
-            public ActivityLoop(Golem golem, CancellationToken token, ILogger logger)
+            public ActivityLoop(HttpClient httpClient, CancellationToken token, ILogger logger)
             {
-                _golem = golem;
+                _httpClient = httpClient;
                 _token = token;
                 _logger = logger;
             }
 
-            public async Task Start()
+            public async Task Start(Action<Job> EmitJobEvent)
             {
                 _logger?.LogInformation("Starting monitoring activities");
 
@@ -333,50 +332,20 @@ namespace Golem
 
                     try
                     {
-                        var stream = await _golem._httpClient.GetStreamAsync("/activity-api/v1/_monitor");
+                        var stream = await _httpClient.GetStreamAsync("/activity-api/v1/_monitor");
                         using StreamReader reader = new StreamReader(stream);
 
                         await foreach (string json in EnumerateMessages(reader).WithCancellation(_token))
                         {
                             _logger?.LogInformation("got json {0}", json);
-                            try
+                            var activity_state = parseMessage(json);
+                            if (activity_state == null)
                             {
-                                var trackingEvent = JsonSerializer.Deserialize<TrackingEvent>(json, s_serializerOptions);
-                                var _activities = trackingEvent?.Activities ?? new List<ActivityState>();
-                                if (!_activities.Any())
-                                {
-                                    _logger?.LogInformation("No activities");
-                                    _golem.EmitJobEvent(null);
-                                    continue;
-                                }
-                                var _active_activities = _activities.FindAll(activity => activity.State != ActivityState.StateType.Terminated);
-                                if (!_active_activities.Any())
-                                {
-                                    _logger?.LogInformation("All activities terminated: {}", _activities);
-                                    _golem.EmitJobEvent(null);
-                                    continue;
-                                }
-                                if (_active_activities.Count > 1)
-                                {
-                                    _logger?.LogWarning("Multiple non terminated activities: {}", _active_activities);
-                                    //TODO what now?
-                                }
-                                //TODO take latest? the one with specific status?
-                                ActivityState _activity = _activities.First();
-                                if (_activity.AgreementId == null)
-                                {
-                                    _logger?.LogInformation("Activity without agreement id: {}", _activity);
-                                    _golem.EmitJobEvent(null);
-                                    continue;
-                                }
-                                var new_job = new Job() { Id = _activity.AgreementId };
-                                _golem.EmitJobEvent(new_job);
+                                EmitJobEvent(null);
+                                continue;
                             }
-                            catch (JsonException e)
-                            {
-                                _logger?.LogError(e, "Invalid monitoring event: {0}", json);
-                                break;
-                            }
+                            var new_job = new Job() { Id = activity_state.AgreementId };
+                            EmitJobEvent(new_job);
 
                         }
                     }
@@ -384,8 +353,44 @@ namespace Golem
                     {
                         _logger?.LogError(e, "status loop failure");
                     }
+                }
+            }
 
-
+            private ActivityState? parseMessage(string message)
+            {
+                try
+                {
+                    var trackingEvent = JsonSerializer.Deserialize<TrackingEvent>(message, s_serializerOptions);
+                    var _activities = trackingEvent?.Activities ?? new List<ActivityState>();
+                    if (!_activities.Any())
+                    {
+                        _logger?.LogInformation("No activities");
+                        return null;
+                    }
+                    var _active_activities = _activities.FindAll(activity => activity.State != ActivityState.StateType.Terminated);
+                    if (!_active_activities.Any())
+                    {
+                        _logger?.LogInformation("All activities terminated: {}", _activities);
+                        return null;
+                    }
+                    if (_active_activities.Count > 1)
+                    {
+                        _logger?.LogWarning("Multiple non terminated activities: {}", _active_activities);
+                        //TODO what now?
+                    }
+                    //TODO take latest? the one with specific status?
+                    ActivityState _activity = _activities.First();
+                    if (_activity.AgreementId == null)
+                    {
+                        _logger?.LogInformation("Activity without agreement id: {}", _activity);
+                        return null;
+                    }
+                    return _activity;
+                }
+                catch (JsonException e)
+                {
+                    _logger?.LogError(e, "Invalid monitoring event: {0}", message);
+                    return null;
                 }
             }
 
@@ -420,6 +425,24 @@ namespace Golem
                 }
                 yield break;
             }
+
+            // public async Task<YagnaAgreement?> GetAgreement(string agreementID)
+            // {
+            //     try
+            //     {
+
+            //         var txt = await _client.GetStringAsync($"{_baseUrl}/market-api/v1/agreements/{agreementID}");
+
+            //         YagnaAgreement? aggr = JsonConvert.DeserializeObject<YagnaAgreement>(txt) ?? null;
+
+            //         return aggr;
+            //     }
+            //     catch (Exception ex)
+            //     {
+            //         _logger.LogError("Failed GetAgreementInfo: " + ex.Message);
+            //         return null;
+            //     }
+            // }
         }
     }
 }
