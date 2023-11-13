@@ -21,7 +21,18 @@ namespace Golem
 
         private readonly HttpClient HttpClient;
 
-        public GolemPrice Price { get; set; }
+        private GolemPrice price;
+        public GolemPrice Price {
+            get
+            {
+                return price;
+            }
+            set
+            {
+                price = value;
+                OnPropertyChanged();
+            }
+        }
         
         public uint NetworkSpeed { get; set; }
 
@@ -40,7 +51,13 @@ namespace Golem
         }
 
         public string WalletAddress {
-            get => ProviderConfig.WalletAddress;
+            get {
+                var walletAddress = ProviderConfig.WalletAddress;
+                if(walletAddress ==null || walletAddress.Length==0)
+                    walletAddress = Yagna.Id?.NodeId;
+                return walletAddress ?? "";
+            }
+
             set => ProviderConfig.WalletAddress = value;
         }
 
@@ -125,8 +142,6 @@ namespace Golem
             };
         }
 
-        
-
         private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions)
         {
             var success = Yagna.Run(yagnaOptions);
@@ -192,9 +207,8 @@ namespace Golem
 
         public bool StartupProvider(YagnaStartupOptions yagnaOptions)
         {
-            var preset_name = "ai-dummy";
-            var presets = Provider.ActivePresets;
-            if (!presets.Contains(preset_name))
+            var presets = Provider.PresetConfig.ActivePresetsNames;
+            if (!presets.Contains(Provider.PresetConfig.DefaultPresetName))
             {
                 // Duration=0.0001 CPU=0.0001 "Init price=0.0000000000000001"
                 var coefs = new Dictionary<string, decimal>
@@ -204,20 +218,20 @@ namespace Golem
                     //{ "Init price", 0.0000000000000001m }
                 };
                 // name "ai" as defined in plugins/*.json
-                var preset = new Preset(preset_name, "ai", coefs);
+                var preset = new Preset(Provider.PresetConfig.DefaultPresetName, "ai", coefs);
 
-                Provider.AddPreset(preset, out string args, out string info);
+                Provider.PresetConfig.AddPreset(preset, out string args, out string info);
                 Console.WriteLine($"Args {args}");
                 Console.WriteLine($"Args {info}");
 
             }
-            Provider.ActivatePreset(preset_name);
+            Provider.PresetConfig.ActivatePreset(Provider.PresetConfig.DefaultPresetName);
 
             foreach (string preset in presets)
             {
-                if(preset != preset_name)
+                if(preset != Provider.PresetConfig.DefaultPresetName)
                 {
-                    Provider.DeactivatePreset(preset);
+                    Provider.PresetConfig.DeactivatePreset(preset);
                 }
                 Console.WriteLine($"Preset {preset}");
             }
