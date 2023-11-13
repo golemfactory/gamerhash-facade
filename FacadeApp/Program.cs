@@ -12,6 +12,8 @@ namespace FacadeApp
         public string? DataDir { get; set; }
     }
 
+
+
     internal class Program
     {
         static async Task Main(string[] args)
@@ -29,32 +31,41 @@ namespace FacadeApp
             Console.WriteLine("Path: " + golemPath);
             Console.WriteLine("DataDir: " + (dataDir ?? ""));
 
-            var golem = new Golem.Golem(golemPath, dataDir);
-
-            golem.PropertyChanged += PropertyChangedHandler.For(nameof(IGolem.Status));
-
-
-            bool end = false;
-
-            do
+            await using (var golem = new Golem.Golem(golemPath, dataDir))
             {
-                Console.WriteLine("Star/Stop/End?");
-                var line = Console.ReadLine();
 
-                switch (line)
+                golem.PropertyChanged += PropertyChangedHandler.For(nameof(IGolem.Status));
+
+
+                bool end = false;
+
+                do
                 {
-                    case "Start":
-                        await golem.Start();
-                        break;
-                    case "Stop":
-                        await golem.Stop();
-                        break;
-                    case "End":
-                        end = true;
-                        break;
-                    default: Console.WriteLine($"Didn't understand: {line}"); break;
-                }
-            } while (!end);
+                    Console.WriteLine("Star/Stop/End?");
+                    var line = Console.ReadLine();
+
+                    switch (line)
+                    {
+                        case "Start":
+                            await golem.Start();
+                            break;
+                        case "Stop":
+                            await golem.Stop();
+                            break;
+                        case "End":
+                            end = true;
+                            break;
+
+                        case "Wallet":
+                            var walletAddress = golem.WalletAddress;
+                            golem.WalletAddress = walletAddress;
+                            Console.WriteLine($"Wallet: {walletAddress}");
+                            break;
+
+                        default: Console.WriteLine($"Didn't understand: {line}"); break;
+                    }
+                } while (!end);
+            }
 
             Console.WriteLine("Done");
         }
@@ -80,4 +91,6 @@ namespace FacadeApp
         }
     }
 }
+
+
 
