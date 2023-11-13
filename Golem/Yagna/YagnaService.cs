@@ -1,10 +1,8 @@
 ﻿using System.Diagnostics;
-using System.Globalization;
 using Golem.Yagna.Types;
 using System.Text.Json;
 using Golem.Tools;
 using System.Text.Json.Serialization;
-using System.ComponentModel.DataAnnotations;
 
 namespace Golem.Yagna
 {
@@ -74,7 +72,7 @@ namespace Golem.Yagna
 
         public YagnaService(string golemPath, string? dataDir)
         {
-            _yaExePath = Path.Combine(golemPath, "yagna.exe");
+            _yaExePath = Path.Combine(golemPath, ProcessFactory.BinName("yagna"));
             _dataDir = dataDir;
             if (!File.Exists(_yaExePath))
             {
@@ -93,7 +91,7 @@ namespace Golem.Yagna
         private Process CreateProcessAndStart(params string[] arguments)
         {
             var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, Env.Build());
-            
+
             process.Start();
             return process;
         }
@@ -105,8 +103,8 @@ namespace Golem.Yagna
             string output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
             if (process.ExitCode != 0)
-            {    
-                throw new Exception("Yagna call failed");
+            {
+                throw new Exception("Yagna call failed. E: " + error);
             }
             return output;
         }
@@ -146,12 +144,21 @@ namespace Golem.Yagna
 
         // public IdInfo? Id => Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
 
-        public IdInfo? Id {
+        public IdInfo? Id
+        {
             get
             {
-                return Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
+                try
+                {
+                    return Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
+                }
+                catch (System.Exception)
+                {
+                    return null;
+                }
+
             }
-        } 
+        }
 
         public PaymentService PaymentService
         {
@@ -187,9 +194,11 @@ namespace Golem.Yagna
             var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
 
             EnvironmentBuilder environment = Env;
-            environment = options.PrivateKey!=null ? environment.WithPrivateKey(options.PrivateKey) : environment;
-            environment = options.AppKey!=null ? environment.WithAppKey(options.AppKey) : environment;
+            environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
+            environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
             environment = File.Exists(certs) ? environment.WithSslCertFile(certs) : environment;
+            environment = _dataDir != null ? environment.WithYagnaDataDir(_dataDir) : environment;
+
 
             var process = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", options.OpenConsole, environment.Build());
 
@@ -209,6 +218,7 @@ namespace Golem.Yagna
 
             YagnaProcess.Kill(true);
             await YagnaProcess.WaitForExitAsync();
+            YagnaProcess = null;
         }
 
         public void BindOutputDataReceivedEvent(DataReceivedEventHandler handler)
