@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "gh-client",
+    "gh-server"
+]
