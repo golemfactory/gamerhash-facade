@@ -164,23 +164,6 @@ namespace Golem.Yagna
             }
         }
 
-        // private List<T>? ExecToType<T>(string arguments)
-        // {
-        //     _logger?.LogInformation("Executing: provider {0}", arguments);
-        //     var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath);
-        //     process.StartInfo.EnvironmentVariables["RUST_LOG"] = "none";
-        //     try
-        //     {
-        //         var json_text = ExecToText(process);
-        //         return JsonSerializer.Deserialize<List<T>>(json_text);
-        //     }
-        //     catch (IOException e)
-        //     {
-        //         _logger?.LogError(e, "failed to execute {0}", arguments);
-        //         throw e;
-        //     }
-        // }
-
         private string ExecToText(Process process)
         {
             process.Start();

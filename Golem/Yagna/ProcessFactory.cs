@@ -39,19 +39,6 @@ namespace Golem.Yagna
             return process;
         }
 
-        private static Dictionary<string, string> GetEnvironmentVariables(string exeUnitPath)
-        {
-            var env = new Dictionary<string, string>
-            {
-                { "GSB_URL", "tcp://127.0.0.1:11501" },
-                { "YAGNA_API_URL", "http://127.0.0.1:11502" },
-                { "YA_PAYMENT_NETWORK_GROUP", "testnet" },
-                { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
-                { "EXE_UNIT_PATH", exeUnitPath }
-            };
-            return env;
-        }
-
         private static ProcessStartInfo CreateProcessStartInfo(string fileName, string args, bool openConsole)
         {
             var startInfo = CreateProcessStartInfo(fileName, openConsole);
