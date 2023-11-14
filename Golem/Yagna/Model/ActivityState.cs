@@ -28,4 +28,11 @@ namespace Golem.Model
 
         public string? ExeUnit { get; set; }
     }
+    
+    class TrackingEvent
+    {
+        public DateTime Ts { get; set; }
+
+        public List<ActivityState> Activities { get; set; } = new List<ActivityState>();
+    }
 }
