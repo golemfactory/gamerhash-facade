@@ -70,10 +70,6 @@ namespace Golem.Yagna
             }
         }
 
-        // public YagnaService(string golemPath)
-        // {
-        //     _yaExePath = Path.Combine(golemPath, "yagna.exe");
-
         public YagnaService(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
