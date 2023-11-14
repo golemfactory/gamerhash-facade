@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,23 +10,23 @@ namespace Golem.Yagna
 {
     public class ProcessFactory
     {
-        public static Process CreateProcess(string fileName, string args, bool openConsole, string exeUnitPath)
+        public static Process CreateProcess(string fileName, string args, bool openConsole, Dictionary<string, string> env)
         {
             var initStartInfo = () => CreateProcessStartInfo(fileName, args, openConsole);
-            return CreateProcess(fileName, initStartInfo, openConsole, exeUnitPath);
+            return CreateProcess(fileName, initStartInfo, env);
         }
 
-        public static Process CreateProcess(string fileName, List<string> args, bool openConsole, string exeUnitPath)
+        public static Process CreateProcess(string fileName, List<string> args, bool openConsole, Dictionary<string, string> env)
         {
             var initStartInfo = () => CreateProcessStartInfo(fileName, args, openConsole);
-            return CreateProcess(fileName, initStartInfo, openConsole, exeUnitPath);
+            return CreateProcess(fileName, initStartInfo, env);
         }
 
-        private static Process CreateProcess(string fileName, Func<ProcessStartInfo> initStartInfo, bool openConsole, string exeUnitPath)
+        private static Process CreateProcess(string fileName, Func<ProcessStartInfo> initStartInfo, Dictionary<string, string> env)
         {
             var startInfo = initStartInfo();
 
-            foreach (var (k, v) in GetEnvironmentVariables(exeUnitPath))
+            foreach (var (k, v) in env)
             {
                 startInfo.EnvironmentVariables.Add(k, v);
             }
@@ -42,10 +43,8 @@ namespace Golem.Yagna
         {
             var env = new Dictionary<string, string>
             {
-                { "YA_NET_RELAY_HOST", "127.0.0.1:17464" },
                 { "GSB_URL", "tcp://127.0.0.1:11501" },
                 { "YAGNA_API_URL", "http://127.0.0.1:11502" },
-                { "SUBNET", "testnet" },
                 { "YA_PAYMENT_NETWORK_GROUP", "testnet" },
                 { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
                 { "EXE_UNIT_PATH", exeUnitPath }
@@ -91,6 +90,18 @@ namespace Golem.Yagna
             }
 
             return startInfo;
+        }
+
+        public static string BinName(string name)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return Path.ChangeExtension(name, ".exe");
+            }
+            else
+            {
+                return Path.GetFileNameWithoutExtension(name);
+            }
         }
     }
 }

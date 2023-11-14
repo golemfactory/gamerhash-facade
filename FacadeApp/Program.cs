@@ -13,6 +13,8 @@ namespace FacadeApp
         public string? DataDir { get; set; }
     }
 
+
+
     internal class Program
     {
         static async Task Main(string[] args)
@@ -36,32 +38,41 @@ namespace FacadeApp
             logger.LogInformation("Path: " + golemPath);
             logger.LogInformation("DataDir: " + (dataDir ?? ""));
 
-            IGolem golem = new Golem.Golem(golemPath, dataDir, loggerFactory);
+            await using (var golem = new Golem.Golem(golemPath, dataDir, loggerFactory))
+            {
 
             golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
 
 
-            bool end = false;
+                bool end = false;
 
             do
             {
                 Console.WriteLine("Start/Stop/End?");
                 var line = Console.ReadLine();
 
-                switch (line)
-                {
-                    case "Start":
-                        await golem.Start();
-                        break;
-                    case "Stop":
-                        await golem.Stop();
-                        break;
-                    case "End":
-                        end = true;
-                        break;
-                    default: Console.WriteLine($"Didn't understand: {line}"); break;
-                }
-            } while (!end);
+                    switch (line)
+                    {
+                        case "Start":
+                            await golem.Start();
+                            break;
+                        case "Stop":
+                            await golem.Stop();
+                            break;
+                        case "End":
+                            end = true;
+                            break;
+
+                        case "Wallet":
+                            var walletAddress = golem.WalletAddress;
+                            golem.WalletAddress = walletAddress;
+                            Console.WriteLine($"Wallet: {walletAddress}");
+                            break;
+
+                        default: Console.WriteLine($"Didn't understand: {line}"); break;
+                    }
+                } while (!end);
+            }
 
             Console.WriteLine("Done");
         }

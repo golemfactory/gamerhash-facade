@@ -2,7 +2,7 @@
   "profiles": {
     "FacadeApp": {
       "commandName": "Project",
-      "commandLineArgs": "-g d:\\code\\yagna\\target\\debug"
+      "commandLineArgs": "-g /gome/skrotki/golem/gamerhash/modules"
     }
   }
 }

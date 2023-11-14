@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Golem;
+using Golem.GolemUI.Src;
 using Golem.Tools;
 using Golem.Yagna;
 using Golem.Yagna.Types;
@@ -22,6 +23,7 @@ namespace Golem
     {
         private YagnaService Yagna { get; set; }
         private Provider Provider { get; set; }
+        private ProviderConfigService ProviderConfig { get; set; }
 
         private Task? _activityLoop;
 
@@ -30,9 +32,21 @@ namespace Golem
 
         private readonly HttpClient _httpClient;
 
-        public GolemPrice Price { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public string WalletAddress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public uint NetworkSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        private GolemPrice price;
+        public GolemPrice Price
+        {
+            get
+            {
+                return price;
+            }
+            set
+            {
+                price = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public uint NetworkSpeed { get; set; }
 
 
         private GolemStatus status;
@@ -51,7 +65,23 @@ namespace Golem
 
         public IJob? CurrentJob { get; private set; }
 
-        public string NodeId => throw new NotImplementedException();
+        public string NodeId
+        {
+            get { return Yagna.Id?.NodeId ?? ""; }
+        }
+
+        public string WalletAddress
+        {
+            get
+            {
+                var walletAddress = ProviderConfig.WalletAddress;
+                if (walletAddress == null || walletAddress.Length == 0)
+                    walletAddress = Yagna.Id?.NodeId;
+                return walletAddress ?? "";
+            }
+
+            set => ProviderConfig.WalletAddress = value;
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -60,22 +90,22 @@ namespace Golem
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-        Task IGolem.BlacklistNode(string node_id)
+        public Task BlacklistNode(string node_id)
         {
             throw new NotImplementedException();
         }
 
-        Task<List<IJob>> IGolem.ListJobs(DateTime since)
+        public Task<List<IJob>> ListJobs(DateTime since)
         {
             throw new NotImplementedException();
         }
 
-        Task IGolem.Resume()
+        public Task Resume()
         {
             throw new NotImplementedException();
         }
 
-        async Task IGolem.Start()
+        public async Task Start()
         {
             Status = GolemStatus.Starting;
 
@@ -88,7 +118,7 @@ namespace Golem
 
             if (success)
             {
-                var defaultKey = Yagna.AppKeyService.Get("default");
+                var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
                 if (defaultKey is not null)
                 {
                     if (StartupProvider(yagnaOptions))
@@ -105,9 +135,12 @@ namespace Golem
             {
                 Status = GolemStatus.Error;
             }
+
+            OnPropertyChanged("WalletAddress");
+            OnPropertyChanged("NodeId");
         }
 
-        async Task IGolem.Stop()
+        public async Task Stop()
         {
             _logger.LogInformation("Stopping Golem");
             await Provider.Stop();
@@ -116,7 +149,7 @@ namespace Golem
             Status = GolemStatus.Off;
         }
 
-        Task<bool> IGolem.Suspend()
+        public Task<bool> Suspend()
         {
             throw new NotImplementedException();
         }
@@ -131,6 +164,7 @@ namespace Golem
 
             Yagna = new YagnaService(golemPath, yagna_datadir, loggerFactory);
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
+            ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork);
 
             _httpClient = new HttpClient
             {
@@ -153,6 +187,11 @@ namespace Golem
                 Yagna.BindErrorDataReceivedEvent(OnYagnaErrorDataRecv);
                 Yagna.BindOutputDataReceivedEvent(OnYagnaOutputDataRecv);
             }
+
+            if (!success)
+                return false;
+
+            var account = WalletAddress;
 
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
 
@@ -187,7 +226,9 @@ namespace Golem
                     //sanity check
                     if (meInfo != null)
                     {
-                        return meInfo.Identity != null;
+                        if (account == null || account.Length == 0)
+                            account = meInfo.Identity;
+                        break;
                     }
                     throw new Exception("Failed to get key");
 
@@ -198,14 +239,15 @@ namespace Golem
                 }
             }
 
+            Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
+
             return success;
         }
 
         public bool StartupProvider(YagnaStartupOptions yagnaOptions)
         {
-            var runtime_name = "ai-dummy";
-            var presets = Provider.ActivePresets;
-            if (!presets.Contains(runtime_name))
+            var presets = Provider.PresetConfig.ActivePresetsNames;
+            if (!presets.Contains(Provider.PresetConfig.DefaultPresetName))
             {
                 // Duration=0.0001 CPU=0.0001 "Init price=0.0000000000000001"
                 var coefs = new Dictionary<string, decimal>
@@ -214,18 +256,22 @@ namespace Golem
                     { "CPU", 0.0001m },
                     // { "Init price", 0.0000000000000001m },
                 };
-                var preset = new Preset(runtime_name, runtime_name, coefs);
+                // name "ai" as defined in plugins/*.json
+                var preset = new Preset(Provider.PresetConfig.DefaultPresetName, "ai-dummy", coefs);
 
-                Provider.AddPreset(preset, out string args, out string info);
+                Provider.PresetConfig.AddPreset(preset, out string args, out string info);
                 Console.WriteLine($"Args {args}");
                 Console.WriteLine($"Args {info}");
 
             }
-            Provider.ActivatePreset(runtime_name);
-            Provider.DeactivatePreset("default");
-            var updated_presets = Provider.Presets.ConvertAll<string>(p => p.Name);
-            foreach (string preset in updated_presets)
+            Provider.PresetConfig.ActivatePreset(Provider.PresetConfig.DefaultPresetName);
+
+            foreach (string preset in presets)
             {
+                if (preset != Provider.PresetConfig.DefaultPresetName)
+                {
+                    Provider.PresetConfig.DeactivatePreset(preset);
+                }
                 Console.WriteLine($"Preset {preset}");
             }
 
@@ -234,7 +280,7 @@ namespace Golem
 
         void OnYagnaErrorDataRecv(object sender, DataReceivedEventArgs e)
         {
-            Console.WriteLine($"[Error]: {e.Data}");
+            Console.WriteLine($"{e.Data}");
         }
         void OnYagnaOutputDataRecv(object sender, DataReceivedEventArgs e)
         {

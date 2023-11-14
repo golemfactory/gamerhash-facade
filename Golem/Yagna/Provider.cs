@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem.Yagna
 {
-    //[JsonObject(MemberSerialization.OptIn)]
     public class ExeUnitDesc
     {
         [JsonPropertyName("name")]
@@ -36,7 +35,6 @@ namespace Golem.Yagna
         public object? Properties { get; set; }
     }
 
-    //[JsonObject(MemberSerialization.OptIn)]
     public class Config
     {
         [JsonPropertyName("node_name")]
@@ -47,32 +45,9 @@ namespace Golem.Yagna
 
         [JsonPropertyName("account")]
         public string? Account { get; set; }
-
     }
 
-    public class Preset
-    {
-        [JsonConstructor]
-        public Preset(string name, string exeunitName, Dictionary<string, decimal> usageCoeffs)
-        {
-            Name = name;
-            ExeunitName = exeunitName;
-            PricingModel = "linear";
-            UsageCoeffs = usageCoeffs;
-        }
 
-        [JsonPropertyName("name")]
-        public string Name { get; set; }
-
-        [JsonPropertyName("exeunit-name")]
-        public string ExeunitName { get; set; }
-
-        [JsonPropertyName("pricing-model")]
-        public string? PricingModel { get; set; }
-
-        [JsonPropertyName("usage-coeffs")]
-        public Dictionary<string, decimal> UsageCoeffs { get; set; }
-    }
     public class Profile
     {
         [JsonConstructor]
@@ -93,24 +68,51 @@ namespace Golem.Yagna
         [JsonPropertyName("storage_gib")]
         public double StorageGib { get; set; }
     }
+
     public class Provider
     {
+        public PresetConfigService PresetConfig { get; set; }
+
         private readonly string _yaProviderPath;
         private readonly string _pluginsPath;
         private readonly string _exeUnitsPath;
         private readonly string? _dataDir;
 
+        private Dictionary<string, string> _env;
+        private Dictionary<string, string> Env
+        {
+            get
+            {
+                if (_env.Count == 0)
+                {
+                    var builder = new EnvironmentBuilder()
+                                        .WithExeUnitPath(_exeUnitsPath);
+
+                    if (_dataDir != null)
+                        builder = builder.WithDataDir(_dataDir);
+
+                    _env = builder.Build();
+                }
+                return _env;
+            }
+        }
+
         private readonly ILogger? _logger;
+
+
         private static Process? ProviderProcess { get; set; }
 
         public Provider(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<Provider>();
-            _yaProviderPath = Path.Combine(golemPath, "ya-provider.exe");
+            _yaProviderPath = Path.Combine(golemPath, ProcessFactory.BinName("ya-provider"));
             _pluginsPath = Path.Combine(golemPath, "..", "plugins");
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");
             _dataDir = dataDir;
+            _env = new Dictionary<string, string>();
+
+            PresetConfig = new PresetConfigService(this);
 
             if (!File.Exists(_yaProviderPath))
             {
@@ -123,7 +125,7 @@ namespace Golem.Yagna
 
         }
 
-        private T? Exec<T>(string arguments) where T : class
+        internal T? Exec<T>(string arguments) where T : class
         {
             var text = this.ExecToText(arguments);
             var options = new JsonSerializerOptionsBuilder()
@@ -132,14 +134,25 @@ namespace Golem.Yagna
             return JsonSerializer.Deserialize<T>(text, options);
         }
 
-        private string ExecToText(string arguments)
+        internal string ExecToText(string arguments)
         {
             _logger?.LogInformation("Executing: provider {0}", arguments);
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, _exeUnitsPath);
-            if (_dataDir != null)
+
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, Env);
+            try
             {
-                process.StartInfo.EnvironmentVariables["DATA_DIR"] = _dataDir;
+                return ExecToText(process);
             }
+            catch (IOException e)
+            {
+                _logger?.LogError(e, "failed to execute {0}", arguments);
+                throw e;
+            }
+        }
+        internal string ExecToText(List<string> arguments)
+        {
+            _logger?.LogInformation($"Executing: provider {string.Join(", ", arguments)}");
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, Env);
             try
             {
                 return ExecToText(process);
@@ -215,15 +228,6 @@ namespace Golem.Yagna
             }
         }
 
-        public List<Preset> Presets
-        {
-            get
-            {
-                return this.Exec<List<Preset>>("--json preset list") ?? new List<Preset>();
-            }
-        }
-
-        public PresetCmd Preset => new PresetCmd(this);
         public Profile? DefaultProfile
         {
             get
@@ -237,48 +241,6 @@ namespace Golem.Yagna
             this.ExecToText("profile update " + param + " " + value + " default");
         }
 
-        public IList<string> ActivePresets
-        {
-            get
-            {
-                return this.Exec<List<string>>("--json preset active") ?? new List<string>();
-            }
-        }
-
-        // public IList<Preset>? ListPresets
-        // {
-        //     get
-        //     {
-        //         return this.ExecToType<Preset>($"preset list --json");
-        //     }
-        // }
-
-        public string ActivatePreset(string presetName)
-        {
-            return this.ExecToText($"preset activate {presetName}");
-        }
-        public void DeactivatePreset(string presetName)
-        {
-            this.ExecToText($"preset deactivate {presetName}");
-        }
-
-        public void AddPreset(Preset preset, out string args, out string info)
-        {
-            StringBuilder cmd = new StringBuilder("preset create --no-interactive", 60);
-
-            cmd.Append(" --preset-name \"").Append(preset.Name).Append('"');
-            cmd.Append(" --exe-unit \"").Append(preset.ExeunitName).Append('"');
-            if (preset.PricingModel != null)
-            {
-                foreach (KeyValuePair<string, decimal> kv in preset.UsageCoeffs)
-                {
-                    cmd.Append(" --price ").Append(kv.Key).Append("=").Append(kv.Value.ToString(CultureInfo.InvariantCulture));
-                }
-            }
-            args = cmd.ToString();
-            info = this.ExecToText(cmd.ToString());
-        }
-
         public bool Run(string appKey, Network network, string? yagnaApiUrl, bool openConsole = false, bool enableDebugLogs = false)
         {
             string debugSwitch = "";
@@ -288,14 +250,10 @@ namespace Golem.Yagna
             }
             var arguments = $"run {debugSwitch}--payment-network {network.Id}";
 
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, openConsole, _exeUnitsPath);
+            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, openConsole, Env);
 
             process.StartInfo.EnvironmentVariables["MIN_AGREEMENT_EXPIRATION"] = "30s";
 
-            if (_dataDir != null)
-            {
-                process.StartInfo.EnvironmentVariables["DATA_DIR"] = _dataDir;
-            }
             process.StartInfo.EnvironmentVariables["YAGNA_APPKEY"] = appKey;
 
             if (process.Start())
@@ -314,39 +272,7 @@ namespace Golem.Yagna
 
             ProviderProcess.Kill(true);
             await ProviderProcess.WaitForExitAsync();
-        }
-
-        public class PresetCmd
-        {
-            private Provider _parent;
-
-            internal PresetCmd(Provider parent)
-            {
-                _parent = parent;
-            }
-
-            public PresetInstanceCmd this[string name] => new PresetInstanceCmd(_parent, name);
-
-
-        }
-        public class PresetInstanceCmd
-        {
-            private Provider _parent;
-            private string _name;
-
-            internal PresetInstanceCmd(Provider parent, string name)
-            {
-                _parent = parent;
-                _name = name;
-            }
-
-            public void UpdatePrices(IDictionary<string, decimal> prices)
-            {
-                var pargs = String.Join(" ", from e in prices select $"--price {e.Key}={e.Value.ToString(CultureInfo.InvariantCulture)}");
-
-                string args = $"preset update --no-interactive {_name} {pargs}";
-                var _result = _parent.ExecToText(args);
-            }
+            ProviderProcess = null;
         }
     }
 }

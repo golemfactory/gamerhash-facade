@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Golem.Tests
 {
+    [Collection("Sequential")]
     public class GolemTests
     {
-        string golemPath = "d:\\code\\yagna\\target\\debug";
         ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
                builder.AddSimpleConsole(options => options.SingleLine = true)
             );
@@ -16,8 +16,10 @@ namespace Golem.Tests
         [Fact]
         public async Task StartStop_VerifyStatusAsync()
         {
+            string golemPath = await PackageBuilder.BuildTestDirectory("StartStop_VerifyStatusAsync");
             Console.WriteLine("Path: " + golemPath);
-            IGolem golem = new Golem(golemPath, null, loggerFactory);
+
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
@@ -30,22 +32,29 @@ namespace Golem.Tests
             await golem.Start();
 
             Assert.Equal(GolemStatus.Ready, status);
-
-            Console.WriteLine("Sleep for a second.");
-            Thread.Sleep(1_000);
-
             await golem.Stop();
 
             Assert.Equal(GolemStatus.Off, status);
         }
 
         [Fact]
-        public async Task Job_verifyStatusAsync()
+        public async Task TestDownloadArtifacts()
         {
-            Console.WriteLine("Path: " + golemPath);
-            var logger = loggerFactory.CreateLogger(nameof(GolemTests));
-            IGolem golem = new Golem(golemPath, null, loggerFactory);
+            var dir = await PackageBuilder.BuildTestDirectory("TestDownloadArtifacts");
 
+            Assert.True(Directory.EnumerateFiles(dir, "modules/golem/yagna*").Any());
+            Assert.True(Directory.EnumerateFiles(dir, "modules/golem/ya-provider*").Any());
+            Assert.True(Directory.EnumerateFiles(dir, "modules/plugins/ya-runtime-ai*").Any());
+            Assert.True(Directory.EnumerateFiles(dir, "modules/plugins/dummy*").Any());
+        }
+
+        [Fact]
+        public async Task Start_ChangeWallet_VerifyStatusAsync()
+        {
+            string golemPath = await PackageBuilder.BuildTestDirectory("Start_ChangeWallet_VerifyStatusAsync");
+            Console.WriteLine("Path: " + golemPath);
+
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
@@ -57,28 +66,7 @@ namespace Golem.Tests
 
             await golem.Start();
 
-            Assert.Equal(GolemStatus.Ready, status);
-            Assert.Null(golem.CurrentJob);
-
-            Console.WriteLine("Sleep for a second.");
-            Thread.Sleep(1_000);
-
-            //TODO: start job
-
-            var current_job = golem.CurrentJob;
-            Assert.NotNull(current_job);
-            Console.WriteLine("{}", current_job.Status);
-
-            IJob? job = null;
-            Action<IJob> update_Job = (v) =>
-            {
-                job = v;
-            };
-            golem.PropertyChanged += new PropertyChangedHandler<IJob>(nameof(job), update_Job).Subscribe();
-
-            Assert.NotNull(job);
-
-            //TODO: stop job
+            golem.WalletAddress = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
 
             await golem.Stop();
 
