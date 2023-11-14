@@ -189,9 +189,6 @@ namespace Golem
 
             Thread.Sleep(700);
 
-            //TODO what if activityLoop != null?
-            this._activityLoop = StartActivityLoop();
-
             //yagna is starting and /me won't work until all services are running
             for (int tries = 0; tries < 300; ++tries)
             {
@@ -230,6 +227,9 @@ namespace Golem
                     // consciously swallow the exception... presumably REST call error...
                 }
             }
+
+            //TODO what if activityLoop != null?
+            this._activityLoop = StartActivityLoop();
 
             Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
 
