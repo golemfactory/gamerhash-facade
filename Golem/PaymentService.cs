@@ -23,11 +23,7 @@ namespace Golem
         private readonly ProviderConfigService _providerConfig;
         private Golem _golem;
         private ILogger<PaymentService> _logger;
-
-        public DateTime? LastSuccessfullRefresh { get; private set; } = null;
-
         public event PropertyChangedEventHandler? PropertyChanged;
-        private bool _shouldCheckForInternalWallet = true;
 
         public PaymentService(Network network, YagnaService yagna, Golem golem, ProviderConfigService providerConfig, ILogger<PaymentService> logger)
         {

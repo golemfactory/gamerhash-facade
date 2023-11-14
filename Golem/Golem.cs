@@ -19,6 +19,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
+    
+
     public class Golem : IGolem, IAsyncDisposable
     {
         private YagnaService Yagna { get; set; }
@@ -32,20 +34,8 @@ namespace Golem
 
         private readonly HttpClient _httpClient;
 
-        private GolemPrice price;
-        public GolemPrice Price
-        {
-            get
-            {
-                return price;
-            }
-            set
-            {
-                price = value;
-                OnPropertyChanged();
-            }
-        }
-
+        public GolemPrice Price { get; set; } = new GolemPrice();
+        
         public uint NetworkSpeed { get; set; }
 
         private GolemStatus status;
@@ -77,7 +67,10 @@ namespace Golem
                 return walletAddress ?? "";
             }
 
-            set => ProviderConfig.WalletAddress = value;
+            set
+            {
+                ProviderConfig.WalletAddress = value;
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
