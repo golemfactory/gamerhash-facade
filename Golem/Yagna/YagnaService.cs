@@ -3,6 +3,9 @@ using Golem.Yagna.Types;
 using System.Text.Json;
 using Golem.Tools;
 using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace Golem.Yagna
 {
@@ -53,9 +56,10 @@ namespace Golem.Yagna
 
     public class YagnaService
     {
-        private string _yaExePath;
+        private readonly string _yaExePath;
         private readonly string? _dataDir;
         private static Process? YagnaProcess { get; set; }
+        private readonly ILogger? _logger;
 
         private EnvironmentBuilder Env
         {
@@ -70,8 +74,11 @@ namespace Golem.Yagna
         // {
         //     _yaExePath = Path.Combine(golemPath, "yagna.exe");
 
-        public YagnaService(string golemPath, string? dataDir)
+        public YagnaService(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
+            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            _logger =  loggerFactory.CreateLogger<YagnaService>();
+            
             _yaExePath = Path.Combine(golemPath, ProcessFactory.BinName("yagna"));
             _dataDir = dataDir;
             if (!File.Exists(_yaExePath))
@@ -275,8 +282,8 @@ namespace Golem.Yagna
 
     public class AppKeyService
     {
-        private YagnaService _yagnaService;
-        private string? _id;
+        private readonly YagnaService _yagnaService;
+        private readonly string? _id;
 
         internal AppKeyService(YagnaService yagnaService, string? id)
         {
@@ -379,7 +386,7 @@ namespace Golem.Yagna
 
     public class IdService
     {
-        YagnaService _yagna;
+        readonly YagnaService _yagna;
 
         internal IdService(YagnaService yagna)
         {
@@ -396,7 +403,7 @@ namespace Golem.Yagna
 
     public class PaymentService
     {
-        YagnaService _yagna;
+        readonly YagnaService _yagna;
 
         internal PaymentService(YagnaService yagna)
         {

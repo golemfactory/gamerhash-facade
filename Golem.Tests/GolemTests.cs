@@ -2,19 +2,24 @@ using Golem;
 using Golem.IntegrationTests.Tools;
 using GolemLib;
 using GolemLib.Types;
+using Microsoft.Extensions.Logging;
 
 namespace Golem.Tests
 {
     [Collection("Sequential")]
     public class GolemTests
     {
+        readonly ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+               builder.AddSimpleConsole(options => options.SingleLine = true)
+            );
+
         [Fact]
         public async Task StartStop_VerifyStatusAsync()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory("StartStop_VerifyStatusAsync");
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath));
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
@@ -49,7 +54,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory("Start_ChangeWallet_VerifyStatusAsync");
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath));
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>

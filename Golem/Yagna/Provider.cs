@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using Golem.Tools;
 using System.Text.Json;
 using System.Linq;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem.Yagna
 {
@@ -101,11 +102,12 @@ namespace Golem.Yagna
 
         private static Process? ProviderProcess { get; set; }
 
-        public Provider(string golemPath, string? dataDir, ILogger? logger = null)
+        public Provider(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
-            _logger = logger;
+            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            _logger = loggerFactory.CreateLogger<Provider>();
             _yaProviderPath = Path.Combine(golemPath, ProcessFactory.BinName("ya-provider"));
-            _pluginsPath = Path.Combine(golemPath, "../plugins");
+            _pluginsPath = Path.Combine(golemPath, "..", "plugins");
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");
             _dataDir = dataDir;
             _env = new Dictionary<string, string>();
@@ -161,6 +163,7 @@ namespace Golem.Yagna
                 throw e;
             }
         }
+
         private string ExecToText(Process process)
         {
             process.Start();
@@ -236,8 +239,6 @@ namespace Golem.Yagna
 
             process.StartInfo.EnvironmentVariables["YAGNA_APPKEY"] = appKey;
 
-            //startInfo.EnvironmentVariables.Add("YA_NET_RELAY_HOST", "127.0.0.1:17464");
-
             if (process.Start())
             {
                 ProviderProcess = process;
@@ -258,4 +259,3 @@ namespace Golem.Yagna
         }
     }
 }
-

@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 
 namespace Golem.Tools
 {
-    public class DateTimeJsonConverter: JsonConverter<DateTime>
+    public class DateTimeJsonConverter : JsonConverter<DateTime>
     {
-        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override DateTime Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
         {
             Debug.Assert(typeToConvert == typeof(DateTime));
             var token = reader.GetString();

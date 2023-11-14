@@ -1,47 +1,40 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "C#: MockGUI Debug",
-            "type": "dotnet",
-            "request": "launch",
-            "projectPath": "${workspaceFolder}/MockGUI/MockGUI.csproj",
-            "preLaunchTask": "build",
-        },
-        {
-            // Use IntelliSense to find out which attributes exist for C# debugging
-            // Use hover for the description of the existing attributes
-            // For further information visit https://github.com/dotnet/vscode-csharp/blob/main/debugger-launchjson.md
-            "name": "MockGUI",
+            "name": "GUI",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/MockGUI/bin/Debug/net7.0/MockGUI.dll",
-            "args": ["-g", "/home/skrotki/golem/gamerhash/modules"],
-            "cwd": "${workspaceFolder}/MockGUI",
+            "args": ["--golem", "modules"],
+            "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
-            "stopAtEntry": false
+            "stopAtEntry": false,
+            "env": {
+                // "Logging__LogLevel__Default": "Debug",
+                // "Logging__LogLevel__Microsoft": "Information"
+                "YA_NET_RELAY_HOST": "127.0.0.1:17464"
+            }
         },
         {
-            // Use IntelliSense to find out which attributes exist for C# debugging
-            // Use hover for the description of the existing attributes
-            // For further information visit https://github.com/dotnet/vscode-csharp/blob/main/debugger-launchjson.md
-            "name": ".NET Core Launch (console)",
+            "name": "CLI",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/FacadeApp/bin/Debug/net7.0/FacadeApp.dll",
-            "args": ["-g", "/home/skrotki/golem/gamerhash/modules"],
-            "cwd": "${workspaceFolder}/FacadeApp",
+            "args": ["--golem", "modules/golem", "--data_dir", "modules/golem-data"],
+            "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
-            "stopAtEntry": false
+            "stopAtEntry": false,
+            "env": {
+                // "Logging__LogLevel__Default": "Debug",
+                // "Logging__LogLevel__Microsoft": "Information"
+            }
         },
         {
             "name": ".NET Core Attach",

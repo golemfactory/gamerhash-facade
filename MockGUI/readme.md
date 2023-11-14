@@ -2,12 +2,15 @@
 
 ## Running
 
-`dotnet run --golem /home/nieznanysprawiciel/.local/share/GamerHash/modules/`
+```sh
+./modules.sh .exe;
+dotnet run --golem modules`
+```
 
 Application requires following directory structure:
 
 ```
-GamerHash/
+gamerhash-facade/
 └── modules
     ├── golem
     │   ├── yagna.exe

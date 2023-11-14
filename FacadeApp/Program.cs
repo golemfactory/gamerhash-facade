@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using CommandLine;
 using GolemLib;
+using Microsoft.Extensions.Logging;
 
 namespace FacadeApp
 {
@@ -18,6 +19,12 @@ namespace FacadeApp
     {
         static async Task Main(string[] args)
         {
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+               builder.AddSimpleConsole()
+            );
+
+            var logger = loggerFactory.CreateLogger<Program>();
+
             string golemPath = "";
             string? dataDir = null;
 
@@ -28,21 +35,21 @@ namespace FacadeApp
                    dataDir = o.DataDir;
                });
 
-            Console.WriteLine("Path: " + golemPath);
-            Console.WriteLine("DataDir: " + (dataDir ?? ""));
+            logger.LogInformation("Path: " + golemPath);
+            logger.LogInformation("DataDir: " + (dataDir ?? ""));
 
-            await using (var golem = new Golem.Golem(golemPath, dataDir))
+            await using (var golem = new Golem.Golem(golemPath, dataDir, loggerFactory))
             {
 
-                golem.PropertyChanged += PropertyChangedHandler.For(nameof(IGolem.Status));
+            golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
 
 
                 bool end = false;
 
-                do
-                {
-                    Console.WriteLine("Star/Stop/End?");
-                    var line = Console.ReadLine();
+            do
+            {
+                Console.WriteLine("Start/Stop/End?");
+                var line = Console.ReadLine();
 
                     switch (line)
                     {
@@ -73,24 +80,42 @@ namespace FacadeApp
 
     public class PropertyChangedHandler
     {
-        public static PropertyChangedEventHandler For(string name)
+
+        public PropertyChangedHandler(ILogger logger)
         {
-            switch(name)
-            {
-                case "Status": return Status_PropertyChangedHandler;
-            }
-            throw new NotSupportedException($"PropertyChangedHandler not implemented for {name}");
+            this.logger = logger;
         }
 
-        private static void Status_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
+        readonly ILogger logger;
+        public PropertyChangedEventHandler For(string name)
+        {
+            switch (name)
+            {
+                case "Status": return Status_PropertyChangedHandler;
+                case "Activities": return Activities_PropertyChangedHandler;
+                default: return Empty_PropertyChangedHandler; 
+            }
+        }
+
+        private void Status_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
         {
             if (sender is not Golem.Golem golem || e.PropertyName != "Status")
-                throw new NotSupportedException($"Type or {e.PropertyName} is not supported in this context");
+                logger.LogError($"Type or {e.PropertyName} is not supported in this context");
+            else
+                logger.LogInformation($"Status property has changed: {e.PropertyName} to {golem.Status}");
+        }
 
-            Console.WriteLine($"Property has changed: {e.PropertyName} to {golem.Status}");
+        private void Activities_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not Golem.Golem golem || e.PropertyName != "Activities")
+                logger.LogError($"Type or {e.PropertyName} is not supported in this context");
+            else
+                logger.LogInformation($"Activities property has changed: {e.PropertyName}. Current job: {golem.CurrentJob}");
+        }
+
+        private void Empty_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
+        {
+            logger.LogInformation($"Property {e} is not supported in this context");
         }
     }
 }
-
-
-

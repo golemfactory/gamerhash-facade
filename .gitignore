@@ -1,6 +1,5 @@
 /.vs
 /.idea
-/.vscode
 GolemLib/bin/
 GolemLib/obj/
 Mock/bin/
@@ -14,3 +13,4 @@ Mock/obj/
 /Golem.Tests/tests/
 /MockGUI/bin/
 /MockGUI/obj/
+/modules/

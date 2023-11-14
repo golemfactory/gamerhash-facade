@@ -2,7 +2,10 @@
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Golem;
 using Golem.GolemUI.Src;
 using Golem.Tools;
@@ -10,6 +13,9 @@ using Golem.Yagna;
 using Golem.Yagna.Types;
 using GolemLib;
 using GolemLib.Types;
+using Golem.Model;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
@@ -19,7 +25,12 @@ namespace Golem
         private Provider Provider { get; set; }
         private ProviderConfigService ProviderConfig { get; set; }
 
-        private readonly HttpClient HttpClient;
+        private Task? _activityLoop;
+
+        private readonly ILogger _logger;
+        private readonly CancellationTokenSource _tokenSource;
+
+        private readonly HttpClient _httpClient;
 
         private GolemPrice price;
         public GolemPrice Price
@@ -37,15 +48,19 @@ namespace Golem
 
         public uint NetworkSpeed { get; set; }
 
-
         private GolemStatus status;
+
         public GolemStatus Status
         {
             get { return status; }
-            set { status = value; OnPropertyChanged(); }
+            set
+            {
+                status = value;
+                OnPropertyChanged();
+            }
         }
 
-        public IJob? CurrentJob => null;
+        public IJob? CurrentJob { get; private set; }
 
         public string NodeId
         {
@@ -93,6 +108,7 @@ namespace Golem
 
             bool openConsole = false;
 
+
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
             var success = await StartupYagnaAsync(yagnaOptions);
@@ -123,8 +139,10 @@ namespace Golem
 
         public async Task Stop()
         {
+            _logger.LogInformation("Stopping Golem");
             await Provider.Stop();
             await Yagna.Stop();
+            _tokenSource.Cancel();
             Status = GolemStatus.Off;
         }
 
@@ -133,16 +151,20 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Golem(string golemPath, string? dataDir)
+        public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
             var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : null;
             var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : null;
+            loggerFactory ??= NullLoggerFactory.Instance;
+            
+            _logger = loggerFactory.CreateLogger<Golem>();
+            _tokenSource = new CancellationTokenSource();
 
-            Yagna = new YagnaService(golemPath, yagna_datadir);
-            Provider = new Provider(golemPath, prov_datadir);
+            Yagna = new YagnaService(golemPath, yagna_datadir, loggerFactory);
+            Provider = new Provider(golemPath, prov_datadir, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork);
 
-            HttpClient = new HttpClient
+            _httpClient = new HttpClient
             {
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
@@ -163,7 +185,7 @@ namespace Golem
 
             var account = WalletAddress;
 
-            HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
 
             Thread.Sleep(700);
 
@@ -179,7 +201,7 @@ namespace Golem
 
                 try
                 {
-                    var response = HttpClient.GetAsync($"/me").Result;
+                    var response = _httpClient.GetAsync($"/me").Result;
                     if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     {
                         throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
@@ -206,6 +228,9 @@ namespace Golem
                 }
             }
 
+            //TODO what if activityLoop != null?
+            this._activityLoop = StartActivityLoop();
+
             Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
 
             return success;
@@ -221,10 +246,10 @@ namespace Golem
                 {
                     { "Duration", 0.0001m },
                     { "CPU", 0.0001m },
-                    //{ "Init price", 0.0000000000000001m }
+                    // { "Init price", 0.0000000000000001m },
                 };
                 // name "ai" as defined in plugins/*.json
-                var preset = new Preset(Provider.PresetConfig.DefaultPresetName, "ai", coefs);
+                var preset = new Preset(Provider.PresetConfig.DefaultPresetName, "ai-dummy", coefs);
 
                 Provider.PresetConfig.AddPreset(preset, out string args, out string info);
                 Console.WriteLine($"Args {args}");
@@ -254,9 +279,30 @@ namespace Golem
             Console.WriteLine($"[Data]: {e.Data}");
         }
 
+        private Task StartActivityLoop()
+        {
+            var token = _tokenSource.Token;
+            token.Register(_httpClient.CancelPendingRequests);
+            return new ActivityLoop(_httpClient, token, _logger).Start(EmitJobEvent);
+        }
+
+        private void EmitJobEvent(Job? job)
+        {
+            if (CurrentJob != job)
+            {
+                CurrentJob = job;
+                _logger.LogInformation("New job: {}", job);
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentJob)));
+            }
+            else
+            {
+                _logger.LogInformation("Job has not changed.");
+            }
+        }
+
         public async ValueTask DisposeAsync()
         {
-            await Stop();
+            await (this as IGolem).Stop();
         }
     }
 }

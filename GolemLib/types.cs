@@ -32,8 +32,11 @@ public class GolemUsage : GolemPrice
 
 public enum JobStatus
 {
+    // everyting but the ones below
     Idle,
+    // initialized -> deployed == downloading
     DownloadingModel,
+    // now Computing == Read. Todo, later (exe-unit when receiving GSB request (the ones which gets translated to http request) will set computing state)
     Computing,
     Finished,
 }

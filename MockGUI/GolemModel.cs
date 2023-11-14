@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using GolemLib;
+using Microsoft.Extensions.Logging;
 
 namespace MockGUI.ViewModels
 {
@@ -30,10 +31,14 @@ namespace MockGUI.ViewModels
 
         public GolemViewModel(string modulesDir)
         {
+            ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+               builder.AddSimpleConsole()
+            );
+            
             var binaries = Path.Combine(modulesDir, "golem");
             var datadir = Path.Combine(modulesDir, "golem-data");
 
-            Golem = new Golem.Golem(binaries, datadir);
+            Golem = new Golem.Golem(binaries, datadir, loggerFactory);
             _jobsHistory = new ObservableCollection<IJob>();
         }
 
@@ -70,6 +75,3 @@ namespace MockGUI.ViewModels
         }
     }
 }
-
-
-
