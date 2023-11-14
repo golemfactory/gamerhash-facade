@@ -56,7 +56,7 @@ namespace Golem.Yagna
 
     public class YagnaService
     {
-        private string _yaExePath;
+        private readonly string _yaExePath;
         private readonly string? _dataDir;
         private static Process? YagnaProcess { get; set; }
         private readonly ILogger? _logger;
@@ -282,8 +282,8 @@ namespace Golem.Yagna
 
     public class AppKeyService
     {
-        private YagnaService _yagnaService;
-        private string? _id;
+        private readonly YagnaService _yagnaService;
+        private readonly string? _id;
 
         internal AppKeyService(YagnaService yagnaService, string? id)
         {
@@ -386,7 +386,7 @@ namespace Golem.Yagna
 
     public class IdService
     {
-        YagnaService _yagna;
+        readonly YagnaService _yagna;
 
         internal IdService(YagnaService yagna)
         {
@@ -403,7 +403,7 @@ namespace Golem.Yagna
 
     public class PaymentService
     {
-        YagnaService _yagna;
+        readonly YagnaService _yagna;
 
         internal PaymentService(YagnaService yagna)
         {

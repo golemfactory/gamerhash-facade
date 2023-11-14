@@ -27,7 +27,7 @@ namespace Golem
 
         private Task? _activityLoop;
 
-        private readonly ILogger? _logger;
+        private readonly ILogger _logger;
         private readonly CancellationTokenSource _tokenSource;
 
         private readonly HttpClient _httpClient;
@@ -48,10 +48,7 @@ namespace Golem
 
         public uint NetworkSpeed { get; set; }
 
-
         private GolemStatus status;
-        private readonly string golemPath;
-        private readonly ILoggerFactory loggerFactory;
 
         public GolemStatus Status
         {
@@ -156,9 +153,10 @@ namespace Golem
 
         public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
-            var prov_datadir = Path.Combine(dataDir, "provider");
-            var yagna_datadir = Path.Combine(dataDir, "yagna");
-            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : null;
+            var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : null;
+            loggerFactory ??= NullLoggerFactory.Instance;
+            
             _logger = loggerFactory.CreateLogger<Golem>();
             _tokenSource = new CancellationTokenSource();
 
@@ -170,12 +168,6 @@ namespace Golem
             {
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
-        }
-
-        public Golem(string golemPath, ILoggerFactory loggerFactory)
-        {
-            this.golemPath = golemPath;
-            this.loggerFactory = loggerFactory;
         }
 
         private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions)
@@ -306,12 +298,12 @@ namespace Golem
             if (CurrentJob != job)
             {
                 CurrentJob = job;
-                _logger?.LogInformation("New job: {}", job);
+                _logger.LogInformation("New job: {}", job);
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentJob)));
             }
             else
             {
-                _logger?.LogInformation("Job has not changed.");
+                _logger.LogInformation("Job has not changed.");
             }
         }
 
@@ -325,7 +317,7 @@ namespace Golem
             }
             catch (Exception ex)
             {
-                _logger?.LogError("Failed to get agreement {}. Err: {}", agreementID, ex.Message);
+                _logger.LogError("Failed to get agreement {}. Err: {}", agreementID, ex.Message);
                 return null;
             }
         }
@@ -360,14 +352,14 @@ namespace Golem
 
             public async Task Start(Action<Job?> EmitJobEvent)
             {
-                _logger?.LogInformation("Starting monitoring activities");
+                _logger.LogInformation("Starting monitoring activities");
 
                 DateTime newReconnect = DateTime.Now;
                 try
                 {
                     while (!_token.IsCancellationRequested)
                     {
-                        _logger?.LogInformation("Monitoring activities");
+                        _logger.LogInformation("Monitoring activities");
                         var now = DateTime.Now;
                         if (newReconnect > now)
                         {
@@ -386,15 +378,15 @@ namespace Golem
 
                             await foreach (string json in EnumerateMessages(reader).WithCancellation(_token))
                             {
-                                _logger?.LogInformation("got json {0}", json);
+                                _logger.LogInformation("got json {0}", json);
                                 var activity_state = parseMessage(json);
-                                if (activity_state == null)
+                                if (activity_state == null || activity_state.AgreementId == null)
                                 {
                                     EmitJobEvent(null);
                                     continue;
                                 }
                                 var agreement = await GetAgreement(activity_state.AgreementId);
-                                if (agreement == null)
+                                if (agreement == null || agreement.Demand?.RequestorId == null)
                                 {
                                     EmitJobEvent(null);
                                     continue;
@@ -402,7 +394,7 @@ namespace Golem
                                 var new_job = new Job()
                                 {
                                     Id = activity_state.AgreementId,
-                                    RequestorId = agreement.Demand.RequestorId
+                                    RequestorId = agreement.Demand.RequestorId,
                                 };
                                 EmitJobEvent(new_job);
 
@@ -410,13 +402,13 @@ namespace Golem
                         }
                         catch (Exception e)
                         {
-                            _logger?.LogError(e, "Activity request failure");
+                            _logger.LogError(e, "Activity request failure");
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    _logger?.LogError(e, "Activity monitoring loop failure");
+                    _logger.LogError(e, "Activity monitoring loop failure");
                 }
                 finally
                 {
@@ -432,32 +424,32 @@ namespace Golem
                     var _activities = trackingEvent?.Activities ?? new List<ActivityState>();
                     if (!_activities.Any())
                     {
-                        _logger?.LogInformation("No activities");
+                        _logger.LogInformation("No activities");
                         return null;
                     }
                     var _active_activities = _activities.FindAll(activity => activity.State != ActivityState.StateType.Terminated);
                     if (!_active_activities.Any())
                     {
-                        _logger?.LogInformation("All activities terminated: {}", _activities);
+                        _logger.LogInformation("All activities terminated: {}", _activities);
                         return null;
                     }
                     if (_active_activities.Count > 1)
                     {
-                        _logger?.LogWarning("Multiple non terminated activities: {}", _active_activities);
+                        _logger.LogWarning("Multiple non terminated activities: {}", _active_activities);
                         //TODO what now?
                     }
                     //TODO take latest? the one with specific status?
                     ActivityState _activity = _activities.First();
                     if (_activity.AgreementId == null)
                     {
-                        _logger?.LogInformation("Activity without agreement id: {}", _activity);
+                        _logger.LogInformation("Activity without agreement id: {}", _activity);
                         return null;
                     }
                     return _activity;
                 }
                 catch (JsonException e)
                 {
-                    _logger?.LogError(e, "Invalid monitoring event: {0}", message);
+                    _logger.LogError(e, "Invalid monitoring event: {0}", message);
                     return null;
                 }
             }
@@ -469,23 +461,23 @@ namespace Golem
                 {
                     try
                     {
-                        String line;
+                        String? line;
                         while (!String.IsNullOrEmpty(line = await reader.ReadLineAsync()))
                         {
                             if (line.StartsWith(_dataPrefix))
                             {
                                 messageBuilder.Append(line.Substring(_dataPrefix.Length).TrimStart());
-                                _logger?.LogInformation("got line {0}", line);
+                                _logger.LogInformation("got line {0}", line);
                             }
                             else
                             {
-                                _logger?.LogError("Unable to deserialize message: {}", line);
+                                _logger.LogError("Unable to deserialize message: {}", line);
                             }
                         }
                     }
                     catch (Exception error)
                     {
-                        _logger?.LogError("Failed to read message: {}", error);
+                        _logger.LogError("Failed to read message: {}", error);
                         break;
                     }
                     yield return messageBuilder.ToString();
@@ -499,7 +491,7 @@ namespace Golem
                 try
                 {
                     var response = await _httpClient.GetStringAsync($"/market-api/v1/agreements/{agreementID}");
-                    _logger?.LogInformation("got agreement {0}", response);
+                    _logger.LogInformation("got agreement {0}", response);
                     YagnaAgreement? agreement = JsonSerializer.Deserialize<YagnaAgreement>(response, s_serializerOptions) ?? null;
                     return agreement;
                 }

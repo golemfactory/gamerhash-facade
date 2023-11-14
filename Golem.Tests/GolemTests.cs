@@ -9,7 +9,7 @@ namespace Golem.Tests
     [Collection("Sequential")]
     public class GolemTests
     {
-        ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+        readonly ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
                builder.AddSimpleConsole(options => options.SingleLine = true)
             );
 

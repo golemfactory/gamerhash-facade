@@ -2,7 +2,7 @@ namespace Golem.Yagna
 {
     public class EnvironmentBuilder
     {
-        private Dictionary<string, string> env = new Dictionary<string, string>
+        private readonly Dictionary<string, string> env = new Dictionary<string, string>
         {
             { "GSB_URL", "tcp://127.0.0.1:11501" },
             { "YAGNA_API_URL", "http://127.0.0.1:11502" },

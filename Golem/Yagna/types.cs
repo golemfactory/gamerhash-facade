@@ -99,13 +99,10 @@ namespace Golem.Yagna.Types
     {
         public required string Id { get; init; }
 
-        //TODO
         public string RequestorId { get; init; }
 
-        //TODO
         public GolemPrice Price { get => new GolemPrice(); init => this.Price = new GolemPrice(); }
 
-        //TODO
         public JobStatus Status => JobStatus.Idle;
 
         //TODO
@@ -113,7 +110,6 @@ namespace Golem.Yagna.Types
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        //TODO
         public Task<GolemUsage> CurrentUsage()
         {
             return new Task<GolemUsage>(() => new GolemUsage());

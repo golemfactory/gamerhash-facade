@@ -86,7 +86,7 @@ namespace FacadeApp
             this.logger = logger;
         }
 
-        ILogger logger;
+        readonly ILogger logger;
         public PropertyChangedEventHandler For(string name)
         {
             switch (name)
