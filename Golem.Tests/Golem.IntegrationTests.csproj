@@ -11,7 +11,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.1" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
     <PackageReference Include="xunit" Version="2.4.2" />
@@ -23,11 +22,24 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <EmbeddedResource Include="Tools\App\**\*" Link="py\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GolemLib\GolemLib.csproj" />
     <ProjectReference Include="..\Golem\Golem.csproj" />
   </ItemGroup>
+
+   <Target Name="AfterClean">
+    <RemoveDir Directories="$(ProjectDir)\bin\$(Configuration)\net7.0\py" ContinueOnError="true" />
+  </Target>
+
+  <Target Name="DbContainerUp" BeforeTargets="Test" AfterTargets="AfterBuild">
+    <Exec Command="python -m venv .venv" WorkingDirectory="$(ProjectDir)\bin\$(Configuration)\net7.0\py" ConsoleToMsBuild="true" />
+    <Exec Command=".\.venv\Scripts\activate | pip install -r requirements.txt" WorkingDirectory="$(ProjectDir)\bin\$(Configuration)\net7.0\py" ConsoleToMsBuild="true" />
+    <Exec Command=".\.venv\Scripts\activate | pyinstaller app.py -y" WorkingDirectory="$(ProjectDir)\bin\$(Configuration)\net7.0\py" ConsoleToMsBuild="true" />
+  </Target>
 
 </Project>
