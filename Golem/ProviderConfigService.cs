@@ -8,7 +8,8 @@ namespace Golem
 {
     using global::Golem.Yagna.Types;
     using global::Golem.Yagna;
-    
+    using GolemLib.Types;
+
     namespace GolemUI.Src
     {
         public class ProviderConfigService
@@ -31,6 +32,45 @@ namespace Golem
                 set
                 {
                     UpdateWalletAddress(value);
+                }
+            }
+
+            public GolemPrice GolemPrice
+            {
+                get
+                {
+                    var preset = _provider.PresetConfig.GetPreset(_provider.PresetConfig.DefaultPresetName);
+                    
+                    if(preset == null)
+                        return new GolemPrice();
+
+                    if(!preset.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
+                        numRequests = 0;
+                    if(!preset.UsageCoeffs.TryGetValue("golem.usage.duration_sec", out var duration))
+                        duration = 0;
+                    if(!preset.UsageCoeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
+                        gpuSec = 0;
+
+                    var initPrice = preset.InitialPrice ?? 0m;
+                    
+                    return new GolemPrice
+                    {
+                        EnvPerHour = duration,
+                        StartPrice = initPrice,
+                        GpuPerHour = gpuSec,
+                        NumRequests = numRequests
+                    };
+                }
+
+                set
+                {
+                    _provider.PresetConfig.UpdatePrices(_provider.PresetConfig.DefaultPresetName, new Dictionary<string, decimal>
+                    {
+                        { "num-requests", value.NumRequests },
+                        { "golem.usage.duration_sec", value.EnvPerHour },
+                        { "gpu-sec", value.GpuPerHour },
+                        { "Initial", value.StartPrice }
+                    });
                 }
             }
 
