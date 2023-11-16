@@ -19,6 +19,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
+    
+
     public class Golem : IGolem, IAsyncDisposable
     {
         private YagnaService Yagna { get; set; }
@@ -32,21 +34,41 @@ namespace Golem
 
         private readonly HttpClient _httpClient;
 
-        private GolemPrice price;
+        private readonly GolemPrice _golemPrice;
+        
         public GolemPrice Price
         {
             get
             {
-                return price;
+                // var price = ProviderConfig.GolemPrice;
+                // _golemPrice.StartPrice = price.StartPrice;
+                // _golemPrice.GpuPerHour = price.GpuPerHour;
+                // _golemPrice.EnvPerHour = price.EnvPerHour;
+                // _golemPrice.NumRequests = price.NumRequests;
+                return _golemPrice;
             }
             set
             {
-                price = value;
+                _golemPrice.StartPrice = value.StartPrice;
+                _golemPrice.GpuPerHour = value.GpuPerHour;
+                _golemPrice.EnvPerHour = value.EnvPerHour;
+                _golemPrice.NumRequests = value.NumRequests;
+
                 OnPropertyChanged();
             }
         }
 
-        public uint NetworkSpeed { get; set; }
+        private uint _networkSpeed;
+        
+        public uint NetworkSpeed
+        { 
+            get =>_networkSpeed;
+            set
+            {
+                _networkSpeed = value;
+                OnPropertyChanged();
+            }
+        }
 
         private GolemStatus status;
 
@@ -77,7 +99,10 @@ namespace Golem
                 return walletAddress ?? "";
             }
 
-            set => ProviderConfig.WalletAddress = value;
+            set
+            {
+                ProviderConfig.WalletAddress = value;
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -163,11 +188,22 @@ namespace Golem
             Yagna = new YagnaService(golemPath, yagna_datadir, loggerFactory);
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork);
+            _golemPrice = ProviderConfig.GolemPrice;
 
             _httpClient = new HttpClient
             {
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
+
+            this.Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
+        }
+
+        private void GolemPrice_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is GolemPrice price)
+            {
+                ProviderConfig.GolemPrice = price;
+            }
         }
 
         private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions)

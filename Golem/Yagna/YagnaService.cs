@@ -11,7 +11,7 @@ namespace Golem.Yagna
 {
     public class YagnaStartupOptions
     {
-        public string? AppKey { get; set; }
+        public string AppKey { get; set; } = "";
 
         public string? PrivateKey { get; set; }
 
@@ -69,10 +69,6 @@ namespace Golem.Yagna
                 return env;
             }
         }
-
-        // public YagnaService(string golemPath)
-        // {
-        //     _yaExePath = Path.Combine(golemPath, "yagna.exe");
 
         public YagnaService(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {

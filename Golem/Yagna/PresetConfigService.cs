@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json.Serialization;
 
+using GolemLib.Types;
+
 namespace Golem.Yagna
 {
     public class Preset
@@ -24,13 +26,16 @@ namespace Golem.Yagna
         [JsonPropertyName("pricing-model")]
         public string? PricingModel { get; set; }
 
+        [JsonPropertyName("initial-price")]
+        public decimal? InitialPrice { get; set; }
+
         [JsonPropertyName("usage-coeffs")]
         public Dictionary<string, decimal> UsageCoeffs { get; set; }
     }
     
     public class PresetConfigService
     {
-        private Provider _parent;
+        private readonly Provider _parent;
         public string DefaultPresetName => "ai-dummy";
 
         internal PresetConfigService(Provider parent)
@@ -46,11 +51,12 @@ namespace Golem.Yagna
             }
         }
 
-        public string AllPresets
+        public List<Preset> AllPresets
         {
             get
             {
-                return _parent.ExecToText("preset list");
+                var presets = _parent.Exec<List<Preset>>("preset --json list") ?? new List<Preset>();
+                return presets;
             }
         }
 
@@ -61,6 +67,12 @@ namespace Golem.Yagna
         public void DeactivatePreset(string presetName)
         {
             _parent.ExecToText($"preset deactivate {presetName}");
+        }
+
+        public Preset? GetPreset(string name)
+        {
+            var preset = AllPresets.Where(p => p.Name == name).SingleOrDefault();
+            return preset;
         }
 
         public void AddPreset(Preset preset, out string args, out string info)
@@ -101,7 +113,7 @@ namespace Golem.Yagna
         {
             var pargs = String.Join(" ", from e in prices select $"--price {e.Key}={e.Value.ToString(CultureInfo.InvariantCulture)}");
 
-            string args = $"preset update --no-interactive {presetName} {pargs}";
+            string args = $"preset update --no-interactive --name {presetName} {pargs}";
             var _result = _parent.ExecToText(args);
         }
     }

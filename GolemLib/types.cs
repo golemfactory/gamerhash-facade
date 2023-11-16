@@ -2,19 +2,7 @@ namespace GolemLib.Types;
 
 using System;
 using System.Collections.Generic;
-
-
-/// <summary>
-/// Represents price settings in Golem pricing model.
-/// TODO: We will find out later which of these options make the most sense.
-/// </summary>
-public class GolemPrice
-{
-    public decimal GpuPerHour { get; set; }
-    public decimal EnvPerHour { get; set; }
-    public decimal NumRequests { get; set; }
-    public decimal StartPrice { get; set; }
-}
+using System.Dynamic;
 
 /// <summary>
 /// Resources usage reported by ExeUnit.
