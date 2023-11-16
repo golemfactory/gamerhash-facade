@@ -27,7 +27,7 @@ namespace Golem.Tests
                 status = v;
             };
 
-            golem.PropertyChanged += new PropertyChangedHandler<GolemStatus, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
 
             await golem.Start();
 
@@ -62,7 +62,7 @@ namespace Golem.Tests
                 status = v;
             };
 
-            golem.PropertyChanged += new PropertyChangedHandler<GolemStatus, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
 
             await golem.Start();
 
@@ -91,6 +91,7 @@ namespace Golem.Tests
             golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.NumRequests), updatePrice).Subscribe();
 
 
+            //Assert property changes
             golem.Price.StartPrice = 0.005m;
             Assert.Equal(0.005m, price);
 
@@ -102,6 +103,12 @@ namespace Golem.Tests
 
             golem.Price.NumRequests = 0.008m;
             Assert.Equal(0.008m, price);
+
+            //Assert property returns correct value
+            Assert.Equal(0.005m, golem.Price.StartPrice);
+            Assert.Equal(0.006m, golem.Price.GpuPerHour);
+            Assert.Equal(0.007m, golem.Price.EnvPerHour);
+            Assert.Equal(0.008m, golem.Price.NumRequests);
         }
     }
 }
