@@ -11,7 +11,7 @@ namespace Golem.Yagna
 {
     public class YagnaStartupOptions
     {
-        public string? AppKey { get; set; }
+        public string AppKey { get; set; } = "";
 
         public string? PrivateKey { get; set; }
 
