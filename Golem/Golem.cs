@@ -57,8 +57,18 @@ namespace Golem
                 OnPropertyChanged();
             }
         }
+
+        private uint _networkSpeed;
         
-        public uint NetworkSpeed { get; set; }
+        public uint NetworkSpeed
+        { 
+            get =>_networkSpeed;
+            set
+            {
+                _networkSpeed = value;
+                OnPropertyChanged();
+            }
+        }
 
         private GolemStatus status;
 
