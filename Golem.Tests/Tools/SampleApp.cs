@@ -5,19 +5,18 @@ using System.Text;
 using System.Reflection;
 using System.IO;
 using Xunit.Abstractions;
+using Golem.Yagna;
+using System.Diagnostics;
 
-namespace App {
-    public class SampleApp {
+namespace App
+{
+    public class SampleApp
+    {
 
-        public void Start() {
-            // var engine = Python.CreateEngine();
-            // ICollection<string> searchPaths = engine.GetSearchPaths();
-            // searchPaths.Add("py\\venv\\Lib");
-            // searchPaths.Add("py\\venv\\Lib\\site-packages");
-            // engine.SetSearchPaths(searchPaths);
-            // var scope = engine.ExecuteFile("py/app.py");
-            // dynamic main = scope.GetVariable("main");
-            // var x = main();
+        public Process CreateProcess()
+        {
+            var app = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, "py", "dist", "app", ProcessFactory.BinName("app"));
+            return ProcessFactory.CreateProcess(app, " --network goerli --subnet-tag public", true, new Dictionary<string, string>());
         }
     }
 }
