@@ -66,9 +66,9 @@ namespace Golem
                 {
                     _provider.PresetConfig.UpdatePrices(_provider.PresetConfig.DefaultPresetName, new Dictionary<string, decimal>
                     {
-                        { "num-requests", value.NumRequests },
+                        { "ai-runtime.requests", value.NumRequests },
                         { "golem.usage.duration_sec", value.EnvPerHour },
-                        { "gpu-sec", value.GpuPerHour },
+                        { "golem.usage.gpu-sec", value.GpuPerHour },
                         { "Initial", value.StartPrice }
                     });
                 }
