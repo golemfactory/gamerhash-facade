@@ -38,7 +38,7 @@ namespace Golem.Tests
                 status = v;
             };
 
-            golem.PropertyChanged += new PropertyChangedHandler<GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
 
             await golem.Start();
 
@@ -73,7 +73,7 @@ namespace Golem.Tests
                 status = v;
             };
 
-            golem.PropertyChanged += new PropertyChangedHandler<GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
 
             await golem.Start();
 
@@ -85,53 +85,41 @@ namespace Golem.Tests
         }
 
         [Fact]
-        public async Task StartStop_Job()
+        public async Task Start_ChangePrices_VerifyPriceAsync()
         {
-            XunitContext.WriteLine("From Test");
-            string golemPath = await PackageBuilder.BuildTestDirectory("StartStop_Job");
+            string golemPath = await PackageBuilder.BuildTestDirectory("Start_ChangePrices_VerifyPriceAsync");
             Console.WriteLine("Path: " + golemPath);
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
-            GolemStatus status = GolemStatus.Off;
+            
+            decimal price = 0;
 
-            Action<GolemStatus> golemStatus = (v) =>
-            {
-                Console.WriteLine("Golem status update. {0}", v);
-                status = v;
-            };
-            golem.PropertyChanged += new PropertyChangedHandler<GolemStatus>(nameof(IGolem.Status), golemStatus).Subscribe();
+            Action<decimal> updatePrice = (v) => price = v;
 
-            IJob? currentJob = null;
-            Action<IJob?> currentJobHook = (v) =>
-            {
-                Console.WriteLine("Current Job update. {0}", v);
-                currentJob = v;
-            };
-            golem.PropertyChanged += new PropertyChangedHandler<IJob?>(nameof(IGolem.CurrentJob), currentJobHook).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.StartPrice), updatePrice).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.GpuPerHour), updatePrice).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.EnvPerHour), updatePrice).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.NumRequests), updatePrice).Subscribe();
 
-            Console.WriteLine("Starting Golem");
-            await golem.Start();
-            Assert.Equal(GolemStatus.Ready, status);
 
-            // Assert.Null(golem.CurrentJob);
+            //Assert property changes
+            golem.Price.StartPrice = 0.005m;
+            Assert.Equal(0.005m, price);
 
-            Console.WriteLine("Starting App");
-            var app_process = new SampleApp().CreateProcess();
-            app_process.Start();
-            Thread.Sleep(3000);
+            golem.Price.GpuPerHour = 0.006m;
+            Assert.Equal(0.006m, price);
 
-            // Assert.NotNull(golem.CurrentJob);
+            golem.Price.EnvPerHour = 0.007m;
+            Assert.Equal(0.007m, price);
 
-            Console.WriteLine("Stopping App");
-            app_process.Kill();
-            Thread.Sleep(3000);
+            golem.Price.NumRequests = 0.008m;
+            Assert.Equal(0.008m, price);
 
-            // Assert.Null(golem.CurrentJob);
-
-            Console.WriteLine("Stopping Golem");
-            await golem.Stop();
-
-            Assert.Equal(GolemStatus.Off, status);
+            //Assert property returns correct value
+            Assert.Equal(0.005m, golem.Price.StartPrice);
+            Assert.Equal(0.006m, golem.Price.GpuPerHour);
+            Assert.Equal(0.007m, golem.Price.EnvPerHour);
+            Assert.Equal(0.008m, golem.Price.NumRequests);
         }
 
         public void Dispose()
