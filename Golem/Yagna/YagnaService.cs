@@ -95,7 +95,11 @@ namespace Golem.Yagna
         {
             var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, Env.Build());
 
-            process.Start();
+            if(process.Start())
+            {
+                ChildProcessTracker.AddProcess(process);
+            }
+            
             return process;
         }
 

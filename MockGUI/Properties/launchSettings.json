@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MockGUI": {
+      "commandName": "Project",
+      "commandLineArgs": "-g c:\\git\\yagna\\target\\debug"
+    }
+  }
+}
