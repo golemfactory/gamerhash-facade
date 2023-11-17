@@ -20,9 +20,18 @@ namespace Golem.Tools
         {
             if (s_jobHandle != nint.Zero)
             {
-                bool success = AssignProcessToJobObject(s_jobHandle, process.Handle);
+                bool success = true;
+                try
+                {
+                    success = AssignProcessToJobObject(s_jobHandle, process.Handle);
+                    
+                }
+                catch
+                {
+                    success = false;
+                }
                 if (!success && !process.HasExited)
-                    throw new Win32Exception();
+                    Console.WriteLine("Failed to track process {0}. Error: {1}", process.Id, new Win32Exception().Message);                
             }
         }
 
@@ -33,7 +42,7 @@ namespace Golem.Tools
             //  app.manifest change.
             //  https://stackoverflow.com/a/4232259/386091
             //  https://stackoverflow.com/a/9507862/386091
-            if (Environment.OSVersion.Version < new Version(6, 2))
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || Environment.OSVersion.Version < new Version(6, 2))
                 return;
 
             // The job name is optional (and can be null) but it helps with diagnostics.

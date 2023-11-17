@@ -133,7 +133,6 @@ namespace Golem
 
             bool openConsole = false;
 
-
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
             var success = await StartupYagnaAsync(yagnaOptions);
