@@ -38,7 +38,10 @@ namespace FacadeApp
             logger.LogInformation("Path: " + golemPath);
             logger.LogInformation("DataDir: " + (dataDir ?? ""));
 
-            await using (var golem = new Golem.Golem(golemPath, dataDir, loggerFactory))
+            var binaries = Path.Combine(golemPath, "golem");
+            dataDir = Path.Combine(golemPath, "golem-data");
+
+            await using (var golem = new Golem.Golem(binaries, dataDir, loggerFactory))
             {
 
             golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
