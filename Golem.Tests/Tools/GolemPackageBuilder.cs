@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
+
 using ICSharpCode.SharpZipLib.GZip;
 using ICSharpCode.SharpZipLib.Tar;
 
@@ -12,16 +13,14 @@ namespace Golem.IntegrationTests.Tools
 {
     public class PackageBuilder
     {
-        const string GITHUB_RELEASE_URL = "https://github.com/{2}/releases/download/{0}/{3}-{1}-{0}";
-        const string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc3";
+        const string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc4";
         const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc14";
+
+        const string CURRENT_RELAY_VERSION = "pre-rel-v0.2.3-rc10";
 
         public static string InitTestDirectory(string name)
         {
-            var build_dir = AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
-            var tests_dir = Path.Combine(build_dir, "../../../tests");
-            var dir = Path.GetFullPath(Path.Combine(tests_dir, name));
-
+            var dir = TestDir(name);
             if (Directory.Exists(dir))
             {
                 Directory.Delete(dir, true);
@@ -45,9 +44,45 @@ namespace Golem.IntegrationTests.Tools
             return dir;
         }
 
+        public async static Task<string> BuildRequestorDirectory(string test_name)
+        {
+            var dir = InitTestDirectory(String.Format("{0}_requestor", test_name));
+            var system = System();
+
+            Directory.CreateDirectory(BinariesDir(dir));
+            Directory.CreateDirectory(YagnaDataDir(dir));
+
+            await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION, system);
+
+            return dir;
+        }
+
+        public async static Task<string> BuildRelayDirectory(string test_name)
+        {
+            var old_dir = TestDir(test_name);
+            if (Directory.Exists(old_dir))
+            {
+                Console.WriteLine("Reusing existing relay directory: ", old_dir);
+                return old_dir;
+            }
+            var dir = InitTestDirectory(String.Format("{0}_relay", test_name));
+            var system = System();
+
+            Directory.CreateDirectory(BinariesDir(dir));
+
+            var artifact = "ya-relay-server";
+            var repo = "pwalski/ya-relay";
+            var tag = CURRENT_RELAY_VERSION;
+
+            await DownloadBinaryArtifact(BinariesDir(dir), artifact, tag, repo, system);
+            SetPermissions(dir);
+
+            return dir;
+        }
+
         static async Task DownloadExtractPackage(string dir, string artifact, string repo, string tag, string system = "windows")
         {
-            var builds = await DownloadArtifact(dir, artifact, tag, repo, system);
+            var builds = await DownloadArchiveArtifact(dir, artifact, tag, repo, system);
             var extract_to = Path.GetDirectoryName(builds) ?? "";
 
             Extract(builds, extract_to);
@@ -103,6 +138,13 @@ namespace Golem.IntegrationTests.Tools
             {
                 throw new Exception("System not supported.");
             }
+        }
+
+        static string TestDir(string name)
+        {
+            var build_dir = AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
+            var tests_dir = Path.Combine(build_dir, "../../../tests");
+            return Path.GetFullPath(Path.Combine(tests_dir, name));
         }
 
         public static string BinariesDir(string gamerhash_dir)
@@ -213,17 +255,26 @@ namespace Golem.IntegrationTests.Tools
         }
 
 
-        static async Task<string> DownloadArtifact(string target_dir, string artifact, string tag, string repository, string system = "windows")
+        static async Task<string> DownloadArchiveArtifact(string target_dir, string artifact, string tag, string repository, string system = "windows")
         {
             var ext = system is "windows" ? ".zip" : ".tar.gz";
-            var url = String.Format(GITHUB_RELEASE_URL, tag, system, repository, artifact);
+            var url = String.Format("https://github.com/{2}/releases/download/{0}/{3}-{1}-{0}", tag, system, repository, artifact);
             url += ext;
 
-            Console.WriteLine(String.Format("Download URL: {0}", url));
+            Console.WriteLine(String.Format("Download archive: {0}", url));
             return await Download(target_dir, url);
         }
 
 
+        static async Task<string> DownloadBinaryArtifact(string target_dir, string artifact, string tag, string repository, string system = "windows")
+        {
+            var ext = system is "windows" ? ".exe" : "";
+            var url = String.Format("https://github.com/{1}/releases/download/{0}/{2}", tag, repository, artifact);
+            url += ext;
+
+            Console.WriteLine(String.Format("Download binary: {0}", url));
+            return await Download(target_dir, url);
+        }
 
     }
 
