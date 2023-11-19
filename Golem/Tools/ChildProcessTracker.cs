@@ -18,20 +18,30 @@ namespace Golem.Tools
         /// <param name="process"></param>
         public static void AddProcess(Process process)
         {
-            if (s_jobHandle != nint.Zero)
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                bool success = true;
-                try
+                // this is a light workaround for Linux that does not work in all cases, e.g. when the process is killed by SIGKILL
+                // but works OK in most cases when a process is killed by SIGTERM or SIGINT
+                // it should be possible to add code that would handle this case from inside the child process
+                // with something like prctl(PR_SET_PDEATHSIG, SIGTERM)  (send SIGTERM when parent dies)
+                AppDomain.CurrentDomain.ProcessExit += (s, e) => process.Kill(true);
+            }
+            else
+            {
+                if (s_jobHandle != nint.Zero)
                 {
-                    success = AssignProcessToJobObject(s_jobHandle, process.Handle);
-                    
+                    bool success = true;
+                    try
+                    {
+                        success = AssignProcessToJobObject(s_jobHandle, process.Handle);
+                    }
+                    catch
+                    {
+                        success = false;
+                    }
+                    if (!success && !process.HasExited)
+                        Console.WriteLine("Failed to track process {0}. Error: {1}", process.Id, new Win32Exception().Message);                
                 }
-                catch
-                {
-                    success = false;
-                }
-                if (!success && !process.HasExited)
-                    Console.WriteLine("Failed to track process {0}. Error: {1}", process.Id, new Win32Exception().Message);                
             }
         }
 
@@ -88,6 +98,7 @@ namespace Golem.Tools
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool AssignProcessToJobObject(nint job, nint process);
+
 
         // Windows will automatically close any open job handles when our process terminates.
         //  This can be verified by using SysInternals' Handle utility. When the job handle

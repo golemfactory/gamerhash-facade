@@ -16,6 +16,7 @@ using GolemLib.Types;
 using Golem.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Collections.Specialized;
 
 namespace Golem
 {
@@ -222,46 +223,7 @@ namespace Golem
 
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
 
-            Thread.Sleep(700);
-
-            //yagna is starting and /me won't work until all services are running
-            for (int tries = 0; tries < 300; ++tries)
-            {
-                Thread.Sleep(300);
-
-                if (Yagna.HasExited) // yagna has stopped
-                {
-                    throw new Exception("Failed to start yagna ...");
-                }
-
-                try
-                {
-                    var response = _httpClient.GetAsync($"/me").Result;
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
-                    }
-                    var txt = await response.Content.ReadAsStringAsync();
-                    var options = new JsonSerializerOptionsBuilder()
-                                    .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
-                                    .Build();
-
-                    MeInfo? meInfo = JsonSerializer.Deserialize<MeInfo>(txt, options) ?? null;
-                    //sanity check
-                    if (meInfo != null)
-                    {
-                        if (account == null || account.Length == 0)
-                            account = meInfo.Identity;
-                        break;
-                    }
-                    throw new Exception("Failed to get key");
-
-                }
-                catch (Exception)
-                {
-                    // consciously swallow the exception... presumably REST call error...
-                }
-            }
+            account = await WaitForIdentityAsync();
 
             //TODO what if activityLoop != null?
             this._activityLoop = StartActivityLoop();
@@ -302,7 +264,52 @@ namespace Golem
                 Console.WriteLine($"Preset {preset}");
             }
 
-            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, true, true);
+            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, yagnaOptions.OpenConsole, true);
+        }
+
+        async Task<string?> WaitForIdentityAsync()
+        {
+            string? identity = null;
+
+            //yagna is starting and /me won't work until all services are running
+            for (int tries = 0; tries < 300; ++tries)
+            {
+                Thread.Sleep(300);
+
+                if (Yagna.HasExited) // yagna has stopped
+                {
+                    throw new Exception("Failed to start yagna ...");
+                }
+
+                try
+                {
+                    var response = _httpClient.GetAsync($"/me").Result;
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
+                    }
+                    var txt = await response.Content.ReadAsStringAsync();
+                    var options = new JsonSerializerOptionsBuilder()
+                                    .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
+                                    .Build();
+
+                    MeInfo? meInfo = JsonSerializer.Deserialize<MeInfo>(txt, options) ?? null;
+                    //sanity check
+                    if (meInfo != null)
+                    {
+                        if (identity == null || identity.Length == 0)
+                            identity = meInfo.Identity;
+                        break;
+                    }
+                    throw new Exception("Failed to get key");
+
+                }
+                catch (Exception)
+                {
+                    // consciously swallow the exception... presumably REST call error...
+                }
+            }
+            return identity;
         }
 
         void OnYagnaErrorDataRecv(object sender, DataReceivedEventArgs e)
