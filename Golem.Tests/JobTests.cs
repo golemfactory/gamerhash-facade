@@ -32,10 +32,11 @@ namespace Golem.Tests
         {
             _relay = await GolemRelay.Build(nameof(JobTests));
             Assert.True(_relay.Start());
-            Thread.Sleep(3000);
+            Thread.Sleep(1000);
+            
             _requestor = await GolemRequestor.Build(nameof(JobTests));
             Assert.True(_requestor.Start());
-            Thread.Sleep(3000);
+            Thread.Sleep(1000);
             _requestor.InitAccount();
         }
 

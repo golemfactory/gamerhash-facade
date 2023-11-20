@@ -19,7 +19,7 @@ namespace Golem.IntegrationTests.Tools
             _env = new Dictionary<string, string>
             {
                 { "YA_NET_RELAY_HOST", "127.0.0.1:17464" },
-                { "YAGNA_DATADIR", Path.Combine(dir, "modules", "golem-data", "yagna") }
+                { "YAGNA_DATADIR", Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")) }
             };
         }
 
@@ -54,20 +54,18 @@ namespace Golem.IntegrationTests.Tools
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env.Add("RUST_LOG", "none");
             var app_key_list_process = CreateProcess("yagna", "app-key list --json", env);
-            var app_key_list_output = new StringBuilder();
-            app_key_list_process.OutputDataReceived += new DataReceivedEventHandler(
-                delegate (object sender, DataReceivedEventArgs e)
-                {
-                    app_key_list_output.Append(e.Data);
-                }
-            );
+
+            app_key_list_process.StartInfo.CreateNoWindow = true;
+            app_key_list_process.StartInfo.RedirectStandardOutput = true;
+            app_key_list_process.StartInfo.UseShellExecute = false;
             app_key_list_process.Start();
+            var app_key_list_output_json = app_key_list_process.StandardOutput.ReadToEnd();
             app_key_process.WaitForExit();
-            var app_key_list_output_json = app_key_list_output.ToString();
             var objects = JArray.Parse(app_key_list_output_json);
             foreach (JObject root in objects)
             {
-                if (root.ContainsKey(AppKeyName))
+                var name = (string)root.GetValue("name");
+                if (AppKeyName.Equals(name))
                 {
                     var key = (string)root.GetValue("key") ?? throw new Exception("Failed to get app key");
                     var id = (string)root.GetValue("id") ?? throw new Exception("Failed to get app id");
