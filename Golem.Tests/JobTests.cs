@@ -45,10 +45,9 @@ namespace Golem.Tests
         {
             string golemPath = await PackageBuilder.BuildTestDirectory("StartStop_Job");
             Console.WriteLine("Path: " + golemPath);
-
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
+            
             GolemStatus status = GolemStatus.Off;
-
             Action<GolemStatus> golemStatus = (v) =>
             {
                 Console.WriteLine("Golem status update. {0}", v);
@@ -68,20 +67,21 @@ namespace Golem.Tests
             await golem.Start();
             Assert.Equal(GolemStatus.Ready, status);
 
-            // Assert.Null(golem.CurrentJob);
+            Assert.Null(golem.CurrentJob);
 
             Console.WriteLine("Starting App");
-            var app_process = new SampleApp().CreateProcess();
+            var app_process = _requestor?.CreateAppProcess() ?? throw new Exception("Requestor not started yet");
             app_process.Start();
-            Thread.Sleep(3000);
+            
+            Thread.Sleep(10000);
 
-            // Assert.NotNull(golem.CurrentJob);
+            Assert.NotNull(golem.CurrentJob);
 
             Console.WriteLine("Stopping App");
             app_process.Kill();
             Thread.Sleep(3000);
 
-            // Assert.Null(golem.CurrentJob);
+            Assert.Null(golem.CurrentJob);
 
             Console.WriteLine("Stopping Golem");
             await golem.Stop();

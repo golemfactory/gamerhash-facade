@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
+using App;
+
 using Newtonsoft.Json.Linq;
 
 namespace Golem.IntegrationTests.Tools
@@ -32,6 +34,15 @@ namespace Golem.IntegrationTests.Tools
         public override bool Start()
         {
             return StartProcess("yagna", "service run", _env);
+        }
+
+        public Process CreateAppProcess()
+        {
+            var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
+            env.Add("YAGNA_APPKEY", AppKey?.Key ?? throw new Exception("Unable to create app process. No YAGNA_APPKEY."));
+            var process = SampleApp.CreateProcess(env);
+            process.StartInfo.WorkingDirectory = Path.Combine(_dir, "modules", "golem-data", "yagna");
+            return process;
         }
 
         public void InitAccount()
@@ -79,14 +90,14 @@ namespace Golem.IntegrationTests.Tools
 
     public class GolemAppKey
     {
-        string key;
+        public readonly string Key;
 
-        string id;
+        public readonly string Id;
 
         public GolemAppKey(string key, string id)
         {
-            this.key = key;
-            this.id = id;
+            this.Key = key;
+            this.Id = id;
         }
     }
 
