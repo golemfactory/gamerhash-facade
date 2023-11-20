@@ -22,7 +22,7 @@ namespace Golem.Tools
             {
                 // this is a light workaround for Linux that does not work in all cases, e.g. when the process is killed by SIGKILL
                 // but works OK in most cases when a process is killed by SIGTERM or SIGINT
-                // it should be possible to add code that would handle this case from inside the child process
+                // it should be possible to add code that would handle this case from inside the child process, if needed,
                 // with something like prctl(PR_SET_PDEATHSIG, SIGTERM)  (send SIGTERM when parent dies)
                 AppDomain.CurrentDomain.ProcessExit += (s, e) => process.Kill(true);
             }
