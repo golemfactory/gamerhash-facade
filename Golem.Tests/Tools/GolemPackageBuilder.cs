@@ -16,9 +16,7 @@ namespace Golem.IntegrationTests.Tools
         const string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc4";
         const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc14";
 
-        const string CURRENT_RELAY_VERSION = "pre-rel-v0.2.3-rc10";
-
-        public static string InitTestDirectory(string name)
+        internal static string InitTestDirectory(string name)
         {
             var dir = TestDir(name);
             if (Directory.Exists(dir))
@@ -53,29 +51,6 @@ namespace Golem.IntegrationTests.Tools
             Directory.CreateDirectory(YagnaDataDir(dir));
 
             await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION, system);
-
-            return dir;
-        }
-
-        public async static Task<string> BuildRelayDirectory(string test_name)
-        {
-            var old_dir = TestDir(test_name);
-            if (Directory.Exists(old_dir))
-            {
-                Console.WriteLine("Reusing existing relay directory: ", old_dir);
-                return old_dir;
-            }
-            var dir = InitTestDirectory(String.Format("{0}_relay", test_name));
-            var system = System();
-
-            Directory.CreateDirectory(BinariesDir(dir));
-
-            var artifact = "ya-relay-server";
-            var repo = "pwalski/ya-relay";
-            var tag = CURRENT_RELAY_VERSION;
-
-            await DownloadBinaryArtifact(BinariesDir(dir), artifact, tag, repo, system);
-            SetPermissions(dir);
 
             return dir;
         }
@@ -140,14 +115,14 @@ namespace Golem.IntegrationTests.Tools
             }
         }
 
-        static string TestDir(string name)
+        internal static string TestDir(string name)
         {
             var build_dir = AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
             var tests_dir = Path.Combine(build_dir, "../../../tests");
             return Path.GetFullPath(Path.Combine(tests_dir, name));
         }
 
-        public static string BinariesDir(string gamerhash_dir)
+        internal static string BinariesDir(string gamerhash_dir)
         {
             return Path.Combine(gamerhash_dir, "modules/golem");
         }
@@ -172,7 +147,7 @@ namespace Golem.IntegrationTests.Tools
             return Path.Combine(gamerhash_dir, "modules/plugins");
         }
 
-        static async Task<string> Download(string target_dir, string url)
+        internal static async Task<string> Download(string target_dir, string url)
         {
             var name = Path.GetFileName(url);
             var target_file = Path.Combine(target_dir, name);
@@ -264,18 +239,6 @@ namespace Golem.IntegrationTests.Tools
             Console.WriteLine(String.Format("Download archive: {0}", url));
             return await Download(target_dir, url);
         }
-
-
-        static async Task<string> DownloadBinaryArtifact(string target_dir, string artifact, string tag, string repository, string system = "windows")
-        {
-            var ext = system is "windows" ? ".exe" : "";
-            var url = String.Format("https://github.com/{1}/releases/download/{0}/{2}", tag, repository, artifact);
-            url += ext;
-
-            Console.WriteLine(String.Format("Download binary: {0}", url));
-            return await Download(target_dir, url);
-        }
-
     }
 
 

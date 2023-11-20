@@ -2,6 +2,7 @@ using App;
 
 using Golem;
 using Golem.IntegrationTests.Tools;
+using Golem.Yagna;
 using Golem.Yagna.Types;
 
 using GolemLib;
@@ -16,6 +17,8 @@ namespace Golem.Tests
     public class JobTests : IDisposable, IAsyncLifetime
     {
         private readonly ILoggerFactory _loggerFactory;
+        private GolemRelay? _relay;
+        private GolemRequestor? _requestor;
 
         public JobTests(ITestOutputHelper outputHelper)
         {
@@ -27,8 +30,10 @@ namespace Golem.Tests
 
         public async Task InitializeAsync()
         {
-            string golemPath = await PackageBuilder.BuildRequestorDirectory(nameof(JobTests));
-            string relayPath = await PackageBuilder.BuildRelayDirectory(nameof(JobTests));
+            _relay = await GolemRelay.Build(nameof(JobTests));
+            Assert.True(_relay.Start());
+            _requestor = await GolemRequestor.Build(nameof(JobTests));
+            Assert.True(_requestor.Start());
         }
 
         [Fact]
@@ -82,7 +87,14 @@ namespace Golem.Tests
 
         public async Task DisposeAsync()
         {
-            await Task.Run(() => 1);
+            if (_requestor != null)
+            {
+                await _requestor.Stop();
+            }
+            if (_relay != null)
+            {
+                await _relay.Stop();
+            }
         }
 
         public void Dispose()
