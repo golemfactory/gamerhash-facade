@@ -2,7 +2,7 @@
   "profiles": {
     "FacadeApp": {
       "commandName": "Project",
-      "commandLineArgs": "-g /gome/skrotki/golem/gamerhash/modules"
+      "commandLineArgs": "-g c:\\\\git\\\\gamerhash\\\\modules"
     }
   }
 }

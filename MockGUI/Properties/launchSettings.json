@@ -2,7 +2,7 @@
   "profiles": {
     "MockGUI": {
       "commandName": "Project",
-      "commandLineArgs": "-g c:\\git\\yagna\\target\\debug"
+      "commandLineArgs": "-g c:\\git\\gamerhash\\modules"
     }
   }
 }

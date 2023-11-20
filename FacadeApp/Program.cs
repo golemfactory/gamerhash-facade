@@ -45,16 +45,14 @@ namespace FacadeApp
 
             await using (var golem = new Golem.Golem(binaries, dataDir, loggerFactory))
             {
-
-            golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
-
+                golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
 
                 bool end = false;
 
-            do
-            {
-                Console.WriteLine("Start/Stop/End?");
-                var line = Console.ReadLine();
+                do
+                {
+                    Console.WriteLine("Start/Stop/End?");
+                    var line = Console.ReadLine();
 
                     switch (line)
                     {
@@ -104,17 +102,13 @@ namespace FacadeApp
 
         private void Status_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
         {
-            if (sender is not Golem.Golem golem || e.PropertyName != "Status")
-                logger.LogError($"Type or {e.PropertyName} is not supported in this context");
-            else
+            if (sender is Golem.Golem golem && e.PropertyName != "Status")
                 logger.LogInformation($"Status property has changed: {e.PropertyName} to {golem.Status}");
         }
 
         private void Activities_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
         {
-            if (sender is not Golem.Golem golem || e.PropertyName != "Activities")
-                logger.LogError($"Type or {e.PropertyName} is not supported in this context");
-            else
+            if (sender is Golem.Golem golem && e.PropertyName != "Activities")
                 logger.LogInformation($"Activities property has changed: {e.PropertyName}. Current job: {golem.CurrentJob}");
         }
 
