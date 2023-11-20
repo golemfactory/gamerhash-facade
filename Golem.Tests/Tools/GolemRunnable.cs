@@ -20,10 +20,7 @@ namespace Golem.IntegrationTests.Tools
 
         protected bool StartProcess(string file_name, string args, Dictionary<string, string> env)
         {
-            var file_name_w_ext = ProcessFactory.BinName(file_name);
-            var dir = Path.GetFullPath(_dir);
-            var runnable_path = Path.Combine(dir, "modules", "golem", file_name_w_ext);
-            var process = ProcessFactory.CreateProcess(runnable_path, args, false, env);
+            var process = CreateProcess(file_name, args, env);
 
             if (process.Start())
             {
@@ -32,6 +29,14 @@ namespace Golem.IntegrationTests.Tools
             }
             _golemProcess = null;
             return false;
+        }
+
+        protected Process CreateProcess(string file_name, string args, Dictionary<string, string> env)
+        {
+            var file_name_w_ext = ProcessFactory.BinName(file_name);
+            var dir = Path.GetFullPath(_dir);
+            var runnable_path = Path.Combine(dir, "modules", "golem", file_name_w_ext);
+            return ProcessFactory.CreateProcess(runnable_path, args, false, env);
         }
 
         public async Task Stop()
