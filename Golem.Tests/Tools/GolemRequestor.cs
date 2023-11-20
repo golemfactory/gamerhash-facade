@@ -18,9 +18,15 @@ namespace Golem.IntegrationTests.Tools
         {
             var env = new Dictionary<string, string>
             {
-                {"YA_NET_RELAY_HOST", "127.0.0.1:17464"},
+                { "YA_NET_RELAY_HOST", "127.0.0.1:17464" },
+                { "YAGNA_DATADIR", Path.Combine(_dir, "modules", "golem-data", "yagna") }
             };
             return StartProcess("yagna", "service run", env);
         }
+
+        // public string InitAccount()
+        // {
+
+        // }
     }
 }

@@ -8,7 +8,7 @@ namespace Golem.IntegrationTests.Tools
     public abstract class GolemRunnable
     {
 
-        private string _dir;
+        protected string _dir;
         private Process? _golemProcess;
 
         protected GolemRunnable(string dir)
