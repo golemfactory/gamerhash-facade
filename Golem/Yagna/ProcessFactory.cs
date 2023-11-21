@@ -28,6 +28,9 @@ namespace Golem.Yagna
 
             foreach (var (k, v) in env)
             {
+                if (startInfo.EnvironmentVariables.ContainsKey(k)) {
+                    startInfo.EnvironmentVariables.Remove(k);
+                }
                 startInfo.EnvironmentVariables.Add(k, v);
             }
 

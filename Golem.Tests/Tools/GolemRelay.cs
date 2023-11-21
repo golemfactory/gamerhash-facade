@@ -17,7 +17,9 @@ namespace Golem.IntegrationTests.Tools
 
         public override bool Start()
         {
-            return StartProcess("ya-relay-server", "-a 127.0.0.1:17464", new Dictionary<string, string>());
+            var working_dir = Path.Combine(_dir, "modules", "golem-data", "relay");
+            Directory.CreateDirectory(working_dir);
+            return StartProcess("ya-relay-server", working_dir, "-a 127.0.0.1:17464", new Dictionary<string, string>());
         }
 
         protected static async Task<string> BuildRelayDir(string test_name)

@@ -32,11 +32,11 @@ namespace Golem.Tests
         {
             _relay = await GolemRelay.Build(nameof(JobTests));
             Assert.True(_relay.Start());
+            System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST","127.0.0.1:17464");
             Thread.Sleep(1000);
             
             _requestor = await GolemRequestor.Build(nameof(JobTests));
             Assert.True(_requestor.Start());
-            Thread.Sleep(1000);
             _requestor.InitAccount();
         }
 
@@ -66,7 +66,6 @@ namespace Golem.Tests
             Console.WriteLine("Starting Golem");
             await golem.Start();
             Assert.Equal(GolemStatus.Ready, status);
-
             Assert.Null(golem.CurrentJob);
 
             Console.WriteLine("Starting App");
