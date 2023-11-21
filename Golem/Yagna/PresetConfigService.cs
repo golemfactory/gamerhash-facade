@@ -43,6 +43,40 @@ namespace Golem.Yagna
             _parent = parent;
         }
 
+        public void InitilizeDefaultPreset()
+        {
+            var presets = ActivePresetsNames;
+            if (!presets.Contains(DefaultPresetName))
+            {
+
+                var coefs =  new Dictionary<string, decimal>
+                {
+                    { "ai-runtime.requests", 0 },
+                    { "golem.usage.duration_sec", 0 },
+                    { "golem.usage.gpu-sec", 0 },
+                    { "Initial", 0 }
+                };
+                
+                // name "ai" as defined in plugins/*.json
+                var preset = new Preset(DefaultPresetName, "ai", coefs);
+
+                AddPreset(preset, out string args, out string info);
+                Console.WriteLine($"Args {args}");
+                Console.WriteLine($"Args {info}");
+
+            }
+            ActivatePreset(DefaultPresetName);
+
+            foreach (string preset in presets)
+            {
+                if (preset != DefaultPresetName)
+                {
+                    DeactivatePreset(preset);
+                }
+                Console.WriteLine($"Preset {preset}");
+            }
+        }
+
         public IList<string> ActivePresetsNames
         {
             get

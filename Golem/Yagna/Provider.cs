@@ -241,6 +241,7 @@ namespace Golem.Yagna
 
             if (process.Start())
             {
+                ChildProcessTracker.AddProcess(process);
                 ProviderProcess = process;
                 return !ProviderProcess.HasExited;
             }
