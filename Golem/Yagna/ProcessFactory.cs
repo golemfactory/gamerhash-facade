@@ -63,7 +63,7 @@ namespace Golem.Yagna
             var startInfo = new ProcessStartInfo
             {
                 FileName = fileName,
-                UseShellExecute = false,
+                UseShellExecute = false
             };
 
             if (openConsole)
@@ -71,6 +71,7 @@ namespace Golem.Yagna
                 startInfo.RedirectStandardOutput = false;
                 startInfo.RedirectStandardError = false;
                 startInfo.CreateNoWindow = false;
+                
             }
             else
             {

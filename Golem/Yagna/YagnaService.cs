@@ -83,25 +83,17 @@ namespace Golem.Yagna
             }
         }
 
-        private string EscapeArgument(string argument)
-        {
-            if (argument.Contains(" ") || argument.StartsWith("\""))
-            {
-                return $"\"{argument.Replace("\"", "\\\"")}\"";
-            }
-            return argument;
-        }
-        private Process CreateProcessAndStart(params string[] arguments)
+        private Process CreateCommandProcessAndStart(params string[] arguments)
         {
             var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, Env.Build());
 
-            process.Start();
+            process.Start();            
             return process;
         }
 
         internal string ExecToText(params string[] arguments)
         {
-            var process = CreateProcessAndStart(arguments);
+            var process = CreateCommandProcessAndStart(arguments);
             process.WaitForExit();
             string output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
@@ -114,7 +106,7 @@ namespace Golem.Yagna
 
         internal async Task<string> ExecToTextAsync(params string[] arguments)
         {
-            var process = CreateProcessAndStart(arguments);
+            var process = CreateCommandProcessAndStart(arguments);
             return await process.StandardOutput.ReadToEndAsync();
         }
 
@@ -207,7 +199,9 @@ namespace Golem.Yagna
 
             if (process.Start())
             {
+                process.WaitForExitAsync();
                 YagnaProcess = process;
+                ChildProcessTracker.AddProcess(process);
                 return !YagnaProcess.HasExited;
             }
             YagnaProcess = null;

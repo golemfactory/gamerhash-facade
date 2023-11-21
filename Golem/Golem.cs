@@ -16,6 +16,7 @@ using GolemLib.Types;
 using Golem.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Collections.Specialized;
 
 namespace Golem
 {
@@ -133,7 +134,6 @@ namespace Golem
 
             bool openConsole = false;
 
-
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
             var success = await StartupYagnaAsync(yagnaOptions);
@@ -223,7 +223,26 @@ namespace Golem
 
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
 
-            Thread.Sleep(700);
+            account = await WaitForIdentityAsync();
+
+            //TODO what if activityLoop != null?
+            this._activityLoop = StartActivityLoop();
+
+            Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
+
+            return success;
+        }
+
+        public bool StartupProvider(YagnaStartupOptions yagnaOptions)
+        {
+            Provider.PresetConfig.InitilizeDefaultPreset();
+
+            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, yagnaOptions.OpenConsole, true);
+        }
+
+        async Task<string?> WaitForIdentityAsync()
+        {
+            string? identity = null;
 
             //yagna is starting and /me won't work until all services are running
             for (int tries = 0; tries < 300; ++tries)
@@ -251,8 +270,8 @@ namespace Golem
                     //sanity check
                     if (meInfo != null)
                     {
-                        if (account == null || account.Length == 0)
-                            account = meInfo.Identity;
+                        if (identity == null || identity.Length == 0)
+                            identity = meInfo.Identity;
                         break;
                     }
                     throw new Exception("Failed to get key");
@@ -263,47 +282,7 @@ namespace Golem
                     // consciously swallow the exception... presumably REST call error...
                 }
             }
-
-            //TODO what if activityLoop != null?
-            this._activityLoop = StartActivityLoop();
-
-            Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
-
-            return success;
-        }
-
-        public bool StartupProvider(YagnaStartupOptions yagnaOptions)
-        {
-            var presets = Provider.PresetConfig.ActivePresetsNames;
-            if (!presets.Contains(Provider.PresetConfig.DefaultPresetName))
-            {
-                // Duration=0.0001 CPU=0.0001 "Init price=0.0000000000000001"
-                var coefs = new Dictionary<string, decimal>
-                {
-                    { "Duration", 0.0001m },
-                    { "CPU", 0.0001m },
-                    // { "Init price", 0.0000000000000001m },
-                };
-                // name "ai" as defined in plugins/*.json
-                var preset = new Preset(Provider.PresetConfig.DefaultPresetName, "ai-dummy", coefs);
-
-                Provider.PresetConfig.AddPreset(preset, out string args, out string info);
-                Console.WriteLine($"Args {args}");
-                Console.WriteLine($"Args {info}");
-
-            }
-            Provider.PresetConfig.ActivatePreset(Provider.PresetConfig.DefaultPresetName);
-
-            foreach (string preset in presets)
-            {
-                if (preset != Provider.PresetConfig.DefaultPresetName)
-                {
-                    Provider.PresetConfig.DeactivatePreset(preset);
-                }
-                Console.WriteLine($"Preset {preset}");
-            }
-
-            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, true, true);
+            return identity;
         }
 
         void OnYagnaErrorDataRecv(object sender, DataReceivedEventArgs e)

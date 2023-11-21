@@ -25,6 +25,12 @@ namespace Golem.Yagna
             return this;
         }
 
+        public EnvironmentBuilder WithYagnaAppKey(string s)
+        {
+            env["YAGNA_APPKEY"] = s;
+            return this;
+        }
+
         public EnvironmentBuilder WithYaPaymentNetworkGroup(string s)
         {
             env["YA_PAYMENT_NETWORK_GROUP"] = s;
