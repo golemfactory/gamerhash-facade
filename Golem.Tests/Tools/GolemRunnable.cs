@@ -49,14 +49,19 @@ namespace Golem.IntegrationTests.Tools
             _golemProcess = null;
         }
 
-        protected static async Task<string> DownloadBinaryArtifact(string target_dir, string artifact, string tag, string repository, string system = "windows")
+        protected static async Task<string> DownloadBinaryArtifact(string target_dir, string artifact, string tag, string repository)
         {
-            var ext = system is "windows" ? ".exe" : "";
+            var ext = ExecutableFileExtension();
             var url = String.Format("https://github.com/{1}/releases/download/{0}/{2}", tag, repository, artifact);
             url += ext;
 
             Console.WriteLine(String.Format("Download binary: {0}", url));
             return await PackageBuilder.Download(target_dir, url);
+        }
+
+        public static String ExecutableFileExtension()
+        {
+            return OperatingSystem.IsWindows() ? ".exe" : "";
         }
 
     }

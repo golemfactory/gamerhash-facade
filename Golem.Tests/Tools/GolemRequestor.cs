@@ -40,11 +40,13 @@ namespace Golem.IntegrationTests.Tools
         public Process CreateAppProcess()
         {
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
-            if (env.ContainsKey("YAGNA_APPKEY")) {
+            if (env.ContainsKey("YAGNA_APPKEY"))
+            {
                 env.Remove("YAGNA_APPKEY");
             }
             env.Add("YAGNA_APPKEY", AppKey?.Key ?? throw new Exception("Unable to create app process. No YAGNA_APPKEY."));
-            if (env.ContainsKey("YAGNA_API_URL")) {
+            if (env.ContainsKey("YAGNA_API_URL"))
+            {
                 env.Remove("YAGNA_API_URL");
             }
             env.Add("YAGNA_API_URL", "http://127.0.0.1:7465");
@@ -111,6 +113,4 @@ namespace Golem.IntegrationTests.Tools
             this.Id = id;
         }
     }
-
-
 }

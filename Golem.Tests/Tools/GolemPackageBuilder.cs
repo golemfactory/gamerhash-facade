@@ -9,6 +9,8 @@ using System.Text;
 using ICSharpCode.SharpZipLib.GZip;
 using ICSharpCode.SharpZipLib.Tar;
 
+using Newtonsoft.Json.Linq;
+
 namespace Golem.IntegrationTests.Tools
 {
     public class PackageBuilder
@@ -33,9 +35,35 @@ namespace Golem.IntegrationTests.Tools
             var system = System();
             BuildDirectoryStructure(dir);
 
-            await DownloadExtractPackage(BinariesDir(dir), "golem-provider", "golemfactory/yagna", CURRENT_GOLEM_VERSION, system);
-            await DownloadExtractPackage(ExeUnitsDir(dir), "runtime", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION, system);
-            await DownloadExtractPackage(ExeUnitsDir(dir), "dummy-framework", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION, system);
+            await DownloadExtractPackage(BinariesDir(dir), "golem-provider", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
+
+            var exeUnitDir = ExeUnitsDir(dir);
+            await DownloadExtractPackage(exeUnitDir, "runtime", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION);
+            await DownloadExtractPackage(exeUnitDir, "dummy-framework", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION);
+
+            string dummy_descriptors = null;
+            using (StreamReader r = new StreamReader(Path.Combine(exeUnitDir, "ya-dummy-ai.json")))
+            {
+                dummy_descriptors = r.ReadToEnd();
+            }
+            if (dummy_descriptors != null)
+            {
+                var descriptors = JArray.Parse(dummy_descriptors);
+                foreach (JObject descriptor in descriptors)
+                {
+                    var name = (string)descriptor.GetValue("name");
+                    if ("ai-dummy".Equals(name))
+                    {
+                        var runtime_name = String.Format("ya-runtime-ai{0}", GolemRunnable.ExecutableFileExtension());
+                        var runtime_path = Path.Combine(exeUnitDir, runtime_name);
+                        descriptor.Remove("name");
+                        descriptor.Add("name", "ai");
+                        descriptor.Remove("supervisor-path");
+                        descriptor.Add("supervisor-path", runtime_path);
+                    }
+                }
+                File.WriteAllText(exeUnitDir + "/ya-dummy-ai.json", descriptors.ToString());
+            }
 
             Directory.SetCurrentDirectory(dir);
 
@@ -45,19 +73,18 @@ namespace Golem.IntegrationTests.Tools
         public async static Task<string> BuildRequestorDirectory(string test_name)
         {
             var dir = InitTestDirectory(String.Format("{0}_requestor", test_name));
-            var system = System();
 
             Directory.CreateDirectory(BinariesDir(dir));
             Directory.CreateDirectory(YagnaDataDir(dir));
 
-            await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION, system);
+            await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
 
             return dir;
         }
 
-        static async Task DownloadExtractPackage(string dir, string artifact, string repo, string tag, string system = "windows")
+        static async Task DownloadExtractPackage(string dir, string artifact, string repo, string tag)
         {
-            var builds = await DownloadArchiveArtifact(dir, artifact, tag, repo, system);
+            var builds = await DownloadArchiveArtifact(dir, artifact, tag, repo);
             var extract_to = Path.GetDirectoryName(builds) ?? "";
 
             Extract(builds, extract_to);
@@ -129,7 +156,7 @@ namespace Golem.IntegrationTests.Tools
 
         public static string DataDir(string gamerhash_dir)
         {
-            return Path.Combine(gamerhash_dir, "modules/golem-data");
+            return Path.Combine(gamerhash_dir, "modules", "golem-data");
         }
 
         public static string ProviderDataDir(string gamerhash_dir)
@@ -144,7 +171,7 @@ namespace Golem.IntegrationTests.Tools
 
         public static string ExeUnitsDir(string gamerhash_dir)
         {
-            return Path.Combine(gamerhash_dir, "modules/plugins");
+            return Path.Combine(gamerhash_dir, "modules", "plugins");
         }
 
         internal static async Task<string> Download(string target_dir, string url)
@@ -230,9 +257,10 @@ namespace Golem.IntegrationTests.Tools
         }
 
 
-        static async Task<string> DownloadArchiveArtifact(string target_dir, string artifact, string tag, string repository, string system = "windows")
+        static async Task<string> DownloadArchiveArtifact(string target_dir, string artifact, string tag, string repository)
         {
-            var ext = system is "windows" ? ".zip" : ".tar.gz";
+            var ext = OperatingSystem.IsWindows() ? ".zip" : ".tar.gz";
+            var system = System();
             var url = String.Format("https://github.com/{2}/releases/download/{0}/{3}-{1}-{0}", tag, system, repository, artifact);
             url += ext;
 

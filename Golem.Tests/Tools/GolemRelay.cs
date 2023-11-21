@@ -31,7 +31,6 @@ namespace Golem.IntegrationTests.Tools
                 return old_dir;
             }
             var dir = PackageBuilder.InitTestDirectory(String.Format("{0}_relay", test_name));
-            var system = PackageBuilder.System();
 
             Directory.CreateDirectory(PackageBuilder.BinariesDir(dir));
 
@@ -39,7 +38,7 @@ namespace Golem.IntegrationTests.Tools
             var repo = "pwalski/ya-relay";
             var tag = CURRENT_RELAY_VERSION;
 
-            await DownloadBinaryArtifact(PackageBuilder.BinariesDir(dir), artifact, tag, repo, system);
+            await DownloadBinaryArtifact(PackageBuilder.BinariesDir(dir), artifact, tag, repo);
             PackageBuilder.SetPermissions(dir);
 
             return dir;
