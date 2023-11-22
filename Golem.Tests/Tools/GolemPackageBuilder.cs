@@ -145,13 +145,13 @@ namespace Golem.IntegrationTests.Tools
         internal static string TestDir(string name)
         {
             var build_dir = AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
-            var tests_dir = Path.Combine(build_dir, "../../../tests");
+            var tests_dir = Path.Combine(build_dir, "..", "..", "..", "tests");
             return Path.GetFullPath(Path.Combine(tests_dir, name));
         }
 
         internal static string BinariesDir(string gamerhash_dir)
         {
-            return Path.Combine(gamerhash_dir, "modules/golem");
+            return Path.Combine(gamerhash_dir, "modules", "golem");
         }
 
         public static string DataDir(string gamerhash_dir)

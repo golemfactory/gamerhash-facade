@@ -63,16 +63,16 @@ namespace Golem.IntegrationTests.Tools
             app_key_process.Start();
             app_key_process.WaitForExit();
 
-            // var payment_fund_process = CreateProcess("yagna", "payment fund", _env);
-            // try
-            // {
-            //     payment_fund_process.Start();
-            //     payment_fund_process.WaitForExit();
-            // }
-            // catch (Exception e)
-            // {
-            //     Console.WriteLine("Payment fund process error: {}", e);
-            // }
+            var payment_fund_process = CreateProcess("yagna", "payment fund", _env);
+            try
+            {
+                payment_fund_process.Start();
+                payment_fund_process.WaitForExit();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Payment fund process error: {}", e);
+            }
 
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
 

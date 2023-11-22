@@ -43,7 +43,7 @@ namespace Golem.Tests
         [Fact]
         public async Task StartStop_Job()
         {
-            string golemPath = await PackageBuilder.BuildTestDirectory("StartStop_Job");
+            string golemPath = await PackageBuilder.BuildTestDirectory(nameof(JobTests));
             Console.WriteLine("Path: " + golemPath);
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
             
@@ -70,7 +70,7 @@ namespace Golem.Tests
 
             Console.WriteLine("Starting App");
             var app_process = _requestor?.CreateAppProcess() ?? throw new Exception("Requestor not started yet");
-            app_process.Start();
+            Assert.True(app_process.Start());
             
             Thread.Sleep(10000);
 
