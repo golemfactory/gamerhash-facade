@@ -108,7 +108,7 @@ namespace Golem.Yagna
             _logger = loggerFactory.CreateLogger<Provider>();
             _yaProviderPath = Path.Combine(golemPath, ProcessFactory.BinName("ya-provider"));
             _pluginsPath = Path.Combine(golemPath, "..", "plugins");
-            _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");
+            _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-*.json");
             _dataDir = dataDir;
             _env = new Dictionary<string, string>();
 
