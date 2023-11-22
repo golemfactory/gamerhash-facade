@@ -22,6 +22,7 @@ namespace Golem.IntegrationTests.Tools
         {
             var process = CreateProcess(file_name, args, env, true);
             process.StartInfo.WorkingDirectory = working_dir;
+            GolemRunnable.AddShutdownHook(process);
             if (process.Start())
             {
                 _golemProcess = process;
@@ -62,6 +63,13 @@ namespace Golem.IntegrationTests.Tools
         public static String ExecutableFileExtension()
         {
             return OperatingSystem.IsWindows() ? ".exe" : "";
+        }
+
+        public static void AddShutdownHook(Process childProcess)
+        {
+            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => { childProcess.Kill(); childProcess.WaitForExit(); };
+            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => { childProcess.Kill(); childProcess.WaitForExit(); };
+            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => { childProcess.Kill(); childProcess.WaitForExit(); };
         }
 
     }
