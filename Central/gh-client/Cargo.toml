@@ -1,6 +1,7 @@
 [package]
 name = "gh-client"
 version = "0.1.0"
+edition = '2021'
 
 [dependencies]
 actix = { version = "0.13", default-features = false }
