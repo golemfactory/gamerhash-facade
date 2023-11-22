@@ -169,8 +169,7 @@ namespace Golem.Yagna
             process.Start();
             var err = process.StandardError.ReadToEnd();
             var result = process.StandardOutput.ReadToEnd();
-            _logger?.LogInformation("Execution result: {0}", result);
-            _logger?.LogInformation("Execution error: {0}", err);
+            _logger?.LogInformation("Execution result:\nstdout: {0}\nstderr: {1}", result, err);
             return result;
         }
 
