@@ -23,9 +23,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <EmbeddedResource Include="Tools\App\**\*" Link="py\%(RecursiveDir)%(Filename)%(Extension)">
+    <!-- <EmbeddedResource Include="Tools\App\**\*" Link="py\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
+    </EmbeddedResource> -->
     <PackageReference Include="XunitContext" Version="3.3.1" />
   </ItemGroup>
 
@@ -35,13 +35,16 @@
   </ItemGroup>
 
    <Target Name="AfterClean">
-    <RemoveDir Directories="$(ProjectDir)\bin\$(Configuration)\net7.0\py" ContinueOnError="true" />
+    <RemoveDir Directories="$(ProjectDir)\bin\$(Configuration)\net7.0\app\" ContinueOnError="true" />
+    <RemoveDir Directories="$(ProjectDir)\Tools\App\dist" ContinueOnError="true" />
+    <RemoveDir Directories="$(ProjectDir)\Tools\App\build" ContinueOnError="true" />
   </Target>
 
   <Target Name="DbContainerUp" BeforeTargets="Test" AfterTargets="AfterBuild">
-    <Exec Command="python -m venv .venv" WorkingDirectory="$(ProjectDir)\bin\$(Configuration)\net7.0\py" ConsoleToMsBuild="true" />
-    <Exec Command=".\.venv\Scripts\activate | pip install -r requirements.txt" WorkingDirectory="$(ProjectDir)\bin\$(Configuration)\net7.0\py" ConsoleToMsBuild="true" />
-    <Exec Command=".\.venv\Scripts\activate | pyinstaller app.py -y" WorkingDirectory="$(ProjectDir)\bin\$(Configuration)\net7.0\py" ConsoleToMsBuild="true" />
+    <Exec Command="python -m venv .venv" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
+    <Exec Command=".\.venv\Scripts\activate | pip install -r requirements.txt" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
+    <Exec Command=".\.venv\Scripts\activate | pyinstaller app.py -y" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
+    <Exec Command="move dist\app $(ProjectDir)\bin\$(Configuration)\net7.0\" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
   </Target>
 
 </Project>

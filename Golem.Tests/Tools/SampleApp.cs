@@ -14,7 +14,7 @@ namespace App
     {
         public static Process CreateProcess(Dictionary<string, string> env)
         {
-            var app = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, "py", "dist", "app", ProcessFactory.BinName("app"));
+            var app = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, "app", ProcessFactory.BinName("app"));
             return ProcessFactory.CreateProcess(app, " --network goerli --subnet-tag public", true, env);
         }
     }
