@@ -122,7 +122,7 @@ def run_golem_example(example_main, log_file=None):
 
 # App
 
-RUNTIME_NAME = "ai-dummy"
+RUNTIME_NAME = "ai"
 CAPABILITIES = "golem.runtime.capabilities"
 
 @dataclass

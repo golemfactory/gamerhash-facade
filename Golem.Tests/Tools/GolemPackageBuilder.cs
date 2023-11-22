@@ -16,7 +16,7 @@ namespace Golem.IntegrationTests.Tools
     public class PackageBuilder
     {
         const string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc4";
-        const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc14";
+        const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc15";
 
         internal static string InitTestDirectory(string name)
         {
@@ -52,12 +52,10 @@ namespace Golem.IntegrationTests.Tools
                 foreach (JObject descriptor in descriptors)
                 {
                     var name = (string)descriptor.GetValue("name");
-                    if ("ai-dummy".Equals(name))
+                    if ("ai".Equals(name))
                     {
                         var runtime_name = String.Format("ya-runtime-ai{0}", GolemRunnable.ExecutableFileExtension());
                         var runtime_path = Path.Combine(exeUnitDir, runtime_name);
-                        descriptor.Remove("name");
-                        descriptor.Add("name", "ai");
                         descriptor.Remove("supervisor-path");
                         descriptor.Add("supervisor-path", runtime_path);
                     }

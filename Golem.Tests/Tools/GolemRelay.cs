@@ -25,11 +25,13 @@ namespace Golem.IntegrationTests.Tools
         protected static async Task<string> BuildRelayDir(string test_name)
         {
             var old_dir = PackageBuilder.TestDir(test_name);
+            /*
             if (Directory.Exists(old_dir))
             {
                 Console.WriteLine("Reusing existing relay directory: ", old_dir);
                 return old_dir;
             }
+            */
             var dir = PackageBuilder.InitTestDirectory(String.Format("{0}_relay", test_name));
 
             Directory.CreateDirectory(PackageBuilder.BinariesDir(dir));
