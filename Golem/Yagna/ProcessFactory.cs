@@ -28,7 +28,10 @@ namespace Golem.Yagna
 
             foreach (var (k, v) in env)
             {
-                startInfo.EnvironmentVariables.Add(k, v);
+                if(startInfo.EnvironmentVariables.ContainsKey(k))
+                    startInfo.EnvironmentVariables[k] = v;
+                else
+                    startInfo.EnvironmentVariables.Add(k, v);
             }
 
             var process = new Process
