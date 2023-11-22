@@ -189,6 +189,7 @@ namespace Golem.Yagna
             var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
 
             EnvironmentBuilder environment = Env;
+            environment = options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(options.YagnaApiUrl) : environment;
             environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
             environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
             environment = File.Exists(certs) ? environment.WithSslCertFile(certs) : environment;
