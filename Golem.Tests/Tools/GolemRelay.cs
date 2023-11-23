@@ -3,7 +3,7 @@ namespace Golem.IntegrationTests.Tools
 {
     public class GolemRelay : GolemRunnable
     {
-        const string CURRENT_RELAY_VERSION = "pre-rel-v0.2.3-rc10";
+        const string CURRENT_RELAY_VERSION = "pre-rel-v0.2.3-rc11";
 
         private GolemRelay(string dir) : base(dir)
         {
