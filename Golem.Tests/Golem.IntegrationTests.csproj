@@ -37,15 +37,16 @@
     <RemoveDir Directories="$(ProjectDir)\Tools\App\build" ContinueOnError="true" />
   </Target>
 
-  <Target Name="DbContainerUp" BeforeTargets="Test" AfterTargets="AfterBuild">
+    
+  <Target Name="BuildApp" BeforeTargets="Test" AfterTargets="AfterBuild">
     <Exec Command="python -m venv .venv" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
     <Exec Command=".\.venv\Scripts\activate | pip install -r requirements.txt" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
-    <Exec Command=".\.venv\Scripts\activate | pyinstaller app.py -y" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
+    <Exec Command=".\.venv\Scripts\activate | pyinstaller --onefile app.py -y" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
     <RemoveDir Directories="$(ProjectDir)\bin\$(Configuration)\net7.0\app" ContinueOnError="true" />
     <ItemGroup>
-      <MySourceFiles Include="$(ProjectDir)Tools\App\dist\app\app*"/>
+      <AppBinary Include="$(ProjectDir)Tools\App\dist\*.*"/>
     </ItemGroup>
-    <Copy SourceFiles="@(MySourceFiles)" DestinationFolder="$(ProjectDir)bin\$(Configuration)\net7.0\app\" />
+    <Copy SourceFiles="@(AppBinary)" DestinationFolder="$(ProjectDir)bin\$(Configuration)\net7.0\app\" />
   </Target>
 
 </Project>

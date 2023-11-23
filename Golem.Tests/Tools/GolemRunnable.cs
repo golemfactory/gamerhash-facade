@@ -32,7 +32,7 @@ namespace Golem.IntegrationTests.Tools
             return false;
         }
 
-        protected Process CreateProcess(string file_name, string args, Dictionary<string, string> env, bool openConsole = false)
+        protected Process CreateProcess(string file_name, string args, Dictionary<string, string> env, bool openConsole = true)
         {
             var file_name_w_ext = ProcessFactory.BinName(file_name);
             var dir = Path.GetFullPath(_dir);

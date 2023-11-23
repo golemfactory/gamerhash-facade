@@ -37,7 +37,7 @@ namespace Golem.IntegrationTests.Tools
             return StartProcess("yagna", Path.Combine(_dir, "modules", "golem-data", "yagna"), "service run", _env);
         }
 
-        public Process CreateAppProcess()
+        public SampleApp CreateSampleApp()
         {
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             if (env.ContainsKey("YAGNA_APPKEY"))
@@ -50,9 +50,7 @@ namespace Golem.IntegrationTests.Tools
                 env.Remove("YAGNA_API_URL");
             }
             env.Add("YAGNA_API_URL", "http://127.0.0.1:7465");
-            var process = SampleApp.CreateProcess(env);
-            process.StartInfo.WorkingDirectory = Path.Combine(_dir, "modules", "golem-data", "yagna");
-            return process;
+            return new SampleApp(_dir, env);
         }
 
         public void InitAccount()

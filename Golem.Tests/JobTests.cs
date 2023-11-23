@@ -33,6 +33,7 @@ namespace Golem.Tests
             _relay = await GolemRelay.Build(nameof(JobTests));
             Assert.True(_relay.Start());
             System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST","127.0.0.1:17464");
+            System.Environment.SetEnvironmentVariable("RUST_LOG","debug");
             Thread.Sleep(1000);
             
             _requestor = await GolemRequestor.Build(nameof(JobTests));
@@ -69,15 +70,15 @@ namespace Golem.Tests
             Assert.Null(golem.CurrentJob);
 
             Console.WriteLine("Starting App");
-            var app_process = _requestor?.CreateAppProcess() ?? throw new Exception("Requestor not started yet");
-            Assert.True(app_process.Start());
+            var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
+            Assert.True(app.Start());
             
             Thread.Sleep(10000);
 
             Assert.NotNull(golem.CurrentJob);
 
             Console.WriteLine("Stopping App");
-            app_process.Kill();
+            await app.Stop();
             Thread.Sleep(3000);
 
             Assert.Null(golem.CurrentJob);

@@ -11,14 +11,24 @@ using Golem.IntegrationTests.Tools;
 
 namespace App
 {
-    class SampleApp
+    public class SampleApp: GolemRunnable
     {
-        public static Process CreateProcess(Dictionary<string, string> env)
+        private readonly Dictionary<string, string> _env;
+
+        public SampleApp(string dir, Dictionary<string, string> env) : base(dir)
         {
-            var app = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, "app", ProcessFactory.BinName("app"));
-            var process = ProcessFactory.CreateProcess(app, " --network goerli --subnet-tag public", true, env);
-            GolemRunnable.AddShutdownHook(process);
-            return process;
+            _env = env;
+            var app_filename = ProcessFactory.BinName("app");
+            var app_src = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, "app", app_filename);
+            var app_dst = Path.Combine(dir, "modules", "golem", app_filename);
+            File.Copy(app_src, app_dst);
+        }
+
+        public override bool Start()
+        {
+            var working_dir = Path.Combine(_dir, "modules", "golem-data", "relay");
+            Directory.CreateDirectory(working_dir);
+            return StartProcess("app", Path.Combine(_dir, "modules", "golem-data", "yagna"), " --network goerli --subnet-tag public", _env);
         }
     }
 }
