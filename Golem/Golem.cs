@@ -132,7 +132,7 @@ namespace Golem
         {
             Status = GolemStatus.Starting;
 
-            bool openConsole = false;
+            bool openConsole = true;
 
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
