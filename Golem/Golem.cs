@@ -29,6 +29,7 @@ namespace Golem
         private ProviderConfigService ProviderConfig { get; set; }
 
         private Task? _activityLoop;
+        private Task? _invoiceEventsLoop;
 
         private readonly ILogger _logger;
         private readonly CancellationTokenSource _tokenSource;
@@ -132,7 +133,7 @@ namespace Golem
         {
             Status = GolemStatus.Starting;
 
-            bool openConsole = false;
+            bool openConsole = true;
 
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
@@ -227,6 +228,7 @@ namespace Golem
 
             //TODO what if activityLoop != null?
             this._activityLoop = StartActivityLoop();
+            this._invoiceEventsLoop = StartInvoiceEventsLoop();
 
             Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
 
@@ -301,13 +303,28 @@ namespace Golem
             return new ActivityLoop(_httpClient, token, _logger).Start(EmitJobEvent);
         }
 
+        private Task StartInvoiceEventsLoop()
+        {
+            var token = _tokenSource.Token;
+            token.Register(_httpClient.CancelPendingRequests);
+            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(UpdatePaymentStatus);
+        }
+
+        private void UpdatePaymentStatus(GolemLib.Types.PaymentStatus paymentStatus)
+        {
+            if (CurrentJob is Job job)
+            {
+                job.PaymentStatus = paymentStatus;
+            }
+        }
+
         private void EmitJobEvent(Job? job)
         {
             if (CurrentJob != job)
             {
                 CurrentJob = job;
                 _logger.LogInformation("New job: {}", job);
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentJob)));
+                OnPropertyChanged(nameof(CurrentJob));
             }
             else
             {

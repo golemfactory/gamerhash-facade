@@ -6,6 +6,8 @@ using System.Text.Json.Serialization;
 using Golem.Model;
 using Golem.Yagna.Types;
 
+using GolemLib.Types;
+
 using Microsoft.Extensions.Logging;
 
 class ActivityLoop
@@ -57,9 +59,9 @@ class ActivityLoop
                     using StreamReader reader = new StreamReader(stream);
 
                     await foreach (string json in EnumerateMessages(reader).WithCancellation(_token))
-                    {
+                    {   
                         _logger.LogInformation("got json {0}", json);
-                        var activity_state = parseMessage(json);
+                        var activity_state = parseActivityState(json);
                         if (activity_state == null || activity_state.AgreementId == null)
                         {
                             EmitJobEvent(null);
@@ -96,7 +98,45 @@ class ActivityLoop
         }
     }
 
-    private ActivityState? parseMessage(string message)
+    private ActivityState? parseActivityState(string message)
+    {
+        try
+        {
+            var trackingEvent = JsonSerializer.Deserialize<TrackingEvent>(message, s_serializerOptions);
+            var _activities = trackingEvent?.Activities ?? new List<ActivityState>();
+            if (!_activities.Any())
+            {
+                _logger.LogInformation("No activities");
+                return null;
+            }
+            var _active_activities = _activities.FindAll(activity => activity.State != ActivityState.StateType.Terminated);
+            if (!_active_activities.Any())
+            {
+                _logger.LogInformation("All activities terminated: {}", _activities);
+                return null;
+            }
+            if (_active_activities.Count > 1)
+            {
+                _logger.LogWarning("Multiple non terminated activities: {}", _active_activities);
+                //TODO what now?
+            }
+            //TODO take latest? the one with specific status?
+            ActivityState _activity = _activities.First();
+            if (_activity.AgreementId == null)
+            {
+                _logger.LogInformation("Activity without agreement id: {}", _activity);
+                return null;
+            }
+            return _activity;
+        }
+        catch (JsonException e)
+        {
+            _logger.LogError(e, "Invalid monitoring event: {0}", message);
+            return null;
+        }
+    }
+
+    private ActivityState? parsePayments(string message)
     {
         try
         {

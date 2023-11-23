@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using GolemLib;
@@ -105,10 +106,24 @@ namespace Golem.Yagna.Types
 
         public JobStatus Status => JobStatus.Idle;
 
-        //TODO
-        public GolemLib.Types.PaymentStatus? PaymentStatus => null;
+        private GolemLib.Types.PaymentStatus? _paymentStatus;
+        public GolemLib.Types.PaymentStatus? PaymentStatus {
+            get => _paymentStatus;
+            set {
+                if(_paymentStatus != value)
+                {
+                    _paymentStatus = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
 
         public Task<GolemUsage> CurrentUsage()
         {
