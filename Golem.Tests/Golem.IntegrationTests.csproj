@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MedallionShell" Version="1.6.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.1" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
@@ -44,7 +45,7 @@
     <Exec Command=".\.venv\Scripts\activate | pyinstaller --onefile app.py -y" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
     <RemoveDir Directories="$(ProjectDir)\bin\$(Configuration)\net7.0\app" ContinueOnError="true" />
     <ItemGroup>
-      <AppBinary Include="$(ProjectDir)Tools\App\dist\*.*"/>
+      <AppBinary Include="$(ProjectDir)Tools\App\dist\*.*" />
     </ItemGroup>
     <Copy SourceFiles="@(AppBinary)" DestinationFolder="$(ProjectDir)bin\$(Configuration)\net7.0\app\" />
   </Target>

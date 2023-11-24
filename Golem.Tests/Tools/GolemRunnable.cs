@@ -4,25 +4,17 @@ using System.Runtime.InteropServices;
 
 using Golem.Yagna;
 
+using Medallion.Shell;
+
 namespace Golem.IntegrationTests.Tools
 {
     public abstract class GolemRunnable
     {
-
-        internal const int CTRL_C_EVENT = 0;
-        [DllImport("kernel32.dll")]
-        internal static extern bool GenerateConsoleCtrlEvent(uint dwCtrlEvent, uint dwProcessGroupId);
-        [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool AttachConsole(uint dwProcessId);
-        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-        internal static extern bool FreeConsole();
-        [DllImport("kernel32.dll")]
-        static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate HandlerRoutine, bool Add);
         // Delegate type to be used as the Handler Routine for SCCH
         delegate Boolean ConsoleCtrlDelegate(uint CtrlType);
 
         protected string _dir;
-        private Process? _golemProcess;
+        private Command? _golemProcess;
 
         protected GolemRunnable(string dir)
         {
@@ -33,68 +25,58 @@ namespace Golem.IntegrationTests.Tools
 
         protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env, bool openConsole = true)
         {
-            var process = CreateProcess(file_name, args, env, openConsole);
-            process.StartInfo.WorkingDirectory = working_dir;
+            Command process = RunCommand(file_name, working_dir, args, env);
+            // process.StartInfo.WorkingDirectory = working_dir;
             GolemRunnable.AddShutdownHook(process);
-            if (process.Start())
+            if (!process.Process.HasExited)
             {
                 _golemProcess = process;
-                return !_golemProcess.HasExited;
+                return !_golemProcess.Process.HasExited;
             }
             _golemProcess = null;
             return false;
         }
 
-        protected Process CreateProcess(string file_name, string args, Dictionary<string, string> env, bool openConsole = true)
+        protected Command RunCommand(string file_name, string working_dir, string args, Dictionary<string, string> env)
         {
             var file_name_w_ext = ProcessFactory.BinName(file_name);
             var dir = Path.GetFullPath(_dir);
             var runnable_path = Path.Combine(dir, "modules", "golem", file_name_w_ext);
-            return ProcessFactory.CreateProcess(runnable_path, args, openConsole, env);
+
+            var args_list = args.Split(null);
+            return Command.Run(runnable_path, args_list, options => options
+                .EnvironmentVariables(env)
+                .WorkingDirectory(working_dir)
+                .ThrowOnError(true)
+                .DisposeOnExit(false)
+            );
         }
 
-        public async Task Stop(StopMethod stopMethod = StopMethod.SigInt)
+        public async Task Stop(StopMethod stopMethod = StopMethod.SigKill)
         {
-            if (_golemProcess == null || _golemProcess.HasExited)
+            if (_golemProcess == null || _golemProcess.Process.HasExited)
                 return;
             switch (stopMethod)
             {
                 case StopMethod.SigKill:
-                    await KillProcess();
+                    _golemProcess.Kill();
                     break;
                 case StopMethod.SigInt:
-                    if (!InterruptProcess()) {
-                        Console.WriteLine("Unable to interrupt process. Killing");
-                        await KillProcess();
+                    if (!await _golemProcess.TrySignalAsync(CommandSignal.ControlC))
+                    {
+                        Console.WriteLine("Failed to interrupt process. Killing");
+                        _golemProcess.Kill();
                     }
                     break;
             }
-            _golemProcess.Kill(true);
-            await _golemProcess.WaitForExitAsync();
-            _golemProcess = null;
-        }
-
-        private async Task KillProcess()
-        {
-            _golemProcess.Kill(true);
-            await _golemProcess.WaitForExitAsync();
-        }
-
-        private bool InterruptProcess()
-        {
-            if (AttachConsole((uint)_golemProcess.Id)) {
-                SetConsoleCtrlHandler(null, true);
-                try { 
-                    if (!GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0))
-                        return false;
-                    _golemProcess.WaitForExit();
-                } finally {
-                    SetConsoleCtrlHandler(null, false);
-                    FreeConsole();
-                }
-                return true;
+            try
+            {
+                _golemProcess.Wait();
             }
-            throw new Exception("Unable to attach to process console.");
+            finally
+            {
+                _golemProcess = null;
+            }
         }
 
         protected static async Task<string> DownloadBinaryArtifact(string target_dir, string artifact, string tag, string repository)
@@ -112,16 +94,16 @@ namespace Golem.IntegrationTests.Tools
             return OperatingSystem.IsWindows() ? ".exe" : "";
         }
 
-        public static void AddShutdownHook(Process childProcess)
+        public static void AddShutdownHook(Command childProcess)
         {
-            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => { childProcess.Kill(); childProcess.WaitForExit(); };
-            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => { childProcess.Kill(); childProcess.WaitForExit(); };
-            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => { childProcess.Kill(); childProcess.WaitForExit(); };
+            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
+            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
+            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
         }
-
     }
 
-    public enum StopMethod {
+    public enum StopMethod
+    {
         SigKill,
         SigInt
     }

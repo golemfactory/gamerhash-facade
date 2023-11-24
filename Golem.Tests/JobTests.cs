@@ -90,7 +90,7 @@ namespace Golem.Tests
             Assert.NotNull(golem.CurrentJob);
 
             Console.WriteLine("Stopping App");
-            await app.Stop();
+            await app.Stop(StopMethod.SigInt);
 
             var jobStopCounter = 0;
             while ((job = await jobChannel.Reader.ReadAsync()) != null && jobStopCounter++ < 10) {
@@ -116,7 +116,7 @@ namespace Golem.Tests
             }
             if (_relay != null)
             {
-                await _relay.Stop(StopMethod.SigKill);
+                await _relay.Stop();
             }
         }
 
