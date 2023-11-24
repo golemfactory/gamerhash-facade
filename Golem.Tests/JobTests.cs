@@ -116,7 +116,7 @@ namespace Golem.Tests
             }
             if (_relay != null)
             {
-                await _relay.Stop();
+                await _relay.Stop(StopMethod.SigKill);
             }
         }
 
