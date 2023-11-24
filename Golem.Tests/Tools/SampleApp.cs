@@ -28,7 +28,7 @@ namespace App
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "relay");
             Directory.CreateDirectory(working_dir);
-            return StartProcess("app", Path.Combine(_dir, "modules", "golem-data", "yagna"), " --network goerli --subnet-tag public", _env);
+            return StartProcess("app", Path.Combine(_dir, "modules", "golem-data", "yagna"), " --network goerli --subnet-tag public", _env, true);
         }
     }
 }

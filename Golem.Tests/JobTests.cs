@@ -86,7 +86,7 @@ namespace Golem.Tests
             while ((job = await jobChannel.Reader.ReadAsync()) == null && jobStartCounter++ < 10) {
                 Console.WriteLine("Still no job");
             }
-            Console.WriteLine("Got a job {0}", job);
+            Console.WriteLine("Got a job. Status {0}, Id: {1}, RequestorId: {2}", golem.CurrentJob.Status, golem.CurrentJob.Id, golem.CurrentJob.RequestorId);
             Assert.NotNull(golem.CurrentJob);
 
             Console.WriteLine("Stopping App");
@@ -94,10 +94,10 @@ namespace Golem.Tests
 
             var jobStopCounter = 0;
             while ((job = await jobChannel.Reader.ReadAsync()) != null && jobStopCounter++ < 10) {
-                Console.WriteLine("Still has a job: {0}", job);
+                Console.WriteLine("Still has a job. Status: {0}, Id: {1}, RequestorId: {2}", job.Status, job.Id, job.RequestorId);
             }
             Assert.Null(golem.CurrentJob);
-
+        
             Console.WriteLine("Stopping Golem");
             await golem.Stop();
 

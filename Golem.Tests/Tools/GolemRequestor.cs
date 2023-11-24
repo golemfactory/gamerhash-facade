@@ -75,7 +75,7 @@ namespace Golem.IntegrationTests.Tools
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
 
             env.Add("RUST_LOG", "none");
-            var app_key_list_process = CreateProcess("yagna", "app-key list --json", env, false);
+            var app_key_list_process = CreateProcess("yagna", "app-key list --json", env);
 
             app_key_list_process.StartInfo.CreateNoWindow = true;
             app_key_list_process.StartInfo.RedirectStandardOutput = true;

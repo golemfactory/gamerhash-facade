@@ -1,5 +1,6 @@
 
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 using Golem.Yagna;
 
@@ -7,6 +8,18 @@ namespace Golem.IntegrationTests.Tools
 {
     public abstract class GolemRunnable
     {
+
+        internal const int CTRL_C_EVENT = 0;
+        [DllImport("kernel32.dll")]
+        internal static extern bool GenerateConsoleCtrlEvent(uint dwCtrlEvent, uint dwProcessGroupId);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern bool AttachConsole(uint dwProcessId);
+        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+        internal static extern bool FreeConsole();
+        [DllImport("kernel32.dll")]
+        static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate HandlerRoutine, bool Add);
+        // Delegate type to be used as the Handler Routine for SCCH
+        delegate Boolean ConsoleCtrlDelegate(uint CtrlType);
 
         protected string _dir;
         private Process? _golemProcess;
@@ -18,9 +31,9 @@ namespace Golem.IntegrationTests.Tools
 
         public abstract bool Start();
 
-        protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env)
+        protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env, bool openConsole = true)
         {
-            var process = CreateProcess(file_name, args, env, true);
+            var process = CreateProcess(file_name, args, env, openConsole);
             process.StartInfo.WorkingDirectory = working_dir;
             GolemRunnable.AddShutdownHook(process);
             if (process.Start())
@@ -40,14 +53,48 @@ namespace Golem.IntegrationTests.Tools
             return ProcessFactory.CreateProcess(runnable_path, args, openConsole, env);
         }
 
-        public async Task Stop()
+        public async Task Stop(StopMethod stopMethod = StopMethod.SigInt)
         {
             if (_golemProcess == null || _golemProcess.HasExited)
                 return;
-
+            switch (stopMethod)
+            {
+                case StopMethod.SigKill:
+                    await KillProcess();
+                    break;
+                case StopMethod.SigInt:
+                    if (!InterruptProcess()) {
+                        Console.WriteLine("Unable to interrupt process. Killing");
+                        await KillProcess();
+                    }
+                    break;
+            }
             _golemProcess.Kill(true);
             await _golemProcess.WaitForExitAsync();
             _golemProcess = null;
+        }
+
+        private async Task KillProcess()
+        {
+            _golemProcess.Kill(true);
+            await _golemProcess.WaitForExitAsync();
+        }
+
+        private bool InterruptProcess()
+        {
+            if (AttachConsole((uint)_golemProcess.Id)) {
+                SetConsoleCtrlHandler(null, true);
+                try { 
+                    if (!GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0))
+                        return false;
+                    _golemProcess.WaitForExit();
+                } finally {
+                    SetConsoleCtrlHandler(null, false);
+                    FreeConsole();
+                }
+                return true;
+            }
+            throw new Exception("Unable to attach to process console.");
         }
 
         protected static async Task<string> DownloadBinaryArtifact(string target_dir, string artifact, string tag, string repository)
@@ -72,5 +119,10 @@ namespace Golem.IntegrationTests.Tools
             AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => { childProcess.Kill(); childProcess.WaitForExit(); };
         }
 
+    }
+
+    public enum StopMethod {
+        SigKill,
+        SigInt
     }
 }
