@@ -40,7 +40,9 @@ namespace Golem.IntegrationTests.Tools
             var repo = "pwalski/ya-relay";
             var tag = CURRENT_RELAY_VERSION;
 
-            await DownloadBinaryArtifact(PackageBuilder.BinariesDir(dir), artifact, tag, repo);
+            var file = await DownloadBinaryArtifact(artifact, tag, repo);
+            var binaries_dir = PackageBuilder.BinariesDir(dir);
+            File.Copy(file, Path.Combine(binaries_dir, Path.GetFileName(file)));
             PackageBuilder.SetPermissions(dir);
 
             return dir;

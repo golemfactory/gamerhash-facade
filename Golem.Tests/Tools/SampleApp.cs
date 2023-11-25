@@ -26,9 +26,9 @@ namespace App
 
         public override bool Start()
         {
-            var working_dir = Path.Combine(_dir, "modules", "golem-data", "relay");
+            var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
-            return StartProcess("app", Path.Combine(_dir, "modules", "golem-data", "yagna"), " --network goerli --subnet-tag public", _env, true);
+            return StartProcess("app", Path.Combine(_dir, "modules", "golem-data", "yagna"), "--network goerli --subnet-tag public", _env, true);
         }
     }
 }

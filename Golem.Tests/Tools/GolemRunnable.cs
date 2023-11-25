@@ -33,6 +33,8 @@ namespace Golem.IntegrationTests.Tools
                 _golemProcess = process;
                 return !_golemProcess.Process.HasExited;
             }
+
+            Console.WriteLine("Command stopped. Output:\n{0}", String.Join("\n", _golemProcess.GetOutputAndErrorLines()));
             _golemProcess = null;
             return false;
         }
@@ -79,14 +81,14 @@ namespace Golem.IntegrationTests.Tools
             }
         }
 
-        protected static async Task<string> DownloadBinaryArtifact(string target_dir, string artifact, string tag, string repository)
+        protected static async Task<string> DownloadBinaryArtifact(string artifact, string tag, string repository)
         {
             var ext = ExecutableFileExtension();
             var url = String.Format("https://github.com/{1}/releases/download/{0}/{2}", tag, repository, artifact);
             url += ext;
 
             Console.WriteLine(String.Format("Download binary: {0}", url));
-            return await PackageBuilder.Download(target_dir, url);
+            return await PackageBuilder.Download(url);
         }
 
         public static String ExecutableFileExtension()

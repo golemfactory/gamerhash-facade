@@ -57,7 +57,6 @@ namespace Golem.Tests
             };
             golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), golemStatus).Subscribe();
 
-
             var jobChannel = Channel.CreateUnbounded<IJob>();
             Action<IJob?> currentJobHook = async (v) =>
             {

@@ -82,21 +82,23 @@ namespace Golem.IntegrationTests.Tools
 
         static async Task DownloadExtractPackage(string dir, string artifact, string repo, string tag)
         {
-            var builds = await DownloadArchiveArtifact(dir, artifact, tag, repo);
-            var extract_to = Path.GetDirectoryName(builds) ?? "";
+            var downloaded_artifact = await DownloadArchiveArtifact(artifact, tag, repo);
 
-            Extract(builds, extract_to);
+            var extract_dir = Path.Combine(dir, "unpack");
 
-            var extract_package_dir = Path.ChangeExtension(builds, null);
-            if (Path.GetExtension(extract_package_dir) == ".tar")
-            {
-                extract_package_dir = Path.ChangeExtension(extract_package_dir, null);
+            Extract(downloaded_artifact, extract_dir);
+
+            var zipExt = ".zip";
+            if (Path.GetFileName(downloaded_artifact).EndsWith(zipExt)) {
+                var filename = Path.GetFileName(downloaded_artifact);
+                var extract_dir_nested = filename.Substring(0, filename.Length - zipExt.Length);
+                extract_dir = Path.Combine(extract_dir, extract_dir_nested);
             }
 
-            SetPermissions(extract_package_dir);
+            SetPermissions(extract_dir);
 
-            CopyFilesRecursively(extract_package_dir, dir);
-            Directory.Delete(extract_package_dir, true);
+            CopyFilesRecursively(extract_dir, dir);
+            Directory.Delete(extract_dir, true);
 
         }
 
@@ -147,35 +149,42 @@ namespace Golem.IntegrationTests.Tools
             return Path.GetFullPath(Path.Combine(tests_dir, name));
         }
 
-        internal static string BinariesDir(string gamerhash_dir)
+        internal static string BinariesDir(string test_dir)
         {
-            return Path.Combine(gamerhash_dir, "modules", "golem");
+            return Path.Combine(test_dir, "modules", "golem");
         }
 
-        public static string DataDir(string gamerhash_dir)
+        public static string DataDir(string test_dir)
         {
-            return Path.Combine(gamerhash_dir, "modules", "golem-data");
+            return Path.Combine(test_dir, "modules", "golem-data");
         }
 
-        public static string ProviderDataDir(string gamerhash_dir)
+        public static string ProviderDataDir(string test_dir)
         {
-            return Path.Combine(DataDir(gamerhash_dir), "provider");
+            return Path.Combine(DataDir(test_dir), "provider");
         }
 
-        public static string YagnaDataDir(string gamerhash_dir)
+        public static string YagnaDataDir(string test_dir)
         {
-            return Path.Combine(DataDir(gamerhash_dir), "yagna");
+            return Path.Combine(DataDir(test_dir), "yagna");
         }
 
-        public static string ExeUnitsDir(string gamerhash_dir)
+        public static string ExeUnitsDir(string test_dir)
         {
-            return Path.Combine(gamerhash_dir, "modules", "plugins");
+            return Path.Combine(test_dir, "modules", "plugins");
         }
 
-        internal static async Task<string> Download(string target_dir, string url)
+        internal static async Task<string> Download(string url)
         {
             var name = Path.GetFileName(url);
+            var target_dir = Path.Combine(Path.GetTempPath(), "gamerhash_facade_tests");
             var target_file = Path.Combine(target_dir, name);
+            if (Path.Exists(target_file)) {
+                return target_file;
+            }
+            if (!Directory.Exists(target_dir)) {
+                Directory.CreateDirectory(target_dir);
+            }
             using (var httpClient = new HttpClient())
             {
                 var response = await httpClient.GetAsync(url);
@@ -211,8 +220,6 @@ namespace Golem.IntegrationTests.Tools
                 default:
                     throw new Exception("Uknonwn archive format. File: " + file);
             }
-
-            File.Delete(file);
         }
 
         // Based on: https://stackoverflow.com/a/52200001
@@ -255,15 +262,15 @@ namespace Golem.IntegrationTests.Tools
         }
 
 
-        static async Task<string> DownloadArchiveArtifact(string target_dir, string artifact, string tag, string repository)
+        static async Task<string> DownloadArchiveArtifact(string artifact, string tag, string repository)
         {
-            var ext = OperatingSystem.IsWindows() ? ".zip" : ".tar.gz";
+            var ext = OperatingSystem.IsWindows() ? "zip" : "tar.gz";
             var system = System();
-            var url = String.Format("https://github.com/{2}/releases/download/{0}/{3}-{1}-{0}", tag, system, repository, artifact);
-            url += ext;
+            var artifact_filename = String.Format("{0}-{1}-{2}.{3}", artifact, system, tag, ext);
+            var url = String.Format("https://github.com/{0}/releases/download/{1}/{2}", repository,  tag, artifact_filename);
 
             Console.WriteLine(String.Format("Download archive: {0}", url));
-            return await Download(target_dir, url);
+            return await Download(url);
         }
     }
 
