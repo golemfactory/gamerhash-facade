@@ -11,6 +11,9 @@ using GolemLib;
 using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Configuration;
+
+using Xunit.Abstractions;
 
 namespace Golem.Tests
 {
@@ -25,8 +28,10 @@ namespace Golem.Tests
         public JobTests(ITestOutputHelper outputHelper)
         {
             XunitContext.Register(outputHelper);
-            _loggerFactory = LoggerFactory.Create(builder =>
-                builder.AddSimpleConsole(options => options.SingleLine = true)
+            var logfile = Path.Combine(PackageBuilder.TestDir(nameof(JobTests)), "gh_facade-{Date}.log");
+            _loggerFactory = LoggerFactory.Create(builder => builder
+                .AddSimpleConsole(options => options.SingleLine = true)
+                .AddFile(logfile)
             );
         }
 
@@ -34,9 +39,9 @@ namespace Golem.Tests
         {
             _relay = await GolemRelay.Build(nameof(JobTests));
             Assert.True(_relay.Start());
-            System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST","127.0.0.1:17464");
-            System.Environment.SetEnvironmentVariable("RUST_LOG","debug");
-            
+            System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:17464");
+            System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");
+
             _requestor = await GolemRequestor.Build(nameof(JobTests));
             Assert.True(_requestor.Start());
             _requestor.InitAccount();
@@ -48,7 +53,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory(nameof(JobTests));
             Console.WriteLine("Path: " + golemPath);
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
-            
+
             var statusChannel = Channel.CreateUnbounded<GolemStatus>();
             Action<GolemStatus> golemStatus = async (v) =>
             {
@@ -69,11 +74,12 @@ namespace Golem.Tests
             await golem.Start();
             Assert.Equal(GolemStatus.Starting, await statusChannel.Reader.ReadAsync());
             GolemStatus? status = GolemStatus.Starting;
-            while ((status = await statusChannel.Reader.ReadAsync()) == GolemStatus.Starting) {
+            while ((status = await statusChannel.Reader.ReadAsync()) == GolemStatus.Starting)
+            {
                 Console.WriteLine("Still starting");
             }
             Assert.Equal(status, GolemStatus.Ready);
-            
+
             Assert.Null(golem.CurrentJob);
 
             Console.WriteLine("Starting App");
@@ -82,7 +88,8 @@ namespace Golem.Tests
 
             var jobStartCounter = 0;
             IJob? job = null;
-            while ((job = await jobChannel.Reader.ReadAsync()) == null && jobStartCounter++ < 10) {
+            while ((job = await jobChannel.Reader.ReadAsync()) == null && jobStartCounter++ < 10)
+            {
                 Console.WriteLine("Still no job");
             }
             Console.WriteLine("Got a job. Status {0}, Id: {1}, RequestorId: {2}", golem.CurrentJob.Status, golem.CurrentJob.Id, golem.CurrentJob.RequestorId);
@@ -92,16 +99,18 @@ namespace Golem.Tests
             await app.Stop(StopMethod.SigInt);
 
             var jobStopCounter = 0;
-            while ((job = await jobChannel.Reader.ReadAsync()) != null && jobStopCounter++ < 10) {
+            while ((job = await jobChannel.Reader.ReadAsync()) != null && jobStopCounter++ < 10)
+            {
                 Console.WriteLine("Still has a job. Status: {0}, Id: {1}, RequestorId: {2}", job.Status, job.Id, job.RequestorId);
             }
             Assert.Null(golem.CurrentJob);
-        
+
             Console.WriteLine("Stopping Golem");
             await golem.Stop();
 
             var golemStopCounter = 0;
-            while ((status = await statusChannel.Reader.ReadAsync()) == GolemStatus.Ready && golemStopCounter++ < 10) {
+            while ((status = await statusChannel.Reader.ReadAsync()) == GolemStatus.Ready && golemStopCounter++ < 10)
+            {
                 Console.WriteLine("Still stopping");
             }
             Assert.Equal(status, GolemStatus.Off);
