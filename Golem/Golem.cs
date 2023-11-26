@@ -306,7 +306,7 @@ namespace Golem
             if (CurrentJob != job)
             {
                 CurrentJob = job;
-                _logger.LogInformation("New job: {}", job);
+                _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CurrentJob)));
             }
             else

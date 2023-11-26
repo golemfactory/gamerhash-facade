@@ -31,6 +31,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GolemLib\GolemLib.csproj" />
     <ProjectReference Include="..\Golem\Golem.csproj" />
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
    <Target Name="AfterClean">

@@ -14,24 +14,43 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Configuration;
 
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Golem.Tests
 {
 
+    public class GolemFixture : IDisposable
+    {
+        public GolemFixture(IMessageSink sink)
+        {
+            Sink = sink;
+        }
+
+        public IMessageSink Sink { get; }
+
+        public void Dispose()
+        {
+        }
+    }
+
     [Collection("Sequential")]
-    public class JobTests : IDisposable, IAsyncLifetime
+    public class JobTests : IDisposable, IAsyncLifetime, IClassFixture<GolemFixture>
     {
         private readonly ILoggerFactory _loggerFactory;
+        private readonly ILogger _logger;
         private GolemRelay? _relay;
         private GolemRequestor? _requestor;
 
-        public JobTests(ITestOutputHelper outputHelper)
+        public JobTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
         {
             XunitContext.Register(outputHelper);
             var logfile = Path.Combine(PackageBuilder.TestDir(nameof(JobTests)), "gh_facade-{Date}.log");
+            var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
+            _logger = loggerProvider.CreateLogger(nameof(JobTests));
             _loggerFactory = LoggerFactory.Create(builder => builder
                 .AddSimpleConsole(options => options.SingleLine = true)
                 .AddFile(logfile)
+                .AddProvider(loggerProvider)
             );
         }
 
@@ -51,38 +70,38 @@ namespace Golem.Tests
         public async Task StartStop_Job()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory(nameof(JobTests));
-            Console.WriteLine("Path: " + golemPath);
+            _logger.LogInformation("Path: " + golemPath);
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
 
             var statusChannel = Channel.CreateUnbounded<GolemStatus>();
             Action<GolemStatus> golemStatus = async (v) =>
             {
-                Console.WriteLine("Golem status update. {0}", v);
+                _logger.LogInformation($"Golem status update. {v}");
                 await statusChannel.Writer.WriteAsync(v);
             };
             golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), golemStatus).Subscribe();
 
-            var jobChannel = Channel.CreateUnbounded<IJob>();
+            var jobChannel = Channel.CreateUnbounded<IJob?>();
             Action<IJob?> currentJobHook = async (v) =>
             {
-                Console.WriteLine("Current Job update. {0}", v);
+                _logger.LogInformation($"Current Job update. {v}");
                 await jobChannel.Writer.WriteAsync(v);
             };
             golem.PropertyChanged += new PropertyChangedHandler<Golem, IJob?>(nameof(IGolem.CurrentJob), currentJobHook).Subscribe();
 
-            Console.WriteLine("Starting Golem");
+            _logger.LogInformation("Starting Golem");
             await golem.Start();
             Assert.Equal(GolemStatus.Starting, await statusChannel.Reader.ReadAsync());
             GolemStatus? status = GolemStatus.Starting;
             while ((status = await statusChannel.Reader.ReadAsync()) == GolemStatus.Starting)
             {
-                Console.WriteLine("Still starting");
+                _logger.LogInformation("Still starting");
             }
             Assert.Equal(status, GolemStatus.Ready);
 
             Assert.Null(golem.CurrentJob);
 
-            Console.WriteLine("Starting App");
+            _logger.LogInformation("Starting App");
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
@@ -90,28 +109,28 @@ namespace Golem.Tests
             IJob? job = null;
             while ((job = await jobChannel.Reader.ReadAsync()) == null && jobStartCounter++ < 10)
             {
-                Console.WriteLine("Still no job");
+                _logger.LogInformation("Still no job");
             }
-            Console.WriteLine("Got a job. Status {0}, Id: {1}, RequestorId: {2}", golem.CurrentJob.Status, golem.CurrentJob.Id, golem.CurrentJob.RequestorId);
+            _logger.LogInformation($"Got a job. Status {golem.CurrentJob?.Status}, Id: {golem.CurrentJob?.Id}, RequestorId: {golem.CurrentJob?.RequestorId}");
             Assert.NotNull(golem.CurrentJob);
 
-            Console.WriteLine("Stopping App");
+            _logger.LogInformation("Stopping App");
             await app.Stop(StopMethod.SigInt);
 
             var jobStopCounter = 0;
             while ((job = await jobChannel.Reader.ReadAsync()) != null && jobStopCounter++ < 10)
             {
-                Console.WriteLine("Still has a job. Status: {0}, Id: {1}, RequestorId: {2}", job.Status, job.Id, job.RequestorId);
+                _logger.LogInformation($"Still has a job. Status: {job.Status}, Id: {job.Id}, RequestorId: {job.RequestorId}");
             }
             Assert.Null(golem.CurrentJob);
 
-            Console.WriteLine("Stopping Golem");
+            _logger.LogInformation("Stopping Golem");
             await golem.Stop();
 
             var golemStopCounter = 0;
             while ((status = await statusChannel.Reader.ReadAsync()) == GolemStatus.Ready && golemStopCounter++ < 10)
             {
-                Console.WriteLine("Still stopping");
+                _logger.LogInformation("Still stopping");
             }
             Assert.Equal(status, GolemStatus.Off);
         }
