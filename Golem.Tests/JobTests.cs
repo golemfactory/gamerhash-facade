@@ -61,7 +61,7 @@ namespace Golem.Tests
             System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:17464");
             System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");
 
-            _requestor = await GolemRequestor.Build(nameof(JobTests));
+            _requestor = await GolemRequestor.Build(nameof(JobTests), false);
             Assert.True(_requestor.Start());
             _requestor.InitAccount();
         }
@@ -144,7 +144,7 @@ namespace Golem.Tests
             }
             if (_relay != null)
             {
-                await _relay.Stop();
+                await _relay.Stop(StopMethod.SigInt);
             }
         }
 
