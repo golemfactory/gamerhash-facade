@@ -25,13 +25,7 @@ namespace Golem.IntegrationTests.Tools
         protected static async Task<string> BuildRelayDir(string test_name)
         {
             var old_dir = PackageBuilder.TestDir(test_name);
-            /*
-            if (Directory.Exists(old_dir))
-            {
-                Console.WriteLine("Reusing existing relay directory: ", old_dir);
-                return old_dir;
-            }
-            */
+
             var dir = PackageBuilder.InitTestDirectory(String.Format("{0}_relay", test_name));
 
             Directory.CreateDirectory(PackageBuilder.BinariesDir(dir));
@@ -42,8 +36,9 @@ namespace Golem.IntegrationTests.Tools
 
             var file = await DownloadBinaryArtifact(artifact, tag, repo);
             var binaries_dir = PackageBuilder.BinariesDir(dir);
-            File.Copy(file, Path.Combine(binaries_dir, Path.GetFileName(file)));
-            PackageBuilder.SetPermissions(dir);
+            var relay_server_bin = Path.Combine(binaries_dir, Path.GetFileName(file));
+            File.Copy(file, relay_server_bin);
+            PackageBuilder.SetFilePermissions(relay_server_bin);
 
             return dir;
         }

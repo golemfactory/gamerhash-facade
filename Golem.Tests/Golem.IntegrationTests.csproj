@@ -40,11 +40,12 @@
     <RemoveDir Directories="$(ProjectDir)\Tools\App\build" ContinueOnError="true" />
   </Target>
 
-    
   <Target Name="BuildApp" BeforeTargets="Test" AfterTargets="AfterBuild">
     <Exec Command="python -m venv .venv" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
-    <Exec Command=".\.venv\Scripts\activate | pip install -r requirements.txt" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
-    <Exec Command=".\.venv\Scripts\activate | pyinstaller --onefile app.py -y" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
+    <Exec Command=".\.venv\Scripts\activate | pip install -r requirements.txt" Condition="'$(OS)' == 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
+    <Exec Command=".\.venv\Scripts\activate | pyinstaller --onefile app.py -y" Condition="'$(OS)' == 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
+    <Exec Command=". .venv/bin/activate; pip install -r requirements.txt" Condition="'$(OS)' != 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
+    <Exec Command=". .venv/bin/activate; pyinstaller --onefile app.py -y" Condition="'$(OS)' != 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\Tools\App" ConsoleToMsBuild="true" />
     <RemoveDir Directories="$(ProjectDir)\bin\$(Configuration)\net7.0\app" ContinueOnError="true" />
     <ItemGroup>
       <AppBinary Include="$(ProjectDir)Tools\App\dist\*.*" />

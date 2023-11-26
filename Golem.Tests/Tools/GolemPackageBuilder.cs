@@ -25,16 +25,22 @@ namespace Golem.IntegrationTests.Tools
             var dir = TestDir(name);
             if (Directory.Exists(dir))
             {
-                if (cleanupData) {
+                if (cleanupData)
+                {
                     Directory.Delete(dir, true);
-                } else {
+                }
+                else
+                {
                     var dataDir = Path.GetFullPath(YagnaDataDir(dir));
-                    foreach (string file in Directory.EnumerateFiles(dir)) {
+                    foreach (string file in Directory.EnumerateFiles(dir))
+                    {
                         File.Delete(file);
                     }
-                    foreach (string nestedDir in Directory.EnumerateDirectories(Path.Combine(dir, "modules"))) {
+                    foreach (string nestedDir in Directory.EnumerateDirectories(Path.Combine(dir, "modules")))
+                    {
                         var nestedDirPath = Path.GetFullPath(Path.Combine(dir, nestedDir));
-                        if (!dataDir.Equals(nestedDirPath)) {
+                        if (!dataDir.Equals(nestedDirPath))
+                        {
                             Directory.Delete(nestedDirPath, true);
                         }
                     }
@@ -104,15 +110,17 @@ namespace Golem.IntegrationTests.Tools
             Extract(downloaded_artifact, extract_dir);
 
             var zipExt = ".zip";
-            if (Path.GetFileName(downloaded_artifact).EndsWith(zipExt)) {
+            if (Path.GetFileName(downloaded_artifact).EndsWith(zipExt))
+            {
                 var filename = Path.GetFileName(downloaded_artifact);
                 var extract_dir_nested = filename.Substring(0, filename.Length - zipExt.Length);
                 extract_dir = Path.Combine(extract_dir, extract_dir_nested);
             }
 
-            SetPermissions(extract_dir);
-
             CopyFilesRecursively(extract_dir, dir);
+
+            SetPermissions(dir);
+
             Directory.Delete(extract_dir, true);
 
         }
@@ -194,10 +202,12 @@ namespace Golem.IntegrationTests.Tools
             var name = Path.GetFileName(url);
             var target_dir = Path.Combine(Path.GetTempPath(), "gamerhash_facade_tests");
             var target_file = Path.Combine(target_dir, name);
-            if (Path.Exists(target_file)) {
+            if (Path.Exists(target_file))
+            {
                 return target_file;
             }
-            if (!Directory.Exists(target_dir)) {
+            if (!Directory.Exists(target_dir))
+            {
                 Directory.CreateDirectory(target_dir);
             }
             using (var httpClient = new HttpClient())
@@ -282,7 +292,7 @@ namespace Golem.IntegrationTests.Tools
             var ext = OperatingSystem.IsWindows() ? "zip" : "tar.gz";
             var system = System();
             var artifact_filename = String.Format("{0}-{1}-{2}.{3}", artifact, system, tag, ext);
-            var url = String.Format("https://github.com/{0}/releases/download/{1}/{2}", repository,  tag, artifact_filename);
+            var url = String.Format("https://github.com/{0}/releases/download/{1}/{2}", repository, tag, artifact_filename);
 
             Console.WriteLine(String.Format("Download archive: {0}", url));
             return await Download(url);
