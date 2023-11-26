@@ -1,7 +1,9 @@
 using System.IO;
 using System.IO.Compression;
+using System.IO.Enumeration;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
@@ -18,12 +20,25 @@ namespace Golem.IntegrationTests.Tools
         const string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc4";
         const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc15";
 
-        internal static string InitTestDirectory(string name)
+        internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
             var dir = TestDir(name);
             if (Directory.Exists(dir))
             {
-                Directory.Delete(dir, true);
+                if (cleanupData) {
+                    Directory.Delete(dir, true);
+                } else {
+                    var dataDir = Path.GetFullPath(YagnaDataDir(dir));
+                    foreach (string file in Directory.EnumerateFiles(dir)) {
+                        File.Delete(file);
+                    }
+                    foreach (string nestedDir in Directory.EnumerateDirectories(Path.Combine(dir, "modules"))) {
+                        var nestedDirPath = Path.GetFullPath(Path.Combine(dir, nestedDir));
+                        if (!dataDir.Equals(nestedDirPath)) {
+                            Directory.Delete(nestedDirPath, true);
+                        }
+                    }
+                }
             }
             Directory.CreateDirectory(BinariesDir(dir));
             return dir;
@@ -68,9 +83,9 @@ namespace Golem.IntegrationTests.Tools
             return dir;
         }
 
-        public async static Task<string> BuildRequestorDirectory(string test_name)
+        public async static Task<string> BuildRequestorDirectory(string test_name, bool cleanupData = true)
         {
-            var dir = InitTestDirectory(String.Format("{0}_requestor", test_name));
+            var dir = InitTestDirectory(String.Format("{0}_requestor", test_name), cleanupData);
 
             Directory.CreateDirectory(BinariesDir(dir));
             Directory.CreateDirectory(YagnaDataDir(dir));
