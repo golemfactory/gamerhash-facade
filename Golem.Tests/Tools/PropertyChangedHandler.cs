@@ -2,13 +2,12 @@
 
 namespace Golem.IntegrationTests.Tools
 {
-
     public class PropertyChangedHandler<T, V>
     {
-        private Action<V> Handler { get; set; }
+        private Action<V?> Handler { get; set; }
         private string PropertyName { get; set; }
 
-        public PropertyChangedHandler(string propertyName, Action<V> handler)
+        public PropertyChangedHandler(string propertyName, Action<V?> handler)
         {
             Handler = handler;
             PropertyName = propertyName;
@@ -30,13 +29,13 @@ namespace Golem.IntegrationTests.Tools
 
             var value = property.GetValue(sender);
 
-            if (value is null)
-                return;
-
             if (sender is not T || e.PropertyName != PropertyName)
                 return;
-
-            Handler((V)value);
+            
+            if (value is null)
+                Handler(default(V));
+            else 
+                Handler((V)value);
 
             Console.WriteLine($"Property has changed: {e.PropertyName} to {value}");
         }
