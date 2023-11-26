@@ -70,7 +70,7 @@ namespace Golem.Tests
         public async Task StartStop_Job()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory(nameof(JobTests));
-            _logger.LogInformation("Path: " + golemPath);
+            _logger.LogInformation($"Path: {golemPath}");
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
 
             var statusChannel = Channel.CreateUnbounded<GolemStatus>();
@@ -122,6 +122,7 @@ namespace Golem.Tests
             {
                 _logger.LogInformation($"Still has a job. Status: {job.Status}, Id: {job.Id}, RequestorId: {job.RequestorId}");
             }
+            _logger.LogInformation("No more jobs");
             Assert.Null(golem.CurrentJob);
 
             _logger.LogInformation("Stopping Golem");
@@ -139,7 +140,7 @@ namespace Golem.Tests
         {
             if (_requestor != null)
             {
-                await _requestor.Stop();
+                await _requestor.Stop(StopMethod.SigInt);
             }
             if (_relay != null)
             {
