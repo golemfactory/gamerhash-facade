@@ -110,7 +110,8 @@ namespace Golem.IntegrationTests.Tools
             var objects = JArray.Parse(app_key_list_output_json);
             foreach (JObject root in objects)
             {
-                var name = root.GetValue("name") ?? "";
+                #pragma warning disable 8600
+                var name = (string)root.GetValue("name");
                 if (AppKeyName.Equals(name))
                 {
                     #pragma warning disable 8600
