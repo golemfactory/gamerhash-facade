@@ -30,6 +30,7 @@ jobs:
       run: dotnet test -v diag
     - name: Archive JobTests artifacts
       uses: actions/upload-artifact@v3
+      if: always()
       with:
         name: JobTests
         path: |
@@ -37,6 +38,7 @@ jobs:
           Golem.Tests/tests/JobTests/modules/golem-data/provider/*.log
     - name: Archive JobTests requestor artifacts
       uses: actions/upload-artifact@v3
+      if: always()
       with:
         name: JobTests_requestor
         path: |
