@@ -75,7 +75,7 @@ namespace Golem.IntegrationTests.Tools
                     var name = (string)descriptor.GetValue("name");
                     if ("ai".Equals(name))
                     {
-                        var runtime_name = String.Format("ya-runtime-ai{0}", GolemRunnable.ExecutableFileExtension());
+                        var runtime_name = $"ya-runtime-ai{GolemRunnable.ExecutableFileExtension()}";
                         var runtime_path = Path.Combine(exeUnitDir, runtime_name);
                         descriptor.Remove("supervisor-path");
                         descriptor.Add("supervisor-path", runtime_path);
@@ -291,10 +291,10 @@ namespace Golem.IntegrationTests.Tools
         {
             var ext = OperatingSystem.IsWindows() ? "zip" : "tar.gz";
             var system = System();
-            var artifact_filename = String.Format("{0}-{1}-{2}.{3}", artifact, system, tag, ext);
-            var url = String.Format("https://github.com/{0}/releases/download/{1}/{2}", repository, tag, artifact_filename);
+            var artifact_filename = $"{artifact}-{system}-{tag}.{ext}";
+            var url = $"https://github.com/{repository}/releases/download/{tag}/{artifact_filename}";
 
-            Console.WriteLine(String.Format("Download archive: {0}", url));
+            Console.WriteLine($"Download archive: {url}");
             return await Download(url);
         }
     }

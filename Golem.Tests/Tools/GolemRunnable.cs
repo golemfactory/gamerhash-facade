@@ -26,7 +26,6 @@ namespace Golem.IntegrationTests.Tools
         protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env, bool openConsole = true)
         {
             Command process = RunCommand(file_name, working_dir, args, env);
-            // process.StartInfo.WorkingDirectory = working_dir;
             GolemRunnable.AddShutdownHook(process);
             if (!process.Process.HasExited)
             {
@@ -87,7 +86,7 @@ namespace Golem.IntegrationTests.Tools
             var url = String.Format("https://github.com/{1}/releases/download/{0}/{2}", tag, repository, artifact);
             url += ext;
 
-            Console.WriteLine(String.Format("Download binary: {0}", url));
+            Console.WriteLine($"Download binary: {url}");
             return await PackageBuilder.Download(url);
         }
 

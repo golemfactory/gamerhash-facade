@@ -62,7 +62,7 @@ namespace Golem.IntegrationTests.Tools
             AppKey = getTestAppKey();
             if (AppKey == null)
             {
-                var app_key_process = RunCommand("yagna", workingDir(), String.Format("app-key create {0}", AppKeyName), _env);
+                var app_key_process = RunCommand("yagna", workingDir(), $"app-key create {AppKeyName}", _env);
                 app_key_process.Wait();
                 AppKey = getTestAppKey();
             }
@@ -74,7 +74,7 @@ namespace Golem.IntegrationTests.Tools
             }
             catch (Exception e)
             {
-                Console.WriteLine("Payment fund process error: {}", e);
+                Console.WriteLine($"Payment fund process error: {e}");
             }
         }
 

@@ -26,7 +26,7 @@ namespace Golem.IntegrationTests.Tools
         {
             var old_dir = PackageBuilder.TestDir(test_name);
 
-            var dir = PackageBuilder.InitTestDirectory(String.Format("{0}_relay", test_name));
+            var dir = PackageBuilder.InitTestDirectory($"{test_name}_relay");
 
             Directory.CreateDirectory(PackageBuilder.BinariesDir(dir));
 
