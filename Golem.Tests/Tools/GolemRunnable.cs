@@ -6,6 +6,8 @@ using Golem.Yagna;
 
 using Medallion.Shell;
 
+using Microsoft.Extensions.Logging;
+
 namespace Golem.IntegrationTests.Tools
 {
     public abstract class GolemRunnable
@@ -14,11 +16,14 @@ namespace Golem.IntegrationTests.Tools
         delegate Boolean ConsoleCtrlDelegate(uint CtrlType);
 
         protected string _dir;
+
+        protected ILogger _logger;
         private Command? _golemProcess;
 
-        protected GolemRunnable(string dir)
+        protected GolemRunnable(string dir, ILogger logger)
         {
             _dir = dir;
+            _logger = logger;
         }
 
         public abstract bool Start();
@@ -33,7 +38,7 @@ namespace Golem.IntegrationTests.Tools
                 return !_golemProcess.Process.HasExited;
             }
 
-            Console.WriteLine("Command stopped. Output:\n{0}", String.Join("\n", _golemProcess.GetOutputAndErrorLines()));
+            _logger.LogInformation("Command stopped. Output:\n{0}", String.Join("\n", _golemProcess.GetOutputAndErrorLines()));
             _golemProcess = null;
             return false;
         }
@@ -65,7 +70,7 @@ namespace Golem.IntegrationTests.Tools
                 case StopMethod.SigInt:
                     if (!await _golemProcess.TrySignalAsync(CommandSignal.ControlC))
                     {
-                        Console.WriteLine("Failed to interrupt process. Killing");
+                        _logger.LogInformation("Failed to interrupt process. Killing");
                         _golemProcess.Kill();
                     }
                     break;

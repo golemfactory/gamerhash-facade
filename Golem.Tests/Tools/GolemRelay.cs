@@ -1,18 +1,20 @@
 
+using Microsoft.Extensions.Logging;
+
 namespace Golem.IntegrationTests.Tools
 {
     public class GolemRelay : GolemRunnable
     {
         const string CURRENT_RELAY_VERSION = "pre-rel-v0.2.3-rc11";
 
-        private GolemRelay(string dir) : base(dir)
+        private GolemRelay(string dir, ILogger logger) : base(dir, logger)
         {
         }
 
-        public async static Task<GolemRelay> Build(string test_name)
+        public async static Task<GolemRelay> Build(string test_name, ILogger logger)
         {
             var dir = await BuildRelayDir(test_name);
-            return new GolemRelay(dir);
+            return new GolemRelay(dir, logger);
         }
 
         public override bool Start()

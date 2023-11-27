@@ -5,6 +5,8 @@ using System.Text;
 
 using App;
 
+using Microsoft.Extensions.Logging;
+
 using Newtonsoft.Json.Linq;
 
 namespace Golem.IntegrationTests.Tools
@@ -16,7 +18,7 @@ namespace Golem.IntegrationTests.Tools
 
         public GolemAppKey? AppKey;
 
-        private GolemRequestor(string dir) : base(dir)
+        private GolemRequestor(string dir, ILogger logger) : base(dir, logger)
         {
             _env = new Dictionary<string, string>
             {
@@ -26,10 +28,10 @@ namespace Golem.IntegrationTests.Tools
             };
         }
 
-        public async static Task<GolemRequestor> Build(string test_name, bool cleanupData = true)
+        public async static Task<GolemRequestor> Build(string test_name, ILogger logger, bool cleanupData = true)
         {
             var dir = await PackageBuilder.BuildRequestorDirectory(test_name, cleanupData);
-            return new GolemRequestor(dir);
+            return new GolemRequestor(dir, logger);
         }
 
         public override bool Start()
@@ -52,7 +54,7 @@ namespace Golem.IntegrationTests.Tools
                 env.Remove("YAGNA_API_URL");
             }
             env.Add("YAGNA_API_URL", "http://127.0.0.1:7465");
-            return new SampleApp(_dir, env);
+            return new SampleApp(_dir, env, _logger);
         }
 
         public void InitAccount()
@@ -74,7 +76,7 @@ namespace Golem.IntegrationTests.Tools
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Payment fund process error: {e}");
+                _logger.LogInformation($"Payment fund process error: {e}");
             }
         }
 

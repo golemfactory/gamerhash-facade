@@ -56,12 +56,12 @@ namespace Golem.Tests
 
         public async Task InitializeAsync()
         {
-            _relay = await GolemRelay.Build(nameof(JobTests));
+            _relay = await GolemRelay.Build(nameof(JobTests), _loggerFactory.CreateLogger("Relay"));
             Assert.True(_relay.Start());
             System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:17464");
             System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");
 
-            _requestor = await GolemRequestor.Build(nameof(JobTests), false);
+            _requestor = await GolemRequestor.Build(nameof(JobTests), _loggerFactory.CreateLogger("Requestor"), false);
             Assert.True(_requestor.Start());
             _requestor.InitAccount();
         }

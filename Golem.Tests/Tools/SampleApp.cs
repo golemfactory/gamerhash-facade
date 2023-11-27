@@ -8,6 +8,7 @@ using Xunit.Abstractions;
 using Golem.Yagna;
 using System.Diagnostics;
 using Golem.IntegrationTests.Tools;
+using Microsoft.Extensions.Logging;
 
 namespace App
 {
@@ -15,7 +16,7 @@ namespace App
     {
         private readonly Dictionary<string, string> _env;
 
-        public SampleApp(string dir, Dictionary<string, string> env) : base(dir)
+        public SampleApp(string dir, Dictionary<string, string> env, ILogger logger) : base(dir, logger)
         {
             _env = env;
             var app_filename = ProcessFactory.BinName("app");
