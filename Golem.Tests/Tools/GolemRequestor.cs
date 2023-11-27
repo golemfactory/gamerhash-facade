@@ -110,11 +110,9 @@ namespace Golem.IntegrationTests.Tools
             var objects = JArray.Parse(app_key_list_output_json);
             foreach (JObject root in objects)
             {
-                #pragma warning disable 8600
                 var name = (string)root.GetValue("name");
                 if (AppKeyName.Equals(name))
                 {
-                    #pragma warning disable 8600
                     var key = (string)root.GetValue("key") ?? throw new Exception("Failed to get app key");
                     var id = (string)root.GetValue("id") ?? throw new Exception("Failed to get app id");
                     return new GolemAppKey(key, id);
