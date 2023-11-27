@@ -32,7 +32,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: JobTests
+        name: JobTests_${{ matrix.os }}
         path: |
           Golem.Tests/tests/JobTests/modules/golem-data/yagna/*.log
           Golem.Tests/tests/JobTests/modules/golem-data/provider/*.log
@@ -40,6 +40,6 @@ jobs:
       uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: JobTests_requestor
+        name: JobTests_requestor_${{ matrix.os }}
         path: |
           Golem.Tests/tests/JobTests_requestor/modules/golem-data/yagna/*.log
