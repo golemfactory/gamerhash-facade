@@ -28,3 +28,16 @@ jobs:
       run: dotnet build
     - name: Test with the dotnet CLI
       run: dotnet test -v diag
+    - name: Archive JobTests artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: JobTests
+        path: |
+          Golem.Tests/tests/JobTests/modules/golem-data/yagna/*.log
+          Golem.Tests/tests/JobTests/modules/golem-data/provider/*.log
+    - name: Archive JobTests requestor artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: JobTests_requestor
+        path: |
+          Golem.Tests/tests/JobTests_requestor/modules/golem-data/yagna/*.log
