@@ -108,7 +108,7 @@ namespace Golem.Yagna
             _logger = loggerFactory.CreateLogger<Provider>();
             _yaProviderPath = Path.Combine(golemPath, ProcessFactory.BinName("ya-provider"));
             _pluginsPath = Path.Combine(golemPath, "..", "plugins");
-            _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-runtime-*.json");
+            _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-*.json");
             _dataDir = dataDir;
             _env = new Dictionary<string, string>();
 
@@ -169,8 +169,7 @@ namespace Golem.Yagna
             process.Start();
             var err = process.StandardError.ReadToEnd();
             var result = process.StandardOutput.ReadToEnd();
-            _logger?.LogInformation("Execution result: {0}", result);
-            _logger?.LogInformation("Execution error: {0}", err);
+            _logger?.LogInformation("Execution result:\nstdout: {0}\nstderr: {1}", result, err);
             return result;
         }
 
