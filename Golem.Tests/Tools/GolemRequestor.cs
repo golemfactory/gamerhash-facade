@@ -67,11 +67,22 @@ namespace Golem.IntegrationTests.Tools
                 var app_key_process = RunCommand("yagna", workingDir(), $"app-key create {AppKeyName}", _env);
                 app_key_process.Wait();
                 AppKey = getTestAppKey();
+            } else {
+                // Release allocations in case of reusing requestor data dir
+                try
+                {
+                    var release_allocations_process = RunCommand("yagna", workingDir(), "payment release-allocations", _env);
+                    release_allocations_process.Wait();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogInformation($"Payment release allocations process error: {e}");
+                }
             }
 
-            var payment_fund_process = RunCommand("yagna", workingDir(), "payment fund", _env);
             try
             {
+                var payment_fund_process = RunCommand("yagna", workingDir(), "payment fund", _env);
                 payment_fund_process.Wait();
             }
             catch (Exception e)
