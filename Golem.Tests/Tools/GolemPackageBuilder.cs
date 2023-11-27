@@ -110,14 +110,14 @@ namespace Golem.IntegrationTests.Tools
             Extract(downloaded_artifact, extract_dir);
 
             var zipExt = ".zip";
-            if (Path.GetFileName(downloaded_artifact).EndsWith(zipExt))
-            {
-                var filename = Path.GetFileName(downloaded_artifact);
-                var extract_dir_nested = filename.Substring(0, filename.Length - zipExt.Length);
-                extract_dir = Path.Combine(extract_dir, extract_dir_nested);
-            }
+            var tarGzExt = ".tar.gz";
 
-            CopyFilesRecursively(extract_dir, dir);
+            var filename = Path.GetFileName(downloaded_artifact);
+            var ext = filename.EndsWith(zipExt) ? zipExt : tarGzExt;
+            var extract_dir_nested_name = filename.Substring(0, filename.Length - ext.Length);
+            var extract_dir_nested = Path.Combine(extract_dir, extract_dir_nested_name);
+
+            CopyFilesRecursively(extract_dir_nested, dir);
 
             SetPermissions(dir);
 
