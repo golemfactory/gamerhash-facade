@@ -1,5 +1,6 @@
 
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Json;
 using System.Text;
 
@@ -44,16 +45,16 @@ namespace Golem.IntegrationTests.Tools
         public SampleApp CreateSampleApp()
         {
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
-            if (env.ContainsKey("YAGNA_APPKEY"))
-            {
-                env.Remove("YAGNA_APPKEY");
+            env["YAGNA_APPKEY"] = AppKey?.Key ?? throw new Exception("Unable to create app process. No YAGNA_APPKEY.");
+            env["YAGNA_API_URL"] = "http://127.0.0.1:7465";
+            var pathEnvVar = Environment.GetEnvironmentVariable("PATH") ?? "";
+            var binariesDir = Path.GetFullPath(PackageBuilder.BinariesDir(_dir));
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                pathEnvVar = $"{pathEnvVar};{binariesDir}";
+            } else {
+                pathEnvVar = $"{pathEnvVar}:{binariesDir}";
             }
-            env.Add("YAGNA_APPKEY", AppKey?.Key ?? throw new Exception("Unable to create app process. No YAGNA_APPKEY."));
-            if (env.ContainsKey("YAGNA_API_URL"))
-            {
-                env.Remove("YAGNA_API_URL");
-            }
-            env.Add("YAGNA_API_URL", "http://127.0.0.1:7465");
+            env["PATH"] = pathEnvVar;
             return new SampleApp(_dir, env, _logger);
         }
 
