@@ -20,7 +20,8 @@ namespace App
         {
             _env = env;
             var app_filename = ProcessFactory.BinName("app");
-            var app_src = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, "app", app_filename);
+            var build_dir = AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? throw new Exception("Failed to get project build dir");
+            var app_src = Path.Combine(build_dir, "app", app_filename);
             var app_dst = Path.Combine(dir, "modules", "golem", app_filename);
             File.Copy(app_src, app_dst);
         }

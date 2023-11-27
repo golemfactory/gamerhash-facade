@@ -62,27 +62,24 @@ namespace Golem.IntegrationTests.Tools
             await DownloadExtractPackage(exeUnitDir, "runtime", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION);
             await DownloadExtractPackage(exeUnitDir, "dummy-framework", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION);
 
-            string dummy_descriptors = null;
+            string dummy_descriptors = "";
             using (StreamReader r = new StreamReader(Path.Combine(exeUnitDir, "ya-dummy-ai.json")))
             {
                 dummy_descriptors = r.ReadToEnd();
             }
-            if (dummy_descriptors != null)
+            var descriptors = JArray.Parse(dummy_descriptors);
+            foreach (JObject descriptor in descriptors)
             {
-                var descriptors = JArray.Parse(dummy_descriptors);
-                foreach (JObject descriptor in descriptors)
+                var name = descriptor.GetValue("name") ?? "";
+                if ("ai".Equals(name))
                 {
-                    var name = (string)descriptor.GetValue("name");
-                    if ("ai".Equals(name))
-                    {
-                        var runtime_name = $"ya-runtime-ai{GolemRunnable.ExecutableFileExtension()}";
-                        var runtime_path = Path.Combine(exeUnitDir, runtime_name);
-                        descriptor.Remove("supervisor-path");
-                        descriptor.Add("supervisor-path", runtime_path);
-                    }
+                    var runtime_name = $"ya-runtime-ai{GolemRunnable.ExecutableFileExtension()}";
+                    var runtime_path = Path.Combine(exeUnitDir, runtime_name);
+                    descriptor.Remove("supervisor-path");
+                    descriptor.Add("supervisor-path", runtime_path);
                 }
-                File.WriteAllText(exeUnitDir + "/ya-dummy-ai.json", descriptors.ToString());
             }
+            File.WriteAllText(exeUnitDir + "/ya-dummy-ai.json", descriptors.ToString());
 
             Directory.SetCurrentDirectory(dir);
 
