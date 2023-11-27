@@ -157,7 +157,7 @@ class AiRuntimeService(Service):
 
 async def main(subnet_tag, driver=None, network=None):
     async with Golem(
-        budget=100.0,
+        budget=1.0,
         subnet_tag=subnet_tag,
         payment_driver=driver,
         payment_network=network,
