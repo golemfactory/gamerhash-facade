@@ -40,7 +40,7 @@
             <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Job Status</TextBlock>
             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding JobStatus}"/>
 
-            <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Paymeent Status</TextBlock>
+            <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Payment Status</TextBlock>
             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PaymentStatus}"/>
         </Grid>
         </DataTemplate>
@@ -110,7 +110,7 @@
                                 <Ellipse
                                     Width="25"
                                     Height="25"
-                                    Fill="Red"
+                                    Fill="Gray"
                                     IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNull}}"/>
 
                                 <Ellipse
@@ -120,8 +120,7 @@
                                     IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNotNull}}"/>
 
                             </Canvas>
-                            <ContentControl Content="{Binding Golem.CurrentJob}"/>
-
+                            <ContentControl Content="{Binding Golem.CurrentJob}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

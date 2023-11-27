@@ -314,6 +314,8 @@ namespace Golem
         {
             if (CurrentJob is Job job)
             {
+                _logger.LogInformation("New payment status for job {}: {}", job.Id, paymentStatus);
+                Console.WriteLine($"New payment status for job {job.Id}: {paymentStatus} requestor: {job.RequestorId}");
                 job.PaymentStatus = paymentStatus;
             }
         }

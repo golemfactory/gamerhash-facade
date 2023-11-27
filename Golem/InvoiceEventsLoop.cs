@@ -1,16 +1,7 @@
-
 using System.Globalization;
-using System.Text;
+using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Web;
-
-using Golem.Model;
 using Golem.Tools;
-using Golem.Yagna.Types;
-
-using GolemLib.Types;
-
 using Microsoft.Extensions.Logging;
 
 class InvoiceEventsLoop
@@ -22,6 +13,17 @@ class InvoiceEventsLoop
     private readonly HttpClient _httpClient;
     private readonly CancellationToken _token;
     private readonly ILogger _logger;
+    private DateTime _since = DateTime.MinValue;
+    private readonly string[] _monitorEventTypes =
+    {
+        "ISSUED",
+        "RECEIVED",
+        "ACCEPTED",
+        "REJECTED",
+        "FAILED",
+        "SETTLED",
+        "CANCELLED"
+    };
 
     public InvoiceEventsLoop(HttpClient httpClient, CancellationToken token, ILogger logger)
     {
@@ -37,31 +39,34 @@ class InvoiceEventsLoop
         DateTime newReconnect = DateTime.Now;
         try
         {
-            var since = DateTime.Now;
-
             while (!_token.IsCancellationRequested)
             {
                 var timeout = 30;
 
                 try
                 {
-                    var url = $"/payment-api/v1/invoiceEvents?timeout={timeout}&after_timestamp={since.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture)}";
-                    var invoiceEventsResponse = await _httpClient.GetAsync(url);
-                    if(invoiceEventsResponse.IsSuccessStatusCode)
+                    var url = $"/payment-api/v1/invoiceEvents?timeout={timeout}&afterTimestamp={_since.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture)}";
+                    using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+                    
+                    requestMessage.Headers.Add("X-Requestor-Events", string.Join(',', _monitorEventTypes));
+                    requestMessage.Headers.Add("X-Provider-Events", string.Join(',', _monitorEventTypes));
+
+                    var invoiceEventsResponse = await _httpClient.SendAsync(requestMessage);
+                    if (invoiceEventsResponse.IsSuccessStatusCode)
                     {
                         var result = await invoiceEventsResponse.Content.ReadAsStringAsync();
-                        if(result != null)
+                        if (result != null)
                         {
                             _logger.LogInformation("InvoiceEvent: {}", result);
                             var invoiceEvents = JsonSerializer.Deserialize<List<InvoiceEvent>>(result, _serializerOptions);
-                            if(invoiceEvents != null && invoiceEvents.Count > 0)
+                            if (invoiceEvents != null && invoiceEvents.Count > 0)
                             {
-                                since = invoiceEvents.OrderByDescending(x => x.EventDate).Select(x => x.EventDate).FirstOrDefault();
-                            
-                                foreach(var invoiceEvent in invoiceEvents)
+                                _since = invoiceEvents.OrderByDescending(x => x.EventDate).Select(x => x.EventDate).FirstOrDefault();
+
+                                foreach (var invoiceEvent in invoiceEvents)
                                 {
                                     var invoice = await GetInvoice(invoiceEvent.InvoiceId);
-                                    if(invoice != null)
+                                    if (invoice != null)
                                     {
                                         var paymentStatus = GetPaymentStatus(invoice.Status);
                                         UpdatePaymentStatus(paymentStatus);
