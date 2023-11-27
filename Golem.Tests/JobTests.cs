@@ -44,12 +44,12 @@ namespace Golem.Tests
         public JobTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
         {
             XunitContext.Register(outputHelper);
-            var logfile = Path.Combine(PackageBuilder.TestDir(nameof(JobTests)), "gh_facade-{Date}.log");
+            // var logfile = Path.Combine(PackageBuilder.TestDir(nameof(JobTests)), "gh_facade-{Date}.log");
             var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
             _logger = loggerProvider.CreateLogger(nameof(JobTests));
             _loggerFactory = LoggerFactory.Create(builder => builder
                 .AddSimpleConsole(options => options.SingleLine = true)
-                .AddFile(logfile)
+                // .AddFile(logfile)
                 .AddProvider(loggerProvider)
             );
         }
