@@ -162,14 +162,14 @@ namespace Golem.IntegrationTests.Tools
             }
         }
 
-        internal static string TestDir(string name)
+        public static string TestDir(string name)
         {
             var build_dir = AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
             var tests_dir = Path.Combine(build_dir, "..", "..", "..", "tests");
             return Path.GetFullPath(Path.Combine(tests_dir, name));
         }
 
-        internal static string BinariesDir(string test_dir)
+        public static string BinariesDir(string test_dir)
         {
             return Path.Combine(test_dir, "modules", "golem");
         }

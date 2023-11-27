@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Golem.IntegrationTests", "G
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MockGUI", "MockGUI\MockGUI.csproj", "{7605A70D-3289-4F2D-B1AD-6573246AD56B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Golem.Tools", "Golem.Tools\Golem.Tools.csproj", "{BB9FBEEE-A4DD-4C18-9433-41F4B2EF14D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{7605A70D-3289-4F2D-B1AD-6573246AD56B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7605A70D-3289-4F2D-B1AD-6573246AD56B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7605A70D-3289-4F2D-B1AD-6573246AD56B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB9FBEEE-A4DD-4C18-9433-41F4B2EF14D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB9FBEEE-A4DD-4C18-9433-41F4B2EF14D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB9FBEEE-A4DD-4C18-9433-41F4B2EF14D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB9FBEEE-A4DD-4C18-9433-41F4B2EF14D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
