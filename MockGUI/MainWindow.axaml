@@ -30,7 +30,7 @@
 
     <Window.DataTemplates>
         <DataTemplate DataType="{x:Type facade:IJob}">
-        <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+        <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
             <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Id</TextBlock>
             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Id}"/>
 
@@ -40,8 +40,31 @@
             <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Job Status</TextBlock>
             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding JobStatus}"/>
 
-            <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Paymeent Status</TextBlock>
+            <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Payment Status</TextBlock>
             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PaymentStatus}"/>
+
+            <TextBlock Grid.Row="4" Grid.Column="0" Classes="Label">Usage</TextBlock>
+            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                <StackPanel>
+                    <TextBlock FontSize="12" FontWeight="Bold">Start Price</TextBlock>
+                    <TextBlock Text="{Binding CurrentUsage.StartPrice, Mode=TwoWay}" Width="150" />
+                </StackPanel>
+                
+                <StackPanel>
+                    <TextBlock FontSize="12" FontWeight="Bold">Price per hour</TextBlock>
+                    <TextBlock Text="{Binding CurrentUsage.EnvPerHour, Mode=TwoWay}" Width="150" />
+                </StackPanel>
+                
+                <StackPanel>
+                    <TextBlock FontSize="12" FontWeight="Bold">GPU usage</TextBlock>
+                    <TextBlock Text="{Binding CurrentUsage.GpuPerHour, Mode=TwoWay}" Width="150" />
+                </StackPanel>
+
+                <StackPanel>
+                    <TextBlock FontSize="12" FontWeight="Bold">Num Requests</TextBlock>
+                    <TextBlock Text="{Binding CurrentUsage.NumRequests, Mode=TwoWay}" Width="150" />
+                </StackPanel>
+            </StackPanel>
         </Grid>
         </DataTemplate>
     </Window.DataTemplates>
@@ -110,7 +133,7 @@
                                 <Ellipse
                                     Width="25"
                                     Height="25"
-                                    Fill="Red"
+                                    Fill="Gray"
                                     IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNull}}"/>
 
                                 <Ellipse
@@ -120,8 +143,7 @@
                                     IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNotNull}}"/>
 
                             </Canvas>
-                            <ContentControl Content="{Binding Golem.CurrentJob}"/>
-
+                            <ContentControl Content="{Binding Golem.CurrentJob}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

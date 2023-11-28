@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using GolemLib;
@@ -99,26 +100,62 @@ namespace Golem.Yagna.Types
     {
         public required string Id { get; init; }
 
-        public string RequestorId { get; init; }
+        public string RequestorId { get; init; } = "";
 
-        public GolemPrice Price { get => new GolemPrice(); init => this.Price = new GolemPrice(); }
+        public GolemPrice _price = new GolemPrice();
+        public GolemPrice Price
+        {
+            get => _price;
+            set
+            {
+                _price = value;
+                OnPropertyChanged();
+            }
+            // init => _price = value;
+        }
 
         public JobStatus Status => JobStatus.Idle;
 
-        //TODO
-        public GolemLib.Types.PaymentStatus? PaymentStatus => null;
+        private GolemLib.Types.PaymentStatus? _paymentStatus;
+        public GolemLib.Types.PaymentStatus? PaymentStatus {
+            get => _paymentStatus;
+            set {
+                if(_paymentStatus != value)
+                {
+                    _paymentStatus = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public Task<GolemUsage> CurrentUsage()
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
         {
-            return new Task<GolemUsage>(() => new GolemUsage());
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-        //TODO
-        public Task<Payment> PaymentConfirmation()
+        private GolemUsage _currentUsage = new GolemUsage();
+        public GolemUsage CurrentUsage
         {
-            return new Task<Payment>(() => throw new NotImplementedException());
+            get => _currentUsage;
+            set {
+                _currentUsage = value;
+                OnPropertyChanged();
+            }
+        }
+
+
+        private List<Payment> _paymentConfirmation = new List<Payment>();
+        public List<Payment> PaymentConfirmation
+        {
+            get{
+                return _paymentConfirmation;
+                
+            } set{
+                _paymentConfirmation = value;
+                OnPropertyChanged();
+            }
         }
 
         public override int GetHashCode()

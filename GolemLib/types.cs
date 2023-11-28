@@ -83,13 +83,13 @@ public enum GolemStatus
 public class ActivityPayment
 {
     public required string ActivityId { get; init; }
-    public required decimal Amount { get; init; }
+    public required string Amount { get; init; }
 }
 
 public class AgreementPayment
 {
     public required string AgreementId { get; init; }
-    public required decimal Amount { get; init; }
+    public required string Amount { get; init; }
 }
 
 public class Payment
@@ -100,11 +100,12 @@ public class Payment
     public required string PayerAddr { get; init; }
     public required string PayeeAddr { get; init; }
     public required string PaymentPlatform { get; init; }
-    public required decimal Amount { get; init; }
+    public required string Amount { get; init; }
     public required DateTime Timestamp { get; init; }
     public required List<ActivityPayment> ActivityPayments { get; init; }
     public required List<AgreementPayment> AgreementPayments { get; init; }
 
-    public required string TransactionId { get; init; }
-    public required byte[] Signature { get; init; }
+    public required string Details { get; init; }
+    // public required string TransactionId { get; init; }
+    // public required byte[] Signature { get; init; }
 }
