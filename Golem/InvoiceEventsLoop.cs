@@ -2,6 +2,9 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using Golem.Tools;
+
+using GolemLib.Types;
+
 using Microsoft.Extensions.Logging;
 
 class InvoiceEventsLoop
@@ -32,7 +35,7 @@ class InvoiceEventsLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<GolemLib.Types.PaymentStatus> UpdatePaymentStatus)
+    public async Task Start(Action<string, GolemLib.Types.PaymentStatus> UpdatePaymentStatus, Action<List<Payment>> updatePaymentConfirmation)
     {
         _logger.LogInformation("Starting monitoring invoice events");
 
@@ -41,7 +44,7 @@ class InvoiceEventsLoop
         {
             while (!_token.IsCancellationRequested)
             {
-                var timeout = 30;
+                var timeout = 10;
 
                 try
                 {
@@ -69,7 +72,12 @@ class InvoiceEventsLoop
                                     if (invoice != null)
                                     {
                                         var paymentStatus = GetPaymentStatus(invoice.Status);
-                                        UpdatePaymentStatus(paymentStatus);
+                                        UpdatePaymentStatus(invoice.AgreementId, paymentStatus);
+                                        if(paymentStatus == PaymentStatus.Settled)
+                                        {
+                                            var payments = await GetPayments();
+                                            updatePaymentConfirmation(payments);
+                                        }
                                     }
                                 }
                             }
@@ -92,7 +100,7 @@ class InvoiceEventsLoop
         }
         finally
         {
-            UpdatePaymentStatus(GolemLib.Types.PaymentStatus.Rejected);
+            // UpdatePaymentStatus(GolemLib.Types.PaymentStatus.Rejected);
         }
     }
 
@@ -123,6 +131,42 @@ class InvoiceEventsLoop
                 var invoice = JsonSerializer.Deserialize<Invoice>(result, _serializerOptions);
                 _logger.LogInformation("Invoice[{}]: {}", id, invoice);
                 return invoice;
+            }
+        }
+        return null;
+    }
+
+    private async Task<List<Payment>> GetPayments()
+    {
+        var paymentsResponse = await _httpClient.GetAsync($"/payment-api/v1/payments");
+        List<Payment>? payments = null;
+
+        if(paymentsResponse.IsSuccessStatusCode)
+        {
+            var result = await paymentsResponse.Content.ReadAsStringAsync();
+            if(result != null)
+            {
+                payments = JsonSerializer.Deserialize<List<Payment>>(result, _serializerOptions);
+                _logger.LogInformation("payments {}", payments!=null?payments.SelectMany(x => x.AgreementPayments.Select(y => y.AgreementId + ": " + y.Amount)).ToList():"(null)");
+            }
+        }
+        return payments ?? new List<Payment>();
+    }
+
+    private async Task<string?> GetActivityAgreement(string id)
+    {
+        var invoiceResponse = await _httpClient.GetAsync($"/activity-api/v1/activity/{id}/agreement");
+
+        if(invoiceResponse.IsSuccessStatusCode)
+        {
+            var result = await invoiceResponse.Content.ReadAsStringAsync();
+            if(result != null)
+            {
+                // var invoice = JsonSerializer.Deserialize<Invoice>(result, _serializerOptions);
+                // _logger.LogInformation("Invoice[{}]: {}", id, invoice);
+                // return invoice;
+
+                return result;
             }
         }
         return null;

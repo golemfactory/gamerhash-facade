@@ -32,7 +32,7 @@ class ActivityLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<Job?> EmitJobEvent)
+    public async Task Start(Action<Job?> EmitJobEvent, Action<string, GolemPrice> updateUsage)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -80,6 +80,23 @@ class ActivityLoop
                         };
                         EmitJobEvent(new_job);
 
+                        if(activity_state!=null)
+                        {
+                            var jobId = activity_state.AgreementId;
+                            var v = activity_state.Usage;
+                            if(v!=null)
+                            {
+                                var price = new GolemPrice
+                                {
+                                    StartPrice = v["asas"],
+                                    GpuPerHour = v["asas"],
+                                    EnvPerHour = v["asas"],
+                                    NumRequests = v["asas"],
+                                };
+                                updateUsage(jobId, price);
+                            }
+                        }
+
                     }
                 }
                 catch (Exception e)
@@ -120,6 +137,7 @@ class ActivityLoop
                 _logger.LogWarning("Multiple non terminated activities: {}", _active_activities);
                 //TODO what now?
             }
+
             //TODO take latest? the one with specific status?
             ActivityState _activity = _activities.First();
             if (_activity.AgreementId == null)

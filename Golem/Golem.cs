@@ -85,6 +85,8 @@ namespace Golem
         }
 
         public IJob? CurrentJob { get; private set; }
+        public string? RecentJobId { get; private set; }
+        public Dictionary<string, Job> Jobs { get; private set; } = new Dictionary<string, Job>();
 
         public string NodeId
         {
@@ -119,14 +121,14 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public Task<List<IJob>> ListJobs(DateTime since)
+        public async Task<List<IJob>> ListJobs(DateTime since)
         {
-            throw new NotImplementedException();
+            return await Task.FromResult(Jobs.Values.Select(j => j as IJob).ToList());
         }
 
-        public Task Resume()
+        public async Task Resume()
         {
-            throw new NotImplementedException();
+            await Start();
         }
 
         public async Task Start()
@@ -172,9 +174,10 @@ namespace Golem
             Status = GolemStatus.Off;
         }
 
-        public Task<bool> Suspend()
+        public async Task<bool> Suspend()
         {
-            throw new NotImplementedException();
+            await Stop();
+            return false;
         }
 
         public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
@@ -300,23 +303,53 @@ namespace Golem
         {
             var token = _tokenSource.Token;
             token.Register(_httpClient.CancelPendingRequests);
-            return new ActivityLoop(_httpClient, token, _logger).Start(EmitJobEvent);
+            return new ActivityLoop(_httpClient, token, _logger).Start(EmitJobEvent, UpdateUsage);
         }
 
         private Task StartInvoiceEventsLoop()
         {
             var token = _tokenSource.Token;
             token.Register(_httpClient.CancelPendingRequests);
-            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(UpdatePaymentStatus);
+            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(UpdatePaymentStatus, UpdatePaymentConfirmation);
         }
 
-        private void UpdatePaymentStatus(GolemLib.Types.PaymentStatus paymentStatus)
+        private void UpdatePaymentStatus(string id, GolemLib.Types.PaymentStatus paymentStatus)
         {
-            if (CurrentJob is Job job)
+            if(Jobs.TryGetValue(id, out var job))
             {
                 _logger.LogInformation("New payment status for job {}: {}", job.Id, paymentStatus);
                 Console.WriteLine($"New payment status for job {job.Id}: {paymentStatus} requestor: {job.RequestorId}");
                 job.PaymentStatus = paymentStatus;
+            }
+            else
+            {
+                _logger.LogError("Job not found: {}", id);
+            }
+        }
+
+        private void UpdatePaymentConfirmation(List<Payment> payments)
+        {
+            if(RecentJobId !=null && Jobs.TryGetValue(RecentJobId, out var job))
+            {
+                _logger.LogInformation("Payments confirmation for job {}:", job.Id);
+
+                var paymentsForRecentJob = payments
+                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == job.Id))
+                    .ToList();
+                    
+                var payment = paymentsForRecentJob.FirstOrDefault();
+                if(payment != null)
+                {
+                    job.PaymentConfirmation = payment;
+                }
+                else
+                {
+                    _logger.LogError("No payment found for job {}", job.Id);
+                }
+            }
+            else
+            {
+                _logger.LogError("No ewcent job found: {}", RecentJobId);
             }
         }
 
@@ -325,12 +358,30 @@ namespace Golem
             if (CurrentJob != job)
             {
                 CurrentJob = job;
+                RecentJobId = job?.Id ?? RecentJobId;
+                var id = job?.Id ?? "";
+                if(!Jobs.ContainsKey(id) && job!=null)
+                {
+                    Jobs.Add(id, job);
+                }
                 _logger.LogInformation("New job: {}", job);
                 OnPropertyChanged(nameof(CurrentJob));
             }
             else
             {
                 _logger.LogInformation("Job has not changed.");
+            }
+        }
+
+        private void UpdateUsage(string jobId, GolemPrice price)
+        {
+            if(Jobs.TryGetValue(jobId, out var job))
+            {
+                job.Price = price;
+            }
+            else
+            {
+                _logger.LogError("Job not found: {}", jobId);
             }
         }
 

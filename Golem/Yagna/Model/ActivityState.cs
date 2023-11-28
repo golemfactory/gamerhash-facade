@@ -24,7 +24,7 @@ namespace Golem.Model
 
         public StateType State { get; set; }
 
-        public Dictionary<string, float>? Usage { get; set; }
+        public Dictionary<string, decimal>? Usage { get; set; }
 
         public string? ExeUnit { get; set; }
     }

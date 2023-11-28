@@ -102,7 +102,17 @@ namespace Golem.Yagna.Types
 
         public string RequestorId { get; init; }
 
-        public GolemPrice Price { get => new GolemPrice(); init => this.Price = new GolemPrice(); }
+        public GolemPrice _price = new GolemPrice();
+        public GolemPrice Price
+        {
+            get => _price;
+            set
+            {
+                _price = value;
+                OnPropertyChanged();
+            }
+            // init => _price = value;
+        }
 
         public JobStatus Status => JobStatus.Idle;
 
@@ -130,10 +140,17 @@ namespace Golem.Yagna.Types
             return new Task<GolemUsage>(() => new GolemUsage());
         }
 
-        //TODO
-        public Task<Payment> PaymentConfirmation()
+
+        private Payment? _paymentConfirmation = null;
+        public Payment? PaymentConfirmation
         {
-            return new Task<Payment>(() => throw new NotImplementedException());
+            get{
+                return _paymentConfirmation;
+                
+            } set{
+                _paymentConfirmation = value;
+                OnPropertyChanged();
+            }
         }
 
         public override int GetHashCode()

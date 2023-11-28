@@ -18,7 +18,7 @@ public interface IJob : INotifyPropertyChanged
     /// Note that even if you change `IGolem.Price` this field won't be
     /// affected, only new jobs will be served using new price.
     /// </summary>
-    public GolemPrice Price { get; init; }
+    public GolemPrice Price { get; }
     public JobStatus Status { get; }
     /// <summary>
     /// Property is set after Provider sends Invoice to Requestor.
@@ -32,7 +32,8 @@ public interface IJob : INotifyPropertyChanged
     /// TODO: We can have multiple `Payment` confirmation structs.
     /// </summary>
     /// <returns></returns>
-    public Task<Payment> PaymentConfirmation();
+    // public Task<Payment> PaymentConfirmation();
+    public Payment? PaymentConfirmation { get; }
     /// <summary>
     /// Get usage counters during task execution, what allows to estimate
     /// reward for the job done.
