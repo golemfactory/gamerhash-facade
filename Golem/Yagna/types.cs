@@ -100,7 +100,7 @@ namespace Golem.Yagna.Types
     {
         public required string Id { get; init; }
 
-        public string RequestorId { get; init; }
+        public string RequestorId { get; init; } = "";
 
         public GolemPrice _price = new GolemPrice();
         public GolemPrice Price
@@ -135,14 +135,19 @@ namespace Golem.Yagna.Types
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-        public Task<GolemUsage> CurrentUsage()
+        private GolemUsage _currentUsage = new GolemUsage();
+        public GolemUsage CurrentUsage
         {
-            return new Task<GolemUsage>(() => new GolemUsage());
+            get => _currentUsage;
+            set {
+                _currentUsage = value;
+                OnPropertyChanged();
+            }
         }
 
 
-        private Payment? _paymentConfirmation = null;
-        public Payment? PaymentConfirmation
+        private List<Payment> _paymentConfirmation = new List<Payment>();
+        public List<Payment> PaymentConfirmation
         {
             get{
                 return _paymentConfirmation;

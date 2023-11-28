@@ -327,25 +327,13 @@ namespace Golem
             }
         }
 
-        private void UpdatePaymentConfirmation(List<Payment> payments)
+        private void UpdatePaymentConfirmation(string jobId, List<Payment> payments)
         {
-            if(RecentJobId !=null && Jobs.TryGetValue(RecentJobId, out var job))
+            if(jobId != null && Jobs.TryGetValue(jobId, out var job))
             {
                 _logger.LogInformation("Payments confirmation for job {}:", job.Id);
 
-                var paymentsForRecentJob = payments
-                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == job.Id))
-                    .ToList();
-                    
-                var payment = paymentsForRecentJob.FirstOrDefault();
-                if(payment != null)
-                {
-                    job.PaymentConfirmation = payment;
-                }
-                else
-                {
-                    _logger.LogError("No payment found for job {}", job.Id);
-                }
+                job.PaymentConfirmation = payments;
             }
             else
             {
@@ -373,11 +361,11 @@ namespace Golem
             }
         }
 
-        private void UpdateUsage(string jobId, GolemPrice price)
+        private void UpdateUsage(string jobId, GolemUsage usage)
         {
             if(Jobs.TryGetValue(jobId, out var job))
             {
-                job.Price = price;
+                job.CurrentUsage = usage;
             }
             else
             {

@@ -35,7 +35,7 @@ class InvoiceEventsLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<string, GolemLib.Types.PaymentStatus> UpdatePaymentStatus, Action<List<Payment>> updatePaymentConfirmation)
+    public async Task Start(Action<string, GolemLib.Types.PaymentStatus> UpdatePaymentStatus, Action<string, List<Payment>> updatePaymentConfirmation)
     {
         _logger.LogInformation("Starting monitoring invoice events");
 
@@ -76,7 +76,10 @@ class InvoiceEventsLoop
                                         if(paymentStatus == PaymentStatus.Settled)
                                         {
                                             var payments = await GetPayments();
-                                            updatePaymentConfirmation(payments);
+                                            var paymentsForRecentJob = payments
+                                                .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
+                                                .ToList();
+                                            updatePaymentConfirmation(invoice.AgreementId, payments);
                                         }
                                     }
                                 }

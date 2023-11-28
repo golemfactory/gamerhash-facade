@@ -33,22 +33,24 @@ public interface IJob : INotifyPropertyChanged
     /// </summary>
     /// <returns></returns>
     // public Task<Payment> PaymentConfirmation();
-    public Payment? PaymentConfirmation { get; }
+    public List<Payment> PaymentConfirmation { get; }
     /// <summary>
     /// Get usage counters during task execution, what allows to estimate
     /// reward for the job done.
     /// </summary>
     /// <returns></returns>
-    public Task<GolemUsage> CurrentUsage();
+    public GolemUsage CurrentUsage { get; }
     /// <summary>
     /// Get amount that should be paid for the task until this point in time.
     /// After task was done this function will return final amount to be paid.
     /// </summary>
     /// <returns></returns>
-    public async Task<decimal> CurrentReward()
+    public decimal CurrentReward
     {
-        var usage = await this.CurrentUsage();
-        return usage.Reward(this.Price);
+        get
+        {
+            return CurrentUsage.Reward(this.Price);
+        }
     }
 }
 

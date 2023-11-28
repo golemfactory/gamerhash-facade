@@ -32,7 +32,7 @@ class ActivityLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<Job?> EmitJobEvent, Action<string, GolemPrice> updateUsage)
+    public async Task Start(Action<Job?> EmitJobEvent, Action<string, GolemUsage> updateUsage)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -78,6 +78,13 @@ class ActivityLoop
                             Id = activity_state.AgreementId,
                             RequestorId = agreement.Demand.RequestorId,
                         };
+
+                        var price = GetPriceFromAgreement(agreement);
+                        if(price!=null)
+                        {
+                            new_job.Price = price;
+                        }
+
                         EmitJobEvent(new_job);
 
                         if(activity_state!=null)
@@ -86,17 +93,16 @@ class ActivityLoop
                             var v = activity_state.Usage;
                             if(v!=null)
                             {
-                                var price = new GolemPrice
+                                var usage = new GolemUsage
                                 {
-                                    StartPrice = v["asas"],
-                                    GpuPerHour = v["asas"],
-                                    EnvPerHour = v["asas"],
-                                    NumRequests = v["asas"],
+                                    StartPrice = 1,
+                                    GpuPerHour = v["golem.usage.gpu-sec"],
+                                    EnvPerHour = v["golem.usage.duration_sec"],
+                                    NumRequests = v["ai-runtime.requests"],
                                 };
-                                updateUsage(jobId, price);
+                                updateUsage(jobId, usage);
                             }
                         }
-
                     }
                 }
                 catch (Exception e)
@@ -113,6 +119,46 @@ class ActivityLoop
         {
             EmitJobEvent(null);
         }
+    }
+
+    private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
+    {
+        if(agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
+        {
+            if(usageVector!=null)
+            {
+                var list = usageVector is JsonElement element ? element.EnumerateArray().ToList() : null;
+                if(list != null)
+                {
+                    var gpuSecIdx = list.FindIndex(x => x.Equals("golem.usage.gpu-sec"));
+                    var durationSecIdx = list.FindIndex(x => x.Equals("golem.usage.duration_sec"));
+                    var requestsIdx = list.FindIndex(x => x.Equals("ai-runtime.requests"));
+
+                    if(gpuSecIdx>=0 && durationSecIdx>=0 && requestsIdx>=0)
+                    {
+                        if(agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
+                        {
+                            var vals = usageVectorValues as List<decimal>;
+                            if(vals != null)
+                            {
+                                var gpuSec = vals[gpuSecIdx];
+                                var durationSec = vals[durationSecIdx];
+                                var requests = vals[requestsIdx];
+
+                                return new GolemPrice
+                                {
+                                    StartPrice = 1,
+                                    GpuPerHour = gpuSec,
+                                    EnvPerHour = durationSec,
+                                    NumRequests = requests,
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private ActivityState? parseActivityState(string message)
