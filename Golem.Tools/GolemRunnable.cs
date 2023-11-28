@@ -38,9 +38,7 @@ namespace Golem.IntegrationTests.Tools
                 return !_golemProcess.Process.HasExited;
             }
 
-            #pragma warning disable 8604
-            _logger.LogInformation("Command stopped. Output:\n{0}", String.Join("\n", _golemProcess?.GetOutputAndErrorLines()));
-            // _logger.LogI
+            _logger.LogInformation("Command stopped. Output:\n{0}", String.Join("\n", _golemProcess.GetOutputAndErrorLines()));
             _golemProcess = null;
             return false;
         }
