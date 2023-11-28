@@ -33,17 +33,21 @@
     <RemoveDir Directories="$(ProjectDir)\App\build" ContinueOnError="true" />
   </Target>
 
-  <Target Name="BuildApp" BeforeTargets="Test" AfterTargets="AfterBuild">
+  <Target Name="BuildApp" BeforeTargets="BeforeBuild">
     <Exec Command="python -m venv .venv" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
     <Exec Command=".\.venv\Scripts\activate | pip install -r requirements.txt" Condition="'$(OS)' == 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
     <Exec Command=".\.venv\Scripts\activate | pyinstaller --onefile app.py -y" Condition="'$(OS)' == 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
     <Exec Command=". .venv/bin/activate; pip install -r requirements.txt" Condition="'$(OS)' != 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
     <Exec Command=". .venv/bin/activate; pyinstaller --onefile app.py -y" Condition="'$(OS)' != 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
-    <RemoveDir Directories="$(ProjectDir)\bin\$(Configuration)\net7.0\app" ContinueOnError="true" />
     <ItemGroup>
-      <AppBinary Include="$(ProjectDir)App\dist\*.*" />
+        <AppBinary Include="$(ProjectDir)\App\dist\app"></AppBinary>
+        <Content Include="@(AppBinary)">
+            <TargetPath>%(AppBinary.Filename)%(Extension)</TargetPath>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <!-- <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory> -->
+            <IsAssembly>true</IsAssembly>
+        </Content>
     </ItemGroup>
-    <Copy SourceFiles="@(AppBinary)" DestinationFolder="$(ProjectDir)bin\$(Configuration)\net7.0\app\" />
   </Target>
 
 </Project>
