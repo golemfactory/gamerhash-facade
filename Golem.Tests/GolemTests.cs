@@ -1,17 +1,28 @@
+using App;
+
 using Golem;
 using Golem.IntegrationTests.Tools;
+using Golem.Yagna.Types;
+
 using GolemLib;
 using GolemLib.Types;
+
 using Microsoft.Extensions.Logging;
 
 namespace Golem.Tests
 {
     [Collection("Sequential")]
-    public class GolemTests
+    public class GolemTests : IDisposable
     {
-        readonly ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
-               builder.AddSimpleConsole(options => options.SingleLine = true)
+        private readonly ILoggerFactory _loggerFactory;
+
+        public GolemTests(ITestOutputHelper outputHelper)
+        {
+            XunitContext.Register(outputHelper);
+            _loggerFactory = LoggerFactory.Create(builder =>
+                builder.AddSimpleConsole(options => options.SingleLine = true)
             );
+        }
 
         [Fact]
         public async Task StartStop_VerifyStatusAsync()
@@ -19,7 +30,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory("StartStop_VerifyStatusAsync");
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
@@ -54,7 +65,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory("Start_ChangeWallet_VerifyStatusAsync");
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
@@ -79,7 +90,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory("Start_ChangePrices_VerifyPriceAsync");
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
             
             decimal price = 0;
 
@@ -109,6 +120,11 @@ namespace Golem.Tests
             Assert.Equal(0.006m, golem.Price.GpuPerHour);
             Assert.Equal(0.007m, golem.Price.EnvPerHour);
             Assert.Equal(0.008m, golem.Price.NumRequests);
+        }
+
+        public void Dispose()
+        {
+            XunitContext.Flush();
         }
     }
 }

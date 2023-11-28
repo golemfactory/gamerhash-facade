@@ -11,6 +11,11 @@ Mock/obj/
 /Golem.Tests/bin/
 /Golem.Tests/obj/
 /Golem.Tests/tests/
+/Golem.Tests/TestResults
+/Golem.Tests/Tools/App/.venv
+/Golem.Tests/Tools/App/build
+/Golem.Tests/Tools/App/dist
+/Golem.Tests/Tools/App/app.spec
 /MockGUI/bin/
 /MockGUI/obj/
 /modules/
