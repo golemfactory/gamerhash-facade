@@ -101,6 +101,7 @@
                             <Button Width="160" Command="{Binding OnResumeCommand}">Resume</Button>
 
                             <Button Margin="0 30" Width="160" Command="{Binding OnRunExample}">Run example</Button>
+                            <Button Margin="0 30" Width="160" Command="{Binding StopRequestor}">Terminate example</Button>
                         </StackPanel>
                     </Border>
                     <Border Classes="Panel">

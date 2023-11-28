@@ -23,6 +23,11 @@ namespace Golem.IntegrationTests.Tools
         internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
             var dir = TestDir(name);
+            return PrepareTestDirectory(dir, cleanupData);
+        }
+
+        public static string PrepareTestDirectory(string dir, bool cleanupData = true)
+        {
             if (Directory.Exists(dir))
             {
                 if (cleanupData)
@@ -90,7 +95,11 @@ namespace Golem.IntegrationTests.Tools
         public async static Task<string> BuildRequestorDirectory(string test_name, bool cleanupData = true)
         {
             var dir = InitTestDirectory(String.Format("{0}_requestor", test_name), cleanupData);
+            return await BuildRequestorDirectoryRelative(dir, cleanupData);
+        }
 
+        public async static Task<string> BuildRequestorDirectoryRelative(string dir, bool cleanupData = true)
+        {
             Directory.CreateDirectory(BinariesDir(dir));
             Directory.CreateDirectory(YagnaDataDir(dir));
 

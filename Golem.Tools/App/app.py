@@ -145,10 +145,12 @@ class AiRuntimeService(Service):
 
         # every `DATE_POLL_INTERVAL` write output of `date` to `DATE_OUTPUT_PATH`
         script = self._ctx.new_script()
-        script.start(
-            "--model",
-            "dummy_model"
-        )
+        # script.start(
+        #     "--model",
+        #     "dummy_model"
+        # )
+        await asyncio.sleep(3)
+
         yield script
 
     # async def run(self):
