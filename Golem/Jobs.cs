@@ -8,15 +8,17 @@ using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
 
+using StateType = Golem.Model.ActivityState.StateType;
+
 class Jobs
 {
     private readonly Action<Job?> _setCurrentJob;
     private readonly ILogger _logger;
 
     /// <summary>
-    /// Dictionary mapping AgreementId to aggregated `Job` with its previous `ActivityState`
+    /// Dictionary mapping AgreementId to aggregated `Job` with its `ActivityState`
     /// </summary>
-    private readonly Dictionary<string, JobAndPreviousState> _jobs = new Dictionary<string, JobAndPreviousState>();
+    private readonly Dictionary<string, JobAndState> _jobs = new Dictionary<string, JobAndState>();
 
     private readonly ReaderWriterLock _jobsLock = new ReaderWriterLock();
 
@@ -26,21 +28,27 @@ class Jobs
         _logger = loggerFactory.CreateLogger(nameof(Jobs));
     }
 
-    public void ApplyJob(Job? job, ActivityState? activityState)
+    public void ApplyJob(Job? job, StateType? activityState)
     {
         if (job?.Id != null && activityState != null)
         {
-            var jobAndPreviousState = new JobAndPreviousState(job, activityState);
-            _jobs[job.Id] = jobAndPreviousState;
+            StateType? oldActivityState = null;
+            if(_jobs.TryGetValue(job.Id, out var jobAndState)) {
+                oldActivityState = jobAndState.State;
+            }
+            job.Status = status((StateType)activityState, oldActivityState);
+            //TODO update fields of old job object instead of creating new one
+            _jobs[job.Id] = new JobAndState(job, (StateType)activityState);
         }
+        //TODO clean current job when Status == Finished ?
         _setCurrentJob(job);
     }
 
     public void UpdateUsage(string jobId, GolemUsage usage)
     {
-        if (_jobs.TryGetValue(jobId, out var jobAndPreviousState))
+        if (_jobs.TryGetValue(jobId, out var jobAndState))
         {
-            var job = jobAndPreviousState.Job;
+            var job = jobAndState.Job;
             job.CurrentUsage = usage;
         }
         else
@@ -51,9 +59,9 @@ class Jobs
 
     public void UpdatePaymentStatus(string id, GolemLib.Types.PaymentStatus paymentStatus)
     {
-        if (_jobs.TryGetValue(id, out var jobAndPreviousState))
+        if (_jobs.TryGetValue(id, out var jobAndState))
         {
-            var job = jobAndPreviousState.Job;
+            var job = jobAndState.Job;
             _logger.LogInformation("New payment status for job {}: {}", job.Id, paymentStatus);
             Console.WriteLine($"New payment status for job {job.Id}: {paymentStatus} requestor: {job.RequestorId}");
             job.PaymentStatus = paymentStatus;
@@ -66,9 +74,9 @@ class Jobs
 
     public void UpdatePaymentConfirmation(string jobId, List<Payment> payments)
     {
-        if (_jobs.TryGetValue(jobId, out var jobAndPreviousState))
+        if (_jobs.TryGetValue(jobId, out var jobAndState))
         {
-            var job = jobAndPreviousState.Job;
+            var job = jobAndState.Job;
             _logger.LogInformation("Payments confirmation for job {0}:", job.Id);
 
             job.PaymentConfirmation = payments;
@@ -79,14 +87,21 @@ class Jobs
         }
     }
 
+    private JobStatus status(StateType newState, StateType? oldState = null)
+    {
+        if (oldState == StateType.Initialized && newState == StateType.Deployed) {
+            return JobStatus.DownloadingModel;
+        } else if (newState == StateType.Ready) {
+            return JobStatus.Computing;
+        } else if (newState == StateType.Terminated) {
+            return JobStatus.Finished;
+        }
+        return JobStatus.Idle;
+    }
+
     public Job? Get(String jobId)
     {
         return _jobs[jobId]?.Job;
-    }
-
-    public bool Contains(String jobId)
-    {
-        return _jobs.ContainsKey(jobId);
     }
 
     public Task<List<IJob>> List()
@@ -94,16 +109,15 @@ class Jobs
         return Task.FromResult(_jobs.Values.Select(j => j.Job as IJob).ToList());
     }
 
-    class JobAndPreviousState
+    class JobAndState
     {
         public Job Job { get; set; }
+        public StateType State { get; set;  }
 
-        public JobAndPreviousState(Job job, ActivityState previousState)
+        public JobAndState(Job job, StateType state)
         {
             Job = job;
-            PreviousState = previousState;
+            State = state;
         }
-
-        public ActivityState PreviousState { get; set; }
     }
 }

@@ -20,12 +20,14 @@ public class GolemUsage : GolemPrice
 
 public enum JobStatus
 {
-    // everyting but the ones below
+    /// Default job state.
     Idle,
-    // initialized -> deployed == downloading
+    /// When job's activity transitions from `Initialized` to `Deployed` state
     DownloadingModel,
-    // now Computing == Read. Todo, later (exe-unit when receiving GSB request (the ones which gets translated to http request) will set computing state)
+    //TODO exe-unit should set `Computing` state when it receives GSB computation requests.
+    /// When job's activity state is set to `Ready`.
     Computing,
+    /// When  job's activity state is set to `Terminated`.
     Finished,
 }
 

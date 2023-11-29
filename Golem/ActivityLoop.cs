@@ -32,7 +32,7 @@ class ActivityLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<Job?, ActivityState?> applyJob, Action<string, GolemUsage> updateUsage)
+    public async Task Start(Action<Job?, ActivityState.StateType?> applyJob, Action<string, GolemUsage> updateUsage)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -72,7 +72,7 @@ class ActivityLoop
                         if (agreement?.Demand?.RequestorId == null)
                         {
                             _logger.LogDebug($"No agreement for activity: {activity_state.Id} (agreement: {activity_state.AgreementId})");
-                            applyJob(null, activity_state);
+                            applyJob(null, activity_state.State);
                             continue;
                         }
 
@@ -88,7 +88,7 @@ class ActivityLoop
                             job.Price = price;
                         }
 
-                        applyJob(job, activity_state);
+                        applyJob(job, activity_state.State);
 
                         if (activity_state != null)
                         {

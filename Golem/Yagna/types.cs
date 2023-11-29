@@ -114,7 +114,7 @@ namespace Golem.Yagna.Types
             // init => _price = value;
         }
 
-        public JobStatus Status => JobStatus.Idle;
+        public JobStatus Status{ get; set; } = JobStatus.Idle;
 
         private GolemLib.Types.PaymentStatus? _paymentStatus;
         public GolemLib.Types.PaymentStatus? PaymentStatus {
