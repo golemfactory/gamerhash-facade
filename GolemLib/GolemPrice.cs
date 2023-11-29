@@ -23,7 +23,6 @@ public class GolemPrice: INotifyPropertyChanged
         {
             gpuPerHour = value;
             OnPropertyChanged();
-            OnPropertyChanged("CurrentReward");
         }
     }
 
@@ -36,7 +35,6 @@ public class GolemPrice: INotifyPropertyChanged
         {
             envPerHour = value;
             OnPropertyChanged();
-            OnPropertyChanged("CurrentReward");
         }
     }
 
@@ -49,7 +47,6 @@ public class GolemPrice: INotifyPropertyChanged
         {
             numRequests = value;
             OnPropertyChanged();
-            OnPropertyChanged("CurrentReward");
         }
     }
 
@@ -63,7 +60,6 @@ public class GolemPrice: INotifyPropertyChanged
         {
             startPrice = value;
             OnPropertyChanged();
-            OnPropertyChanged("CurrentReward");
         }
     }
 
