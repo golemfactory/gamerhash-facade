@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GolemLib\GolemLib.csproj" />
+    <ProjectReference Include="..\Golem\Golem.csproj" />
+    
+    <PackageReference Include="MedallionShell" Version="1.6.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.1" />
+    <PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
+    <PackageReference Include="SharpZipLib" Version="1.4.2" />
+    <PackageReference Include="xunit" Version="2.6.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="3.2.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="XunitContext" Version="3.3.1" />
+  </ItemGroup>
+
+   <Target Name="AfterClean">
+    <RemoveDir Directories="$(ProjectDir)\bin\$(Configuration)\net7.0\app\" ContinueOnError="true" />
+    <RemoveDir Directories="$(ProjectDir)\App\dist" ContinueOnError="true" />
+    <RemoveDir Directories="$(ProjectDir)\App\build" ContinueOnError="true" />
+  </Target>
+
+  <Target Name="BuildApp" BeforeTargets="BeforeBuild">
+    <Exec Command="python -m venv .venv" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
+    <Exec Command=".\.venv\Scripts\activate | pip install -r requirements.txt" Condition="'$(OS)' == 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
+    <Exec Command=".\.venv\Scripts\activate | pyinstaller --onefile app.py -y" Condition="'$(OS)' == 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
+    <Exec Command=". .venv/bin/activate; pip install -r requirements.txt" Condition="'$(OS)' != 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
+    <Exec Command=". .venv/bin/activate; pyinstaller --onefile app.py -y" Condition="'$(OS)' != 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
+    <ItemGroup>
+        <AppBinary Include="$(ProjectDir)\App\dist\app*"></AppBinary>
+        <Content Include="@(AppBinary)">
+            <TargetPath>%(AppBinary.Filename)%(Extension)</TargetPath>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <!-- <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory> -->
+            <IsAssembly>true</IsAssembly>
+        </Content>
+    </ItemGroup>
+  </Target>
+
+</Project>

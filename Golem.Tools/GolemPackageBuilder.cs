@@ -18,11 +18,16 @@ namespace Golem.IntegrationTests.Tools
     public class PackageBuilder
     {
         const string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc4";
-        const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc15";
+        const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc16";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
             var dir = TestDir(name);
+            return PrepareTestDirectory(dir, cleanupData);
+        }
+
+        public static string PrepareTestDirectory(string dir, bool cleanupData = true)
+        {
             if (Directory.Exists(dir))
             {
                 if (cleanupData)
@@ -92,7 +97,11 @@ namespace Golem.IntegrationTests.Tools
         public async static Task<string> BuildRequestorDirectory(string test_name, bool cleanupData = true)
         {
             var dir = InitTestDirectory(String.Format("{0}_requestor", test_name), cleanupData);
+            return await BuildRequestorDirectoryRelative(dir, cleanupData);
+        }
 
+        public async static Task<string> BuildRequestorDirectoryRelative(string dir, bool cleanupData = true)
+        {
             Directory.CreateDirectory(BinariesDir(dir));
             Directory.CreateDirectory(YagnaDataDir(dir));
 
@@ -165,14 +174,14 @@ namespace Golem.IntegrationTests.Tools
             }
         }
 
-        internal static string TestDir(string name)
+        public static string TestDir(string name)
         {
             var build_dir = AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
             var tests_dir = Path.Combine(build_dir, "..", "..", "..", "tests");
             return Path.GetFullPath(Path.Combine(tests_dir, name));
         }
 
-        internal static string BinariesDir(string test_dir)
+        public static string BinariesDir(string test_dir)
         {
             return Path.Combine(test_dir, "modules", "golem");
         }
