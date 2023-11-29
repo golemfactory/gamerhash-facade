@@ -34,11 +34,15 @@ class Jobs
         {
             StateType? oldActivityState = null;
             if(_jobs.TryGetValue(job.Id, out var jobAndState)) {
+                var oldJob = jobAndState.Job;
                 oldActivityState = jobAndState.State;
+                oldJob.Status = status((StateType)activityState, oldActivityState);
+                oldJob.OnPropertyChanged(nameof(oldJob.Status));
+                job = oldJob;
+            } else {
+                job.Status = status((StateType)activityState, oldActivityState);
+                _jobs[job.Id] = new JobAndState(job, (StateType)activityState);
             }
-            job.Status = status((StateType)activityState, oldActivityState);
-            //TODO update fields of old job object instead of creating new one
-            _jobs[job.Id] = new JobAndState(job, (StateType)activityState);
         } else {
             //TODO fix it when handling of activities list will be supported
             finishAll();
