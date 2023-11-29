@@ -123,7 +123,7 @@ class ActivityLoop
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
     {
-        if(agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
+        if(agreement?.Offer?.Properties !=null && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
         {
             if(usageVector!=null)
             {
