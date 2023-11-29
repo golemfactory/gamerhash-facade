@@ -39,6 +39,9 @@ class Jobs
             job.Status = status((StateType)activityState, oldActivityState);
             //TODO update fields of old job object instead of creating new one
             _jobs[job.Id] = new JobAndState(job, (StateType)activityState);
+        } else {
+            //TODO fix it when handling of activities list will be supported
+            finishAll();
         }
         //TODO clean current job when Status == Finished ?
         _setCurrentJob(job);
@@ -107,6 +110,17 @@ class Jobs
     public Task<List<IJob>> List()
     {
         return Task.FromResult(_jobs.Values.Select(j => j.Job as IJob).ToList());
+    }
+
+    private void finishAll()
+    {
+        foreach (var jobAndStatus in _jobs.Values) {
+            var job = jobAndStatus.Job;
+            if (job.Status != JobStatus.Finished) {
+                job.Status = JobStatus.Finished;
+                job.OnPropertyChanged();
+            }
+        }
     }
 
     class JobAndState
