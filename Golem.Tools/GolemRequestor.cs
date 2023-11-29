@@ -35,6 +35,12 @@ namespace Golem.IntegrationTests.Tools
             return new GolemRequestor(dir, logger);
         }
 
+        public async static Task<GolemRequestor> BuildRelative(string datadir, ILogger logger, bool cleanupData = true)
+        {
+            var dir = await PackageBuilder.BuildRequestorDirectoryRelative(datadir, cleanupData);
+            return new GolemRequestor(dir, logger);
+        }
+
         public override bool Start()
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
@@ -49,9 +55,12 @@ namespace Golem.IntegrationTests.Tools
             env["YAGNA_API_URL"] = "http://127.0.0.1:7465";
             var pathEnvVar = Environment.GetEnvironmentVariable("PATH") ?? "";
             var binariesDir = Path.GetFullPath(PackageBuilder.BinariesDir(_dir));
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
                 pathEnvVar = $"{pathEnvVar};{binariesDir}";
-            } else {
+            }
+            else
+            {
                 pathEnvVar = $"{pathEnvVar}:{binariesDir}";
             }
             env["PATH"] = pathEnvVar;
@@ -68,7 +77,9 @@ namespace Golem.IntegrationTests.Tools
                 var app_key_process = RunCommand("yagna", workingDir(), $"app-key create {AppKeyName}", _env);
                 app_key_process.Wait();
                 AppKey = getTestAppKey();
-            } else {
+            }
+            else
+            {
                 // Release allocations in case of reusing requestor data dir
                 try
                 {

@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace App
 {
-    public class SampleApp: GolemRunnable
+    public class SampleApp : GolemRunnable
     {
         private readonly Dictionary<string, string> _env;
 
@@ -20,7 +20,7 @@ namespace App
         {
             _env = env;
             var app_filename = ProcessFactory.BinName("app");
-            var app_src = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, "app", app_filename);
+            var app_src = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, app_filename);
             var app_dst = Path.Combine(dir, "modules", "golem", app_filename);
             File.Copy(app_src, app_dst);
         }
