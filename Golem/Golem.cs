@@ -30,9 +30,9 @@ namespace Golem
 
         private Task? _activityLoop;
         private Task? _invoiceEventsLoop;
+        private CancellationTokenSource? _tokenSource;
 
         private readonly ILogger _logger;
-        private readonly CancellationTokenSource _tokenSource;
 
         private readonly HttpClient _httpClient;
 
@@ -171,7 +171,7 @@ namespace Golem
             _logger.LogInformation("Stopping Golem");
             await Provider.Stop();
             await Yagna.Stop();
-            _tokenSource.Cancel();
+            _tokenSource?.Cancel();
             Status = GolemStatus.Off;
         }
 
@@ -231,9 +231,9 @@ namespace Golem
 
             account = await WaitForIdentityAsync();
 
-            //TODO what if activityLoop != null?
-            this._activityLoop = StartActivityLoop();
-            this._invoiceEventsLoop = StartInvoiceEventsLoop();
+            resetToken();
+            _activityLoop = StartActivityLoop();
+            _invoiceEventsLoop = StartInvoiceEventsLoop();
 
             Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
 
@@ -333,6 +333,19 @@ namespace Golem
         public async ValueTask DisposeAsync()
         {
             await (this as IGolem).Stop();
+        }
+
+        private void resetToken()
+        {
+            //TODO lock access to token or use something else
+            if (_tokenSource != null && !_tokenSource.IsCancellationRequested) {
+                try {
+                    _tokenSource?.Cancel();
+                } catch (Exception e) {
+                    _logger.LogWarning(e, "Failed to cancel token.");
+                }
+            }
+            _tokenSource = new CancellationTokenSource();
         }
     }
 }
