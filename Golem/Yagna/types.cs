@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+
 using GolemLib;
 using GolemLib.Types;
 
@@ -114,13 +115,15 @@ namespace Golem.Yagna.Types
             // init => _price = value;
         }
 
-        public JobStatus Status{ get; set; } = JobStatus.Idle;
+        public JobStatus Status { get; set; } = JobStatus.Idle;
 
         private GolemLib.Types.PaymentStatus? _paymentStatus;
-        public GolemLib.Types.PaymentStatus? PaymentStatus {
+        public GolemLib.Types.PaymentStatus? PaymentStatus
+        {
             get => _paymentStatus;
-            set {
-                if(_paymentStatus != value)
+            set
+            {
+                if (_paymentStatus != value)
                 {
                     _paymentStatus = value;
                     OnPropertyChanged();
@@ -139,7 +142,8 @@ namespace Golem.Yagna.Types
         public GolemUsage CurrentUsage
         {
             get => _currentUsage;
-            set {
+            set
+            {
                 _currentUsage = value;
                 OnPropertyChanged();
             }
@@ -149,10 +153,13 @@ namespace Golem.Yagna.Types
         private List<Payment> _paymentConfirmation = new List<Payment>();
         public List<Payment> PaymentConfirmation
         {
-            get{
+            get
+            {
                 return _paymentConfirmation;
-                
-            } set{
+
+            }
+            set
+            {
                 _paymentConfirmation = value;
                 OnPropertyChanged();
             }
@@ -160,7 +167,7 @@ namespace Golem.Yagna.Types
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Id, RequestorId, Status, PaymentStatus);
+            return HashCode.Combine(Id, RequestorId, Status, PaymentStatus, PaymentConfirmation, CurrentUsage);
         }
 
         public override bool Equals(object? obj)
@@ -173,7 +180,10 @@ namespace Golem.Yagna.Types
             return Id.Equals(job?.Id)
                 && RequestorId.Equals(job.RequestorId)
                 && Status.Equals(job.Status)
-                && PaymentStatus.Equals(job.PaymentStatus);
+                && PaymentStatus.Equals(job.PaymentStatus)
+                && PaymentConfirmation.Equals(job.PaymentConfirmation)
+                && CurrentUsage.Equals(job.CurrentUsage)
+                ;
         }
     }
 

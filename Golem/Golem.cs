@@ -317,7 +317,7 @@ namespace Golem
 
         private void setCurrentJob(Job? job)
         {
-            if (CurrentJob != job)
+            if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
             {
                 CurrentJob = job;
                 RecentJobId = job?.Id ?? RecentJobId;
@@ -338,10 +338,14 @@ namespace Golem
         private void resetToken()
         {
             //TODO lock access to token or use something else
-            if (_tokenSource != null && !_tokenSource.IsCancellationRequested) {
-                try {
+            if (_tokenSource != null && !_tokenSource.IsCancellationRequested)
+            {
+                try
+                {
                     _tokenSource?.Cancel();
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     _logger.LogWarning(e, "Failed to cancel token.");
                 }
             }

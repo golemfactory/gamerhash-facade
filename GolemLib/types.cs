@@ -86,12 +86,46 @@ public class ActivityPayment
 {
     public required string ActivityId { get; init; }
     public required string Amount { get; init; }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(ActivityId, Amount);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj == null)
+        {
+            return false;
+        }
+        ActivityPayment? payment = obj as ActivityPayment;
+        return ActivityId.Equals(payment?.ActivityId)
+            && Amount.Equals(payment?.Amount)
+            ;
+    }
 }
 
 public class AgreementPayment
 {
     public required string AgreementId { get; init; }
     public required string Amount { get; init; }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(AgreementId, Amount);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj == null)
+        {
+            return false;
+        }
+        AgreementPayment? payment = obj as AgreementPayment;
+        return AgreementId.Equals(payment?.AgreementId)
+            && Amount.Equals(payment?.Amount)
+            ;
+    }
 }
 
 public class Payment
@@ -110,4 +144,35 @@ public class Payment
     public required string Details { get; init; }
     // public required string TransactionId { get; init; }
     // public required byte[] Signature { get; init; }
+
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(
+            HashCode.Combine(PaymentId, PayerId, PayeeId, PayerAddr, PayeeAddr, PaymentPlatform, Amount, Timestamp),
+            ActivityPayments, AgreementPayments, Details
+        );
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj == null)
+        {
+            return false;
+        }
+        Payment? payment = obj as Payment;
+        return PaymentId.Equals(payment?.PaymentId)
+            && PayerId.Equals(payment?.PayerId)
+            && PayeeId.Equals(payment?.PayeeId)
+            && PayerAddr.Equals(payment?.PayerAddr)
+            && PayeeAddr.Equals(payment?.PayeeAddr)
+            && PaymentPlatform.Equals(payment?.PaymentPlatform)
+            && Amount.Equals(payment?.Amount)
+            && Amount.Equals(payment?.Amount)
+            && Timestamp.Equals(payment?.Timestamp)
+            && ActivityPayments.Equals(payment?.ActivityPayments)
+            && AgreementPayments.Equals(payment?.AgreementPayments)
+            && Details.Equals(payment?.Details)
+            ;
+    }
 }
