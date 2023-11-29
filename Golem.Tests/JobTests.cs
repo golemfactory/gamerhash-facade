@@ -105,23 +105,25 @@ namespace Golem.Tests
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
-            var jobStartCounter = 0;
             IJob? job = null;
-            while ((job = await jobChannel.Reader.ReadAsync()) == null && jobStartCounter++ < 100)
+            while ((job = await jobChannel.Reader.ReadAsync()).Status != JobStatus.DownloadingModel)
             {
-                _logger.LogInformation("Still no job");
+                _logger.LogInformation("Still no DownloadingModel status");
+            }
+            while ((job = await jobChannel.Reader.ReadAsync()).Status != JobStatus.Computing)
+            {
+                _logger.LogInformation("Still no DownloadingModel status");
             }
             _logger.LogInformation($"Got a job. Status {golem.CurrentJob?.Status}, Id: {golem.CurrentJob?.Id}, RequestorId: {golem.CurrentJob?.RequestorId}");
             
             Assert.NotNull(golem.CurrentJob);
             Assert.Equal(golem.CurrentJob.RequestorId, _requestor?.AppKey?.Id);
-            Assert.Equal(golem.CurrentJob?.Status, JobStatus.Idle);
+            Assert.Equal(golem.CurrentJob?.Status, JobStatus.Computing);
 
             _logger.LogInformation("Stopping App");
             await app.Stop(StopMethod.SigInt);
 
-            var jobStopCounter = 0;
-            while ((job = await jobChannel.Reader.ReadAsync()) != null && jobStopCounter++ < 100)
+            while ((job = await jobChannel.Reader.ReadAsync()).Status != JobStatus.Finished)
             {
                 _logger.LogInformation($"Still has a job. Status: {job.Status}, Id: {job.Id}, RequestorId: {job.RequestorId}");
             }
