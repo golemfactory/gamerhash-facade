@@ -3,7 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        Width="1800" Height="900"
+        Width="1900" Height="900"
         x:Class="MockGUI.MainWindow"
         xmlns:facade="using:GolemLib"
         Title="Facade tester">
@@ -127,7 +127,7 @@
                             <Button Width="160" Command="{Binding OnResumeCommand}">Resume</Button>
 
                             <Button Margin="0 30" Width="160" Command="{Binding OnRunExample}">Run example</Button>
-                            <Button Margin="0 30" Width="160" Command="{Binding StopRequestor}">Terminate example</Button>
+                            <Button Width="160" Command="{Binding StopRequestor}">Terminate example</Button>
                         </StackPanel>
                     </Border>
                     <Border Classes="Panel">
@@ -162,12 +162,17 @@
                             <CalendarDatePicker Width="250" SelectedDate="{Binding DateSince}"/>
                             <TimePicker SelectedTime="{Binding TimeSince}" Width="250" ClockIdentifier="24HourClock" MinuteIncrement="5"/>
 
-                            <Button Width="160" HorizontalAlignment="Center" Command="{Binding OnListJobs}">List Jobs</Button>
+                            <Button Width="160" HorizontalAlignment="Left" Command="{Binding OnListJobs}">List Jobs</Button>
                         </StackPanel>
                     </Border>
 
-                    <Border Classes="Panel">
-                        <ItemsControl ItemsSource="{Binding JobsHistory}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                    <Border MaxHeight="700" Classes="Panel">
+                        <ScrollViewer>
+                            <ListBox    ItemsSource="{Binding JobsHistory}"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
+                                        SelectionMode="Multiple,Toggle"/>
+                        </ScrollViewer>
                     </Border>
                 </StackPanel>
             </Border>
