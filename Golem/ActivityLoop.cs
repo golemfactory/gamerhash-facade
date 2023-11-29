@@ -176,18 +176,6 @@ class ActivityLoop
                 _logger.LogInformation("No activities");
                 return null;
             }
-            var _active_activities = _activities.FindAll(activity => activity.State != ActivityState.StateType.Terminated);
-            if (!_active_activities.Any())
-            {
-                _logger.LogInformation("All activities terminated: {}", _activities);
-                return null;
-            }
-            if (_active_activities.Count > 1)
-            {
-                _logger.LogWarning("Multiple non terminated activities: {}", _active_activities);
-                //TODO what now?
-            }
-
             //TODO take latest? the one with specific status?
             ActivityState _activity = _activities.First();
             if (_activity.AgreementId == null)
