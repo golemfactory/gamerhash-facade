@@ -32,7 +32,7 @@ class ActivityLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<Job?> EmitJobEvent, Action<string, GolemUsage> updateUsage)
+    public async Task Start(Action<Job?, ActivityState?> applyJob, Action<string, GolemUsage> updateUsage)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -59,39 +59,42 @@ class ActivityLoop
                     using StreamReader reader = new StreamReader(stream);
 
                     await foreach (string json in EnumerateMessages(reader).WithCancellation(_token))
-                    {   
+                    {
                         _logger.LogInformation("got json {0}", json);
                         var activity_state = parseActivityState(json);
-                        if (activity_state == null || activity_state.AgreementId == null)
+                        if (activity_state?.AgreementId == null)
                         {
-                            EmitJobEvent(null);
+                            _logger.LogDebug("No activity");
+                            applyJob(null, null);
                             continue;
                         }
                         var agreement = await GetAgreement(activity_state.AgreementId);
-                        if (agreement == null || agreement.Demand?.RequestorId == null)
+                        if (agreement?.Demand?.RequestorId == null)
                         {
-                            EmitJobEvent(null);
+                            _logger.LogDebug($"No agreement for activity: {activity_state.Id} (agreement: {activity_state.AgreementId})");
+                            applyJob(null, activity_state);
                             continue;
                         }
-                        var new_job = new Job()
+
+                        var job = new Job()
                         {
                             Id = activity_state.AgreementId,
                             RequestorId = agreement.Demand.RequestorId,
                         };
 
                         var price = GetPriceFromAgreement(agreement);
-                        if(price!=null)
+                        if (price != null)
                         {
-                            new_job.Price = price;
+                            job.Price = price;
                         }
 
-                        EmitJobEvent(new_job);
+                        applyJob(job, activity_state);
 
-                        if(activity_state!=null)
+                        if (activity_state != null)
                         {
                             var jobId = activity_state.AgreementId;
                             var v = activity_state.Usage;
-                            if(v!=null)
+                            if (v != null)
                             {
                                 var usage = new GolemUsage
                                 {
@@ -117,29 +120,30 @@ class ActivityLoop
         }
         finally
         {
-            EmitJobEvent(null);
+            _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
+            applyJob(null, null);
         }
     }
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
     {
-        if(agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
+        if (agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
         {
-            if(usageVector!=null)
+            if (usageVector != null)
             {
                 var list = usageVector is JsonElement element ? element.EnumerateArray().ToList() : null;
-                if(list != null)
+                if (list != null)
                 {
                     var gpuSecIdx = list.FindIndex(x => x.Equals("golem.usage.gpu-sec"));
                     var durationSecIdx = list.FindIndex(x => x.Equals("golem.usage.duration_sec"));
                     var requestsIdx = list.FindIndex(x => x.Equals("ai-runtime.requests"));
 
-                    if(gpuSecIdx>=0 && durationSecIdx>=0 && requestsIdx>=0)
+                    if (gpuSecIdx >= 0 && durationSecIdx >= 0 && requestsIdx >= 0)
                     {
-                        if(agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
+                        if (agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
                         {
                             var vals = usageVectorValues as List<decimal>;
-                            if(vals != null)
+                            if (vals != null)
                             {
                                 var gpuSec = vals[gpuSecIdx];
                                 var durationSec = vals[durationSecIdx];
