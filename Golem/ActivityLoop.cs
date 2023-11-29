@@ -130,24 +130,25 @@ class ActivityLoop
                 var list = usageVector is JsonElement element ? element.EnumerateArray().ToList() : null;
                 if(list != null)
                 {
-                    var gpuSecIdx = list.FindIndex(x => x.Equals("golem.usage.gpu-sec"));
-                    var durationSecIdx = list.FindIndex(x => x.Equals("golem.usage.duration_sec"));
-                    var requestsIdx = list.FindIndex(x => x.Equals("ai-runtime.requests"));
+                    var gpuSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.gpu-sec"));
+                    var durationSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.duration_sec"));
+                    var requestsIdx = list.FindIndex(x => x.ToString().Equals("ai-runtime.requests"));
 
                     if(gpuSecIdx>=0 && durationSecIdx>=0 && requestsIdx>=0)
                     {
                         if(agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
                         {
-                            var vals = usageVectorValues as List<decimal>;
+                            var vals = usageVectorValues is JsonElement valuesElement ? valuesElement.EnumerateArray().Select(x => x.GetDecimal()).ToList() : null;
                             if(vals != null)
                             {
                                 var gpuSec = vals[gpuSecIdx];
                                 var durationSec = vals[durationSecIdx];
                                 var requests = vals[requestsIdx];
+                                var initialPrice = vals.Last();
 
                                 return new GolemPrice
                                 {
-                                    StartPrice = 1,
+                                    StartPrice = initialPrice,
                                     GpuPerHour = gpuSec,
                                     EnvPerHour = durationSec,
                                     NumRequests = requests,

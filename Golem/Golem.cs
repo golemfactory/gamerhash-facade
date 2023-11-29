@@ -32,7 +32,7 @@ namespace Golem
         private Task? _invoiceEventsLoop;
 
         private readonly ILogger _logger;
-        private readonly CancellationTokenSource _tokenSource;
+        private CancellationTokenSource _tokenSource;
 
         private readonly HttpClient _httpClient;
 
@@ -230,6 +230,7 @@ namespace Golem
             account = await WaitForIdentityAsync();
 
             //TODO what if activityLoop != null?
+            this._tokenSource = new CancellationTokenSource();
             this._activityLoop = StartActivityLoop();
             this._invoiceEventsLoop = StartInvoiceEventsLoop();
 
@@ -366,6 +367,7 @@ namespace Golem
             if(Jobs.TryGetValue(jobId, out var job))
             {
                 job.CurrentUsage = usage;
+                OnPropertyChanged(nameof(CurrentJob));
             }
             else
             {
