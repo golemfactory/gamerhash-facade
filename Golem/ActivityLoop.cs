@@ -6,6 +6,8 @@ using System.Text.Json.Serialization;
 using Golem.Model;
 using Golem.Yagna.Types;
 
+using GolemLib.Types;
+
 using Microsoft.Extensions.Logging;
 
 class ActivityLoop
@@ -30,7 +32,7 @@ class ActivityLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<Job?> EmitJobEvent)
+    public async Task Start(Action<Job?> EmitJobEvent, Action<string, GolemUsage> updateUsage)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -57,9 +59,9 @@ class ActivityLoop
                     using StreamReader reader = new StreamReader(stream);
 
                     await foreach (string json in EnumerateMessages(reader).WithCancellation(_token))
-                    {
+                    {   
                         _logger.LogInformation("got json {0}", json);
-                        var activity_state = parseMessage(json);
+                        var activity_state = parseActivityState(json);
                         if (activity_state == null || activity_state.AgreementId == null)
                         {
                             EmitJobEvent(null);
@@ -76,8 +78,31 @@ class ActivityLoop
                             Id = activity_state.AgreementId,
                             RequestorId = agreement.Demand.RequestorId,
                         };
+
+                        var price = GetPriceFromAgreement(agreement);
+                        if(price!=null)
+                        {
+                            new_job.Price = price;
+                        }
+
                         EmitJobEvent(new_job);
 
+                        if(activity_state!=null)
+                        {
+                            var jobId = activity_state.AgreementId;
+                            var v = activity_state.Usage;
+                            if(v!=null)
+                            {
+                                var usage = new GolemUsage
+                                {
+                                    StartPrice = 1,
+                                    GpuPerHour = v["golem.usage.gpu-sec"],
+                                    EnvPerHour = v["golem.usage.duration_sec"],
+                                    NumRequests = v["ai-runtime.requests"],
+                                };
+                                updateUsage(jobId, usage);
+                            }
+                        }
                     }
                 }
                 catch (Exception e)
@@ -96,7 +121,86 @@ class ActivityLoop
         }
     }
 
-    private ActivityState? parseMessage(string message)
+    private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
+    {
+        if(agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
+        {
+            if(usageVector!=null)
+            {
+                var list = usageVector is JsonElement element ? element.EnumerateArray().ToList() : null;
+                if(list != null)
+                {
+                    var gpuSecIdx = list.FindIndex(x => x.Equals("golem.usage.gpu-sec"));
+                    var durationSecIdx = list.FindIndex(x => x.Equals("golem.usage.duration_sec"));
+                    var requestsIdx = list.FindIndex(x => x.Equals("ai-runtime.requests"));
+
+                    if(gpuSecIdx>=0 && durationSecIdx>=0 && requestsIdx>=0)
+                    {
+                        if(agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
+                        {
+                            var vals = usageVectorValues as List<decimal>;
+                            if(vals != null)
+                            {
+                                var gpuSec = vals[gpuSecIdx];
+                                var durationSec = vals[durationSecIdx];
+                                var requests = vals[requestsIdx];
+
+                                return new GolemPrice
+                                {
+                                    StartPrice = 1,
+                                    GpuPerHour = gpuSec,
+                                    EnvPerHour = durationSec,
+                                    NumRequests = requests,
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private ActivityState? parseActivityState(string message)
+    {
+        try
+        {
+            var trackingEvent = JsonSerializer.Deserialize<TrackingEvent>(message, s_serializerOptions);
+            var _activities = trackingEvent?.Activities ?? new List<ActivityState>();
+            if (!_activities.Any())
+            {
+                _logger.LogInformation("No activities");
+                return null;
+            }
+            var _active_activities = _activities.FindAll(activity => activity.State != ActivityState.StateType.Terminated);
+            if (!_active_activities.Any())
+            {
+                _logger.LogInformation("All activities terminated: {}", _activities);
+                return null;
+            }
+            if (_active_activities.Count > 1)
+            {
+                _logger.LogWarning("Multiple non terminated activities: {}", _active_activities);
+                //TODO what now?
+            }
+
+            //TODO take latest? the one with specific status?
+            ActivityState _activity = _activities.First();
+            if (_activity.AgreementId == null)
+            {
+                _logger.LogInformation("Activity without agreement id: {}", _activity);
+                return null;
+            }
+            return _activity;
+        }
+        catch (JsonException e)
+        {
+            _logger.LogError(e, "Invalid monitoring event: {0}", message);
+            return null;
+        }
+    }
+
+    private ActivityState? parsePayments(string message)
     {
         try
         {

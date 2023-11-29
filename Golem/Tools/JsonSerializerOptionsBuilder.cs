@@ -8,7 +8,7 @@ namespace Golem.Tools
         private JsonNamingPolicy JsonNamingPolicy { get; set; } = JsonNamingPolicy.CamelCase;
         private bool PropertyNameCaseInsensitive { get; set; } = true;
         private bool WriteIndented { get; set; } = true;
-        private List<JsonConverter> JsonConverters { get; set; } = new List<JsonConverter> { new DateTimeJsonConverter() };
+        private List<JsonConverter> JsonConverters { get; set; } = new List<JsonConverter> { new DateTimeJsonConverter(), new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) };
 
         public JsonSerializerOptions Build() { 
             var options = new JsonSerializerOptions
