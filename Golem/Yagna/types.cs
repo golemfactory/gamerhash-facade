@@ -142,8 +142,11 @@ namespace Golem.Yagna.Types
             set {
                 _currentUsage = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(CurrentReward));
             }
         }
+
+        public decimal CurrentReward => CurrentUsage.Reward(Price);
 
 
         private List<Payment> _paymentConfirmation = new List<Payment>();

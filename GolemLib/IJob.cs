@@ -47,10 +47,7 @@ public interface IJob : INotifyPropertyChanged
     /// <returns></returns>
     public decimal CurrentReward
     {
-        get
-        {
-            return CurrentUsage.Reward(this.Price);
-        }
+        get;
     }
 }
 
