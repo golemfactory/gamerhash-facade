@@ -59,7 +59,7 @@
                         </StackPanel>
 
                         <StackPanel>
-                            <TextBlock FontSize="12" FontWeight="Bold">Price per hour</TextBlock>
+                            <TextBlock FontSize="12" FontWeight="Bold">Price per second</TextBlock>
                             <TextBlock Text="{Binding Price.EnvPerHour, Mode=TwoWay}" Width="120" />
                             <TextBlock Text="{Binding CurrentUsage.EnvPerHour, Mode=TwoWay}" Width="120" />
                         </StackPanel>
@@ -78,7 +78,7 @@
                     </StackPanel>
 
                     <TextBlock Grid.Row="5" Grid.Column="0" Classes="Label">Current Reward</TextBlock>
-                    <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding CurrentReward}"/>
+                    <TextBlock Grid.Row="5" Grid.Column="1" VerticalAlignment="Center" Text="{Binding CurrentReward}"/>
                 </Grid>
             </Border>
         </DataTemplate>
