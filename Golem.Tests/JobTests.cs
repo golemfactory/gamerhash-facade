@@ -64,7 +64,7 @@ namespace Golem.Tests
 
             _requestor = await GolemRequestor.Build(nameof(JobTests), _loggerFactory.CreateLogger("Requestor"));
             Assert.True(_requestor.Start());
-            _requestor.InitAccount();
+            _requestor.InitPayment();
         }
 
         [Fact]
@@ -111,7 +111,7 @@ namespace Golem.Tests
             _logger.LogInformation($"Got a job. Status {golem.CurrentJob?.Status}, Id: {golem.CurrentJob?.Id}, RequestorId: {golem.CurrentJob?.RequestorId}");
 
             Assert.NotNull(golem.CurrentJob);
-            Assert.Equal(golem.CurrentJob.RequestorId, _requestor?.AppKey?.Id);
+            Assert.Equal(golem.CurrentJob.RequestorId, _requestor?.AppKey);
             Assert.Equal(golem.CurrentJob?.Status, JobStatus.Computing);
 
             _logger.LogInformation("Stopping App");

@@ -2,9 +2,12 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Json;
+using System.Security.Cryptography;
 using System.Text;
 
 using App;
+
+using Golem.Yagna;
 
 using Medallion.Shell;
 
@@ -16,10 +19,9 @@ namespace Golem.IntegrationTests.Tools
 {
     public class GolemRequestor : GolemRunnable
     {
-        private const string AppKeyName = "tests";
         private readonly Dictionary<string, string> _env;
 
-        public GolemAppKey? AppKey;
+        public string? AppKey;
 
         private GolemRequestor(string dir, ILogger logger) : base(dir, logger)
         {
@@ -47,13 +49,41 @@ namespace Golem.IntegrationTests.Tools
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
-            return StartProcess("yagna", working_dir, "service run", _env);
+            AppKey = "2fdfe1a7a6bd4d7d81f4eb2f70ceeb45";
+            var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
+            // var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
+            env["YAGNA_AUTOCONF_ID_SECRET"] = getRequestorAutoconfIdSecret();
+            env["YAGNA_AUTOCONF_APPKEY"] = AppKey;
+            return StartProcess("yagna", working_dir, "service run", env);
+        }
+
+        private string getRequestorAutoconfIdSecret()
+        {
+            string? key = null;
+            if ((key = (string?)Environment.GetEnvironmentVariable("REQUESTOR_AUTOCONF_ID_SECRET")) != null)
+            {
+                return key;
+            }
+            var keyPath = Path.GetFullPath(Path.Combine(_dir, "..", "..", "Tools", "test_key.plain"));
+            var keyReader = new StreamReader(keyPath);
+            return keyReader.ReadLine() ?? throw new Exception($"Failed to read key from file {keyPath}");
+        }
+
+        private string generateRandomAppkey()
+        {
+            string? appKey = null;
+            if ((appKey = (string?)Environment.GetEnvironmentVariable("REQUESTOR_AUTOCONF_APPKEY")) != null)
+            {
+                return appKey;
+            }
+            byte[] data = RandomNumberGenerator.GetBytes(20);
+            return Convert.ToBase64String(data);
         }
 
         public SampleApp CreateSampleApp()
         {
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
-            env["YAGNA_APPKEY"] = AppKey?.Key ?? throw new Exception("Unable to create app process. No YAGNA_APPKEY.");
+            env["YAGNA_APPKEY"] = AppKey ?? throw new Exception("Unable to create app process. No YAGNA_APPKEY.");
             env["YAGNA_API_URL"] = "http://127.0.0.1:7465";
             var pathEnvVar = Environment.GetEnvironmentVariable("PATH") ?? "";
             var binariesDir = Path.GetFullPath(PackageBuilder.BinariesDir(_dir));
@@ -69,23 +99,9 @@ namespace Golem.IntegrationTests.Tools
             return new SampleApp(_dir, env, _logger);
         }
 
-        public void InitAccount()
+        public void InitPayment(double minFundThreshold = 100.0)
         {
             Thread.Sleep(3000);
-
-            _logger.LogInformation("Reading test key");
-            var keyPath = Path.GetFullPath(Path.Combine(_dir, "..", "..", "Tools", "test_key.json"));
-            var testKeyReader = new StreamReader(keyPath);
-            var testKeyFile = JObject.Parse(testKeyReader.ReadToEnd());
-            var testAddress = (string)testKeyFile.GetValue("address");
-            _logger.LogInformation($"Creating id from {keyPath}");
-            WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"id create --from-keystore {keyPath}", _env));
-            _logger.LogInformation($"Setting default id 0x{testAddress}");
-            WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"id update --set-default 0x{testAddress}", _env));
-            _logger.LogInformation($"Creating app-key with name {AppKeyName}");
-            WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"app-key create {AppKeyName}", _env));
-            AppKey = getTestAppKey();
-
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env.Add("RUST_LOG", "none");
 
@@ -94,29 +110,28 @@ namespace Golem.IntegrationTests.Tools
             var payment_status_output_obj = JObject.Parse(payment_status_output_json);
             var totalGlm = (float)payment_status_output_obj["amount"];
             var reserved = (float)payment_status_output_obj["reserved"];
-            
-            if (reserved > 0.0) {
-                WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment release-allocations", _env));
-            } 
 
-            if (totalGlm < 100.0) {
-                try
-                {
-                    var payment_fund_process = RunCommand("yagna", workingDir(), "payment fund", _env);
-                    payment_fund_process.Wait();
-                }
-                catch (Exception e)
-                {
-                    _logger.LogInformation($"Payment fund process error: {e}");
-                }
+            if (reserved > 0.0)
+            {
+                WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment release-allocations", _env));
             }
+
+            if (minFundThreshold < 100.0)
+            {
+                WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment fund", _env));
+            }
+            AppKey = getTestAppKey();
+            return;
         }
 
         private Command WaitAndPrintOnError(Command cmd)
-    {
-            try {
+        {
+            try
+            {
                 cmd.Wait();
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 _logger.LogError(e, $"Failed to run cmd: {cmd}");
                 _logger.LogError(String.Join("\n", cmd.GetOutputAndErrorLines()));
                 throw;
@@ -124,7 +139,7 @@ namespace Golem.IntegrationTests.Tools
             return cmd;
         }
 
-        private GolemAppKey? getTestAppKey()
+        private string? getTestAppKey()
         {
             var dataDir = _env["YAGNA_DATADIR"];
             if (!Path.Exists(dataDir) || Directory.EnumerateFiles(dataDir).Count() == 0)
@@ -143,11 +158,11 @@ namespace Golem.IntegrationTests.Tools
             foreach (JObject root in objects)
             {
                 var name = (string)root.GetValue("name");
-                if (AppKeyName.Equals(name))
+                if ("autoconfigured".Equals(name))
                 {
                     var key = (string)root.GetValue("key") ?? throw new Exception("Failed to get app key");
                     var id = (string)root.GetValue("id") ?? throw new Exception("Failed to get app id");
-                    return new GolemAppKey(key, id);
+                    return key;
                 }
             }
             return null;
@@ -158,19 +173,6 @@ namespace Golem.IntegrationTests.Tools
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
             return working_dir;
-        }
-    }
-
-    public class GolemAppKey
-    {
-        public readonly string Key;
-
-        public readonly string Id;
-
-        public GolemAppKey(string key, string id)
-        {
-            this.Key = key;
-            this.Id = id;
         }
     }
 }

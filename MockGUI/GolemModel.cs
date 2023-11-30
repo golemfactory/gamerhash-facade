@@ -86,7 +86,7 @@ namespace MockGUI.ViewModels
                 Requestor.Start();
 
                 _logger.LogInformation("Initializing payment accounts");
-                Requestor.InitAccount();
+                Requestor.InitPayment();
 
                 _logger.LogInformation("Creating requestor application");
                 App = Requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
