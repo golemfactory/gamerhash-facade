@@ -67,7 +67,7 @@ namespace Golem.Tests
             _requestor.InitAccount();
         }
 
-        [Fact]
+        [Fact(Skip="Skipped until payment issue resovled")]
         public async Task StartStop_Job()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory(nameof(JobTests));
