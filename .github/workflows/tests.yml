@@ -27,19 +27,13 @@ jobs:
     - name: Build
       run: dotnet build
     - name: Test with the dotnet CLI
-      run: dotnet test -v diag
+      run: dotnet test -v d
     - name: Archive JobTests artifacts
       uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: JobTests_${{ matrix.os }}
+        name: Test_logs_${{ matrix.os }}
         path: |
-          Golem.Tests/tests/JobTests/modules/golem-data/yagna/*.log
-          Golem.Tests/tests/JobTests/modules/golem-data/provider/*.log
-    - name: Archive JobTests requestor artifacts
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: JobTests_requestor_${{ matrix.os }}
-        path: |
-          Golem.Tests/tests/JobTests_requestor/modules/golem-data/yagna/*.log
+          Golem.Tests/tests/*.log
+          Golem.Tests/tests/*/modules/golem-data/yagna/*.log
+          Golem.Tests/tests/*/modules/golem-data/provider/*.log
