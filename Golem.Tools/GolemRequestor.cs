@@ -71,7 +71,7 @@ namespace Golem.IntegrationTests.Tools
         {
             Thread.Sleep(3000);
 
-            var totalGlm = 0;
+            var totalGlm = 0.0;
             AppKey = getTestAppKey();
             if (AppKey == null)
             {
@@ -83,21 +83,21 @@ namespace Golem.IntegrationTests.Tools
             {
                 var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
                 env.Add("RUST_LOG", "none");
-                
+
                 var payment_status_process = RunCommand("yagna", workingDir(), "payment status --json", env);
                 payment_status_process.Wait();
                 var payment_status_output_json = String.Join("\n", payment_status_process.GetOutputAndErrorLines());
                 var payment_status_output_obj = JObject.Parse(payment_status_output_json);
-                totalGlm = (int)payment_status_output_obj["amount"];
-                var reserved = (int)payment_status_output_obj["reserved"];
+                totalGlm = (float)payment_status_output_obj["amount"];
+                var reserved = (float)payment_status_output_obj["reserved"];
                 
-                if (reserved > 0) {
+                if (reserved > 0.0) {
                     var release_allocations_process = RunCommand("yagna", workingDir(), "payment release-allocations", _env);
                     release_allocations_process.Wait();
                 } 
             }
 
-            if (totalGlm < 100) {
+            if (totalGlm < 100.0) {
                 try
                 {
                     var payment_fund_process = RunCommand("yagna", workingDir(), "payment fund", _env);
