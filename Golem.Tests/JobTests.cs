@@ -44,12 +44,13 @@ namespace Golem.Tests
         public JobTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
         {
             XunitContext.Register(outputHelper);
-            // var logfile = Path.Combine(PackageBuilder.TestDir(nameof(JobTests)), "gh_facade-{Date}.log");
+            // Log file directly in `tests` directory (like `tests/Jobtests-20231231.log )
+            var logfile = Path.Combine(PackageBuilder.TestDir(""), nameof(JobTests) + "-{Date}.log");
             var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
             _logger = loggerProvider.CreateLogger(nameof(JobTests));
             _loggerFactory = LoggerFactory.Create(builder => builder
                 .AddSimpleConsole(options => options.SingleLine = true)
-                // .AddFile(logfile)
+                .AddFile(logfile)
                 .AddProvider(loggerProvider)
             );
         }
@@ -92,12 +93,9 @@ namespace Golem.Tests
             _logger.LogInformation("Starting Golem");
             await golem.Start();
             Assert.Equal(GolemStatus.Starting, await statusChannel.Reader.ReadAsync());
-            GolemStatus? status = GolemStatus.Starting;
-            while ((status = await statusChannel.Reader.ReadAsync()) == GolemStatus.Starting)
-            {
-                _logger.LogInformation("Still starting");
-            }
-            Assert.Equal(status, GolemStatus.Ready);
+
+            var readyStatus = await SkipMatching(statusChannel, (GolemStatus status) => { return status == GolemStatus.Starting; });
+            Assert.Equal(GolemStatus.Ready, readyStatus);
 
             Assert.Null(golem.CurrentJob);
 
@@ -105,17 +103,13 @@ namespace Golem.Tests
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
-            IJob? job = null;
-            while ((job = await jobChannel.Reader.ReadAsync()).Status != JobStatus.DownloadingModel)
-            {
-                _logger.LogInformation("Still no DownloadingModel status");
-            }
-            while ((job = await jobChannel.Reader.ReadAsync()).Status != JobStatus.Computing)
-            {
-                _logger.LogInformation("Still no DownloadingModel status");
-            }
+            IJob? donwloadingCurrentJob = await SkipMatching(jobChannel, (IJob? j) => { return j?.Status == JobStatus.Idle; });
+            Assert.Equal(JobStatus.DownloadingModel, donwloadingCurrentJob?.Status);
+            IJob? computingCurrentJob = await SkipMatching(jobChannel, (IJob? j) => { return j?.Status == JobStatus.DownloadingModel; });
+            Assert.Equal(JobStatus.Computing, donwloadingCurrentJob?.Status);
+
             _logger.LogInformation($"Got a job. Status {golem.CurrentJob?.Status}, Id: {golem.CurrentJob?.Id}, RequestorId: {golem.CurrentJob?.RequestorId}");
-            
+
             Assert.NotNull(golem.CurrentJob);
             Assert.Equal(golem.CurrentJob.RequestorId, _requestor?.AppKey?.Id);
             Assert.Equal(golem.CurrentJob?.Status, JobStatus.Computing);
@@ -123,22 +117,34 @@ namespace Golem.Tests
             _logger.LogInformation("Stopping App");
             await app.Stop(StopMethod.SigInt);
 
-            while ((job = await jobChannel.Reader.ReadAsync()).Status != JobStatus.Finished)
-            {
-                _logger.LogInformation($"Still has a job. Status: {job.Status}, Id: {job.Id}, RequestorId: {job.RequestorId}");
-            }
+            IJob? finishedCurrentJob = await SkipMatching(jobChannel, (IJob? j) => { return j?.Status == JobStatus.Computing; });
             _logger.LogInformation("No more jobs");
             Assert.Null(golem.CurrentJob);
 
             _logger.LogInformation("Stopping Golem");
             await golem.Stop();
 
-            var golemStopCounter = 0;
-            while ((status = await statusChannel.Reader.ReadAsync()) == GolemStatus.Ready && golemStopCounter++ < 100)
+            var offStatus = await SkipMatching(statusChannel, (GolemStatus status) => { return status == GolemStatus.Ready; });
+            Assert.Equal(GolemStatus.Off, offStatus);
+        }
+
+        public async Task<T> SkipMatching<T>(ChannelReader<T> channel, Func<T, bool> matcher, double timeoutMs = 10_000)
+        {
+            var cancelTokenSource = new CancellationTokenSource();
+            cancelTokenSource.CancelAfter(TimeSpan.FromMilliseconds(timeoutMs));
+            while (await channel.WaitToReadAsync(cancelTokenSource.Token))
             {
-                _logger.LogInformation("Still stopping");
+                if (channel.TryRead(out T value) && !matcher.Invoke(value))
+                {
+                    return value;
+                }
+                else
+                {
+                    _logger.LogInformation($"Skipping element: {value}");
+                }
             }
-            Assert.Equal(status, GolemStatus.Off);
+
+            throw new Exception($"Failed to find matching {nameof(T)} within {timeoutMs} ms.");
         }
 
         public async Task DisposeAsync()
