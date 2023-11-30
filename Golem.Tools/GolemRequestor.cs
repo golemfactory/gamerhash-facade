@@ -6,6 +6,8 @@ using System.Text;
 
 using App;
 
+using Medallion.Shell;
+
 using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json.Linq;
@@ -71,31 +73,31 @@ namespace Golem.IntegrationTests.Tools
         {
             Thread.Sleep(3000);
 
-            var totalGlm = 0.0;
+            _logger.LogInformation("Reading test key");
+            var keyPath = Path.GetFullPath(Path.Combine(_dir, "..", "..", "Tools", "test_key.json"));
+            var testKeyReader = new StreamReader(keyPath);
+            var testKeyFile = JObject.Parse(testKeyReader.ReadToEnd());
+            var testAddress = (string)testKeyFile.GetValue("address");
+            _logger.LogInformation($"Creating id from {keyPath}");
+            WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"id create --from-keystore {keyPath}", _env));
+            _logger.LogInformation($"Setting default id 0x{testAddress}");
+            WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"id update --set-default 0x{testAddress}", _env));
+            _logger.LogInformation($"Creating app-key with name {AppKeyName}");
+            WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"app-key create {AppKeyName}", _env));
             AppKey = getTestAppKey();
-            if (AppKey == null)
-            {
-                var app_key_process = RunCommand("yagna", workingDir(), $"app-key create {AppKeyName}", _env);
-                app_key_process.Wait();
-                AppKey = getTestAppKey();
-            }
-            else
-            {
-                var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
-                env.Add("RUST_LOG", "none");
 
-                var payment_status_process = RunCommand("yagna", workingDir(), "payment status --json", env);
-                payment_status_process.Wait();
-                var payment_status_output_json = String.Join("\n", payment_status_process.GetOutputAndErrorLines());
-                var payment_status_output_obj = JObject.Parse(payment_status_output_json);
-                totalGlm = (float)payment_status_output_obj["amount"];
-                var reserved = (float)payment_status_output_obj["reserved"];
-                
-                if (reserved > 0.0) {
-                    var release_allocations_process = RunCommand("yagna", workingDir(), "payment release-allocations", _env);
-                    release_allocations_process.Wait();
-                } 
-            }
+            var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
+            env.Add("RUST_LOG", "none");
+
+            var payment_status_process = WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment status --json", env));
+            var payment_status_output_json = String.Join("\n", payment_status_process.GetOutputAndErrorLines());
+            var payment_status_output_obj = JObject.Parse(payment_status_output_json);
+            var totalGlm = (float)payment_status_output_obj["amount"];
+            var reserved = (float)payment_status_output_obj["reserved"];
+            
+            if (reserved > 0.0) {
+                WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment release-allocations", _env));
+            } 
 
             if (totalGlm < 100.0) {
                 try
@@ -108,6 +110,18 @@ namespace Golem.IntegrationTests.Tools
                     _logger.LogInformation($"Payment fund process error: {e}");
                 }
             }
+        }
+
+        private Command WaitAndPrintOnError(Command cmd)
+    {
+            try {
+                cmd.Wait();
+            } catch (Exception e) {
+                _logger.LogError(e, $"Failed to run cmd: {cmd}");
+                _logger.LogError(String.Join("\n", cmd.GetOutputAndErrorLines()));
+                throw;
+            }
+            return cmd;
         }
 
         private GolemAppKey? getTestAppKey()

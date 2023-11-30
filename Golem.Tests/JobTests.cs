@@ -62,12 +62,12 @@ namespace Golem.Tests
             System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:17464");
             System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");
 
-            _requestor = await GolemRequestor.Build(nameof(JobTests), _loggerFactory.CreateLogger("Requestor"), false);
+            _requestor = await GolemRequestor.Build(nameof(JobTests), _loggerFactory.CreateLogger("Requestor"));
             Assert.True(_requestor.Start());
             _requestor.InitAccount();
         }
 
-        [Fact(Skip="Skipped until payment issue resovled")]
+        [Fact]
         public async Task StartStop_Job()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory(nameof(JobTests));
