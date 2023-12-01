@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-using Golem.IntegrationTests.Tools;
+using Golem.Tools;
 
 using GolemLib;
 using App;
