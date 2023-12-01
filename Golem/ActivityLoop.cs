@@ -68,6 +68,7 @@ class ActivityLoop
                             applyJob(null, null);
                             continue;
                         }
+
                         var agreement = await GetAgreement(activity_state.AgreementId);
                         if (agreement?.Demand?.RequestorId == null)
                         {
@@ -82,10 +83,13 @@ class ActivityLoop
                             RequestorId = agreement.Demand.RequestorId,
                         };
 
-                        var price = GetPriceFromAgreement(agreement);
-                        if (price != null)
+                        if(job.Price is NotInitializedGolemPrice)
                         {
-                            job.Price = price;
+                            var price = GetPriceFromAgreement(agreement);
+                            if (price != null)
+                            {
+                                job.Price = price;
+                            }
                         }
 
                         applyJob(job, activity_state.State);
@@ -93,18 +97,9 @@ class ActivityLoop
                         if (activity_state != null)
                         {
                             var jobId = activity_state.AgreementId;
-                            var v = activity_state.Usage;
-                            if (v != null)
-                            {
-                                var usage = new GolemUsage
-                                {
-                                    StartPrice = 1,
-                                    GpuPerHour = v["golem.usage.gpu-sec"],
-                                    EnvPerHour = v["golem.usage.duration_sec"],
-                                    NumRequests = v["ai-runtime.requests"],
-                                };
+                            var usage = GetUsage(activity_state.Usage);
+                            if(usage!=null)
                                 updateUsage(jobId, usage);
-                            }
                         }
                     }
                 }
@@ -125,13 +120,29 @@ class ActivityLoop
         }
     }
 
+    private GolemUsage? GetUsage(Dictionary<string, decimal>? usageDict)
+    {
+        if (usageDict != null)
+        {
+            var usage = new GolemUsage
+            {
+                StartPrice = 1,
+                GpuPerHour = usageDict["golem.usage.gpu-sec"],
+                EnvPerHour = usageDict["golem.usage.duration_sec"],
+                NumRequests = usageDict["ai-runtime.requests"],
+            };
+            return usage;
+        }
+        return null;
+    }
+
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
     {
-        if(agreement?.Offer?.Properties !=null && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
+        if (agreement?.Offer?.Properties!=null && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
         {
             if (usageVector != null)
             {
-                var list = usageVector is JsonElement element ? element.EnumerateArray().ToList() : null;
+                var list = usageVector is JsonElement element ? element.EnumerateArray().Select(e => e.ToString()).ToList() : null;
                 if (list != null)
                 {
                     var gpuSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.gpu-sec"));

@@ -42,18 +42,19 @@ class InvoiceEventsLoop
         DateTime newReconnect = DateTime.Now;
         try
         {
+            const int timeout = 10;
+            
+
             while (!_token.IsCancellationRequested)
             {
-                var timeout = 10;
+                var url = $"/payment-api/v1/invoiceEvents?timeout={timeout}&afterTimestamp={_since.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture)}";
+                using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            
+                requestMessage.Headers.Add("X-Requestor-Events", string.Join(',', _monitorEventTypes));
+                requestMessage.Headers.Add("X-Provider-Events", string.Join(',', _monitorEventTypes));
 
                 try
                 {
-                    var url = $"/payment-api/v1/invoiceEvents?timeout={timeout}&afterTimestamp={_since.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture)}";
-                    using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-                    
-                    requestMessage.Headers.Add("X-Requestor-Events", string.Join(',', _monitorEventTypes));
-                    requestMessage.Headers.Add("X-Provider-Events", string.Join(',', _monitorEventTypes));
-
                     var invoiceEventsResponse = await _httpClient.SendAsync(requestMessage);
                     if (invoiceEventsResponse.IsSuccessStatusCode)
                     {
@@ -64,25 +65,9 @@ class InvoiceEventsLoop
                             var invoiceEvents = JsonSerializer.Deserialize<List<InvoiceEvent>>(result, _serializerOptions);
                             if (invoiceEvents != null && invoiceEvents.Count > 0)
                             {
-                                _since = invoiceEvents.OrderByDescending(x => x.EventDate).Select(x => x.EventDate).FirstOrDefault();
+                                _since = invoiceEvents.Max(x => x.EventDate);
 
-                                foreach (var invoiceEvent in invoiceEvents)
-                                {
-                                    var invoice = await GetInvoice(invoiceEvent.InvoiceId);
-                                    if (invoice != null)
-                                    {
-                                        var paymentStatus = GetPaymentStatus(invoice.Status);
-                                        UpdatePaymentStatus(invoice.AgreementId, paymentStatus);
-                                        if(paymentStatus == PaymentStatus.Settled)
-                                        {
-                                            var payments = await GetPayments();
-                                            var paymentsForRecentJob = payments
-                                                .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
-                                                .ToList();
-                                            updatePaymentConfirmation(invoice.AgreementId, payments);
-                                        }
-                                    }
-                                }
+                                invoiceEvents.ForEach(async i => await UpdatesForInvoice(i, UpdatePaymentStatus, updatePaymentConfirmation));
                             }
                         }
                     }
@@ -104,6 +89,24 @@ class InvoiceEventsLoop
         finally
         {
             // UpdatePaymentStatus(GolemLib.Types.PaymentStatus.Rejected);
+        }
+    }
+
+    private async Task UpdatesForInvoice(InvoiceEvent invoiceEvent, Action<string, PaymentStatus> UpdatePaymentStatus, Action<string, List<Payment>> updatePaymentConfirmation)
+    {
+        var invoice = await GetInvoice(invoiceEvent.InvoiceId);
+        if (invoice != null)
+        {
+            var paymentStatus = GetPaymentStatus(invoice.Status);
+            UpdatePaymentStatus(invoice.AgreementId, paymentStatus);
+            if (paymentStatus == PaymentStatus.Settled)
+            {
+                var payments = await GetPayments();
+                var paymentsForRecentJob = payments
+                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
+                    .ToList();
+                updatePaymentConfirmation(invoice.AgreementId, payments);
+            }
         }
     }
 
