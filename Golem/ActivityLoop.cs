@@ -32,7 +32,13 @@ class ActivityLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<Job?, ActivityState.StateType?> applyJob, Action<string, GolemUsage> updateUsage)
+    public async Task Start(
+        Action<Job?> setCurrentJob,
+        Func<string, string, Job> getOrCreateJob,
+        Func<ActivityState.StateType, ActivityState.StateType?, JobStatus> resolveStatus,
+        Action setAllJobsFinished,
+        Func<string, ActivityState.StateType?> getActivityState,
+        Action<string, ActivityState.StateType> updateActivityState)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -65,47 +71,44 @@ class ActivityLoop
                         if (activity_state?.AgreementId == null)
                         {
                             _logger.LogDebug("No activity");
-                            applyJob(null, null);
+                            setAllJobsFinished();
+                            setCurrentJob(null);
                             continue;
                         }
+
                         var agreement = await GetAgreement(activity_state.AgreementId);
                         if (agreement?.Demand?.RequestorId == null)
                         {
                             _logger.LogDebug($"No agreement for activity: {activity_state.Id} (agreement: {activity_state.AgreementId})");
-                            applyJob(null, activity_state.State);
+                            setAllJobsFinished();
+                            setCurrentJob(null);
                             continue;
                         }
 
-                        var job = new Job()
-                        {
-                            Id = activity_state.AgreementId,
-                            RequestorId = agreement.Demand.RequestorId,
-                        };
+                        var jobId = activity_state.AgreementId;
+                        var job = getOrCreateJob(jobId, agreement.Demand.RequestorId);
 
-                        var price = GetPriceFromAgreement(agreement);
-                        if (price != null)
+                        if(job.Price is NotInitializedGolemPrice)
                         {
-                            job.Price = price;
-                        }
-
-                        applyJob(job, activity_state.State);
-
-                        if (activity_state != null)
-                        {
-                            var jobId = activity_state.AgreementId;
-                            var v = activity_state.Usage;
-                            if (v != null)
+                            var price = GetPriceFromAgreement(agreement);
+                            if (price != null)
                             {
-                                var usage = new GolemUsage
-                                {
-                                    StartPrice = 1,
-                                    GpuPerHour = v["golem.usage.gpu-sec"],
-                                    EnvPerHour = v["golem.usage.duration_sec"],
-                                    NumRequests = v["ai-runtime.requests"],
-                                };
-                                updateUsage(jobId, usage);
+                                job.Price = price;
                             }
                         }
+
+                        var activityState = getActivityState(jobId);
+                        if(activityState != null)
+                        {
+                            job.Status = resolveStatus(activityState.Value, activity_state.State);
+                            updateActivityState(jobId, activity_state.State);
+                        }
+                        
+                        var usage = GetUsage(activity_state.Usage);
+                        if(usage != null)
+                            job.CurrentUsage = usage;
+
+                        setCurrentJob(job);
                     }
                 }
                 catch (Exception e)
@@ -121,37 +124,55 @@ class ActivityLoop
         finally
         {
             _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
-            applyJob(null, null);
+            setAllJobsFinished();
+            setCurrentJob(null);
         }
+    }
+
+    private GolemUsage? GetUsage(Dictionary<string, decimal>? usageDict)
+    {
+        if (usageDict != null)
+        {
+            var usage = new GolemUsage
+            {
+                StartPrice = 1,
+                GpuPerHour = usageDict["golem.usage.gpu-sec"],
+                EnvPerHour = usageDict["golem.usage.duration_sec"],
+                NumRequests = usageDict["ai-runtime.requests"],
+            };
+            return usage;
+        }
+        return null;
     }
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
     {
-        if (agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
+        if (agreement?.Offer?.Properties!=null && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
         {
             if (usageVector != null)
             {
-                var list = usageVector is JsonElement element ? element.EnumerateArray().ToList() : null;
+                var list = usageVector is JsonElement element ? element.EnumerateArray().Select(e => e.ToString()).ToList() : null;
                 if (list != null)
                 {
-                    var gpuSecIdx = list.FindIndex(x => x.Equals("golem.usage.gpu-sec"));
-                    var durationSecIdx = list.FindIndex(x => x.Equals("golem.usage.duration_sec"));
-                    var requestsIdx = list.FindIndex(x => x.Equals("ai-runtime.requests"));
+                    var gpuSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.gpu-sec"));
+                    var durationSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.duration_sec"));
+                    var requestsIdx = list.FindIndex(x => x.ToString().Equals("ai-runtime.requests"));
 
                     if (gpuSecIdx >= 0 && durationSecIdx >= 0 && requestsIdx >= 0)
                     {
                         if (agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
                         {
-                            var vals = usageVectorValues as List<decimal>;
-                            if (vals != null)
+                            var vals = usageVectorValues is JsonElement valuesElement ? valuesElement.EnumerateArray().Select(x => x.GetDecimal()).ToList() : null;
+                            if(vals != null)
                             {
                                 var gpuSec = vals[gpuSecIdx];
                                 var durationSec = vals[durationSecIdx];
                                 var requests = vals[requestsIdx];
+                                var initialPrice = vals.Last();
 
                                 return new GolemPrice
                                 {
-                                    StartPrice = 1,
+                                    StartPrice = initialPrice,
                                     GpuPerHour = gpuSec,
                                     EnvPerHour = durationSec,
                                     NumRequests = requests,

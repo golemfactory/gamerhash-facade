@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Options;
 using Xunit.Sdk;
+using Xunit.Abstractions;
 
 
 namespace Golem.IntegrationTests.Tools
