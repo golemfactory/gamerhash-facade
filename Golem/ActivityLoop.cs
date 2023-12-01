@@ -32,7 +32,7 @@ class ActivityLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<Job?> EmitJobEvent, Action<string, GolemUsage> updateUsage)
+    public async Task Start(Action<Job?, ActivityState.StateType?> applyJob, Action<string, GolemUsage> updateUsage)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -59,39 +59,42 @@ class ActivityLoop
                     using StreamReader reader = new StreamReader(stream);
 
                     await foreach (string json in EnumerateMessages(reader).WithCancellation(_token))
-                    {   
+                    {
                         _logger.LogInformation("got json {0}", json);
                         var activity_state = parseActivityState(json);
-                        if (activity_state == null || activity_state.AgreementId == null)
+                        if (activity_state?.AgreementId == null)
                         {
-                            EmitJobEvent(null);
+                            _logger.LogDebug("No activity");
+                            applyJob(null, null);
                             continue;
                         }
                         var agreement = await GetAgreement(activity_state.AgreementId);
-                        if (agreement == null || agreement.Demand?.RequestorId == null)
+                        if (agreement?.Demand?.RequestorId == null)
                         {
-                            EmitJobEvent(null);
+                            _logger.LogDebug($"No agreement for activity: {activity_state.Id} (agreement: {activity_state.AgreementId})");
+                            applyJob(null, activity_state.State);
                             continue;
                         }
-                        var new_job = new Job()
+
+                        var job = new Job()
                         {
                             Id = activity_state.AgreementId,
                             RequestorId = agreement.Demand.RequestorId,
                         };
 
                         var price = GetPriceFromAgreement(agreement);
-                        if(price!=null)
+                        if (price != null)
                         {
-                            new_job.Price = price;
+                            job.Price = price;
                         }
 
-                        EmitJobEvent(new_job);
+                        applyJob(job, activity_state.State);
 
-                        if(activity_state!=null)
+                        if (activity_state != null)
                         {
                             var jobId = activity_state.AgreementId;
                             var v = activity_state.Usage;
-                            if(v!=null)
+                            if (v != null)
                             {
                                 var usage = new GolemUsage
                                 {
@@ -117,7 +120,8 @@ class ActivityLoop
         }
         finally
         {
-            EmitJobEvent(null);
+            _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
+            applyJob(null, null);
         }
     }
 
@@ -125,18 +129,18 @@ class ActivityLoop
     {
         if(agreement?.Offer?.Properties !=null && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
         {
-            if(usageVector!=null)
+            if (usageVector != null)
             {
                 var list = usageVector is JsonElement element ? element.EnumerateArray().ToList() : null;
-                if(list != null)
+                if (list != null)
                 {
                     var gpuSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.gpu-sec"));
                     var durationSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.duration_sec"));
                     var requestsIdx = list.FindIndex(x => x.ToString().Equals("ai-runtime.requests"));
 
-                    if(gpuSecIdx>=0 && durationSecIdx>=0 && requestsIdx>=0)
+                    if (gpuSecIdx >= 0 && durationSecIdx >= 0 && requestsIdx >= 0)
                     {
-                        if(agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
+                        if (agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
                         {
                             var vals = usageVectorValues is JsonElement valuesElement ? valuesElement.EnumerateArray().Select(x => x.GetDecimal()).ToList() : null;
                             if(vals != null)
@@ -173,18 +177,6 @@ class ActivityLoop
                 _logger.LogInformation("No activities");
                 return null;
             }
-            var _active_activities = _activities.FindAll(activity => activity.State != ActivityState.StateType.Terminated);
-            if (!_active_activities.Any())
-            {
-                _logger.LogInformation("All activities terminated: {}", _activities);
-                return null;
-            }
-            if (_active_activities.Count > 1)
-            {
-                _logger.LogWarning("Multiple non terminated activities: {}", _active_activities);
-                //TODO what now?
-            }
-
             //TODO take latest? the one with specific status?
             ActivityState _activity = _activities.First();
             if (_activity.AgreementId == null)

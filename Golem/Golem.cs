@@ -20,7 +20,7 @@ using System.Collections.Specialized;
 
 namespace Golem
 {
-    
+
 
     public class Golem : IGolem, IAsyncDisposable
     {
@@ -30,14 +30,20 @@ namespace Golem
 
         private Task? _activityLoop;
         private Task? _invoiceEventsLoop;
+        private CancellationTokenSource? _tokenSource;
 
         private readonly ILogger _logger;
+<<<<<<< HEAD
         private CancellationTokenSource _tokenSource;
+=======
+>>>>>>> master
 
         private readonly HttpClient _httpClient;
 
         private readonly GolemPrice _golemPrice;
-        
+
+        private readonly Jobs _jobs;
+
         public GolemPrice Price
         {
             get
@@ -61,10 +67,10 @@ namespace Golem
         }
 
         private uint _networkSpeed;
-        
+
         public uint NetworkSpeed
-        { 
-            get =>_networkSpeed;
+        {
+            get => _networkSpeed;
             set
             {
                 _networkSpeed = value;
@@ -86,7 +92,6 @@ namespace Golem
 
         public IJob? CurrentJob { get; private set; }
         public string? RecentJobId { get; private set; }
-        public Dictionary<string, Job> Jobs { get; private set; } = new Dictionary<string, Job>();
 
         public string NodeId
         {
@@ -121,9 +126,9 @@ namespace Golem
             throw new NotImplementedException();
         }
 
-        public async Task<List<IJob>> ListJobs(DateTime since)
+        public Task<List<IJob>> ListJobs(DateTime since)
         {
-            return await Task.FromResult(Jobs.Values.Select(j => j as IJob).ToList());
+            return _jobs.List();
         }
 
         public async Task Resume()
@@ -170,7 +175,7 @@ namespace Golem
             _logger.LogInformation("Stopping Golem");
             await Provider.Stop();
             await Yagna.Stop();
-            _tokenSource.Cancel();
+            _tokenSource?.Cancel();
             Status = GolemStatus.Off;
         }
 
@@ -185,7 +190,7 @@ namespace Golem
             var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : null;
             var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : null;
             loggerFactory ??= NullLoggerFactory.Instance;
-            
+
             _logger = loggerFactory.CreateLogger<Golem>();
             _tokenSource = new CancellationTokenSource();
 
@@ -193,6 +198,7 @@ namespace Golem
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork);
             _golemPrice = ProviderConfig.GolemPrice;
+            _jobs = new Jobs(setCurrentJob, loggerFactory);
 
             _httpClient = new HttpClient
             {
@@ -229,10 +235,16 @@ namespace Golem
 
             account = await WaitForIdentityAsync();
 
+<<<<<<< HEAD
             //TODO what if activityLoop != null?
             this._tokenSource = new CancellationTokenSource();
             this._activityLoop = StartActivityLoop();
             this._invoiceEventsLoop = StartInvoiceEventsLoop();
+=======
+            resetToken();
+            _activityLoop = StartActivityLoop();
+            _invoiceEventsLoop = StartInvoiceEventsLoop();
+>>>>>>> master
 
             Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
 
@@ -304,55 +316,22 @@ namespace Golem
         {
             var token = _tokenSource.Token;
             token.Register(_httpClient.CancelPendingRequests);
-            return new ActivityLoop(_httpClient, token, _logger).Start(EmitJobEvent, UpdateUsage);
+            return new ActivityLoop(_httpClient, token, _logger).Start(_jobs.ApplyJob, _jobs.UpdateUsage);
         }
 
         private Task StartInvoiceEventsLoop()
         {
             var token = _tokenSource.Token;
             token.Register(_httpClient.CancelPendingRequests);
-            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(UpdatePaymentStatus, UpdatePaymentConfirmation);
+            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(_jobs.UpdatePaymentStatus, _jobs.UpdatePaymentConfirmation);
         }
 
-        private void UpdatePaymentStatus(string id, GolemLib.Types.PaymentStatus paymentStatus)
+        private void setCurrentJob(Job? job)
         {
-            if(Jobs.TryGetValue(id, out var job))
-            {
-                _logger.LogInformation("New payment status for job {}: {}", job.Id, paymentStatus);
-                Console.WriteLine($"New payment status for job {job.Id}: {paymentStatus} requestor: {job.RequestorId}");
-                job.PaymentStatus = paymentStatus;
-            }
-            else
-            {
-                _logger.LogError("Job not found: {}", id);
-            }
-        }
-
-        private void UpdatePaymentConfirmation(string jobId, List<Payment> payments)
-        {
-            if(jobId != null && Jobs.TryGetValue(jobId, out var job))
-            {
-                _logger.LogInformation("Payments confirmation for job {}:", job.Id);
-
-                job.PaymentConfirmation = payments;
-            }
-            else
-            {
-                _logger.LogError("No ewcent job found: {}", RecentJobId);
-            }
-        }
-
-        private void EmitJobEvent(Job? job)
-        {
-            if (CurrentJob != job)
+            if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
             {
                 CurrentJob = job;
                 RecentJobId = job?.Id ?? RecentJobId;
-                var id = job?.Id ?? "";
-                if(!Jobs.ContainsKey(id) && job!=null)
-                {
-                    Jobs.Add(id, job);
-                }
                 _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
                 OnPropertyChanged(nameof(CurrentJob));
             }
@@ -362,6 +341,7 @@ namespace Golem
             }
         }
 
+<<<<<<< HEAD
         private void UpdateUsage(string jobId, GolemUsage usage)
         {
             if(Jobs.TryGetValue(jobId, out var job))
@@ -375,9 +355,28 @@ namespace Golem
             }
         }
 
+=======
+>>>>>>> master
         public async ValueTask DisposeAsync()
         {
             await (this as IGolem).Stop();
+        }
+
+        private void resetToken()
+        {
+            //TODO lock access to token or use something else
+            if (_tokenSource != null && !_tokenSource.IsCancellationRequested)
+            {
+                try
+                {
+                    _tokenSource?.Cancel();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, "Failed to cancel token.");
+                }
+            }
+            _tokenSource = new CancellationTokenSource();
         }
     }
 }
