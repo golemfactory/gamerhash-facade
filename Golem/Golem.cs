@@ -292,7 +292,13 @@ namespace Golem
         {
             var token = _tokenSource.Token;
             token.Register(_httpClient.CancelPendingRequests);
-            return new ActivityLoop(_httpClient, token, _logger).Start(_jobs.ApplyJob, _jobs.UpdateUsage, _jobs.GetOrCreateJob);
+            return new ActivityLoop(_httpClient, token, _logger).Start(
+                SetCurrentJob,
+                _jobs.UpdateUsage,
+                _jobs.GetOrCreateJob,
+                _jobs.UpdateStatus,
+                _jobs.SetAllJobsFinished
+                );
         }
 
         private Task StartInvoiceEventsLoop()

@@ -158,25 +158,6 @@ class InvoiceEventsLoop
         }
         return payments ?? new List<Payment>();
     }
-
-    private async Task<string?> GetActivityAgreement(string id)
-    {
-        var invoiceResponse = await _httpClient.GetAsync($"/activity-api/v1/activity/{id}/agreement");
-
-        if(invoiceResponse.IsSuccessStatusCode)
-        {
-            var result = await invoiceResponse.Content.ReadAsStringAsync();
-            if(result != null)
-            {
-                // var invoice = JsonSerializer.Deserialize<Invoice>(result, _serializerOptions);
-                // _logger.LogInformation("Invoice[{}]: {}", id, invoice);
-                // return invoice;
-
-                return result;
-            }
-        }
-        return null;
-    }
 }
 
 
