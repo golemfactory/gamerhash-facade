@@ -37,11 +37,15 @@ class Jobs
                 var oldJob = jobAndState.Job;
                 oldActivityState = jobAndState.State;
                 oldJob.Status = status((StateType)activityState, oldActivityState);
+                _logger.LogInformation("Update job: {0} status: {1}", oldJob.Id, oldJob.Status);
                 oldJob.OnPropertyChanged(nameof(oldJob.Status));
                 job = oldJob;
             } else {
                 job.Status = status((StateType)activityState, oldActivityState);
+                _logger.LogInformation("New job: {0} status: {1}", job.Id, job.Status);
+                job.OnPropertyChanged(nameof(job.Status));
                 _jobs[job.Id] = new JobAndState(job, (StateType)activityState);
+                return;
             }
         } else {
             //TODO fix it when handling of activities list will be supported
