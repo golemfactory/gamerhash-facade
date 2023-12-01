@@ -18,7 +18,7 @@ class Jobs
     /// <summary>
     /// Dictionary mapping AgreementId to aggregated `Job` with its `ActivityState`
     /// </summary>
-    private readonly Dictionary<string, JobAndState> _jobs = new Dictionary<string, JobAndState>();
+    private readonly Dictionary<string, JobAndState> _jobs = new();
 
     private readonly ReaderWriterLock _jobsLock = new ReaderWriterLock();
 
@@ -26,6 +26,19 @@ class Jobs
     {
         _setCurrentJob = setCurrentJob;
         _logger = loggerFactory.CreateLogger(nameof(Jobs));
+    }
+
+    public Job GetOrCreateJob(string jobId, string requestorId)
+    {
+        if(_jobs.TryGetValue(jobId, out var job))
+            return job.Job;
+        var newJob = new Job
+        {
+            Id = jobId,
+            RequestorId = requestorId
+        };
+        _jobs[jobId] = new JobAndState(newJob, StateType.New);
+        return newJob;
     }
 
     public void ApplyJob(Job? job, StateType? activityState)
@@ -36,14 +49,11 @@ class Jobs
             if(_jobs.TryGetValue(job.Id, out var jobAndState)) {
                 var oldJob = jobAndState.Job;
                 oldActivityState = jobAndState.State;
-                oldJob.Status = status((StateType)activityState, oldActivityState);
-                _logger.LogInformation("Update job: {0} status: {1}", oldJob.Id, oldJob.Status);
+                oldJob.Status = ResolveStatus(activityState.Value, oldActivityState);
                 oldJob.OnPropertyChanged(nameof(oldJob.Status));
                 job = oldJob;
             } else {
-                job.Status = status((StateType)activityState, oldActivityState);
-                _logger.LogInformation("New job: {0} status: {1}", job.Id, job.Status);
-                job.OnPropertyChanged(nameof(job.Status));
+                job.Status = ResolveStatus((StateType)activityState, oldActivityState);
                 _jobs[job.Id] = new JobAndState(job, (StateType)activityState);
                 return;
             }
@@ -51,8 +61,24 @@ class Jobs
             //TODO fix it when handling of activities list will be supported
             finishAll();
         }
-        //TODO clean current job when Status == Finished ?
-        _setCurrentJob(job);
+    }
+
+    public StateType? GetActivityState(string joibId)
+    {
+        return _jobs.ContainsKey(joibId) ? _jobs[joibId].State : null;
+    }
+
+    public void UpdateActivityState(string joibId, StateType activityState)
+    {
+        if(_jobs.ContainsKey(joibId))
+        {
+            _jobs[joibId].State = activityState;
+        }
+    }
+
+    public void SetAllJobsFinished()
+    {
+        finishAll();
     }
 
     public void UpdateUsage(string jobId, GolemUsage usage)
@@ -98,21 +124,20 @@ class Jobs
         }
     }
 
-    private JobStatus status(StateType newState, StateType? oldState = null)
+    public JobStatus ResolveStatus(StateType newState, StateType? oldState)
     {
-        if (oldState == StateType.Initialized && newState == StateType.Deployed) {
-            return JobStatus.DownloadingModel;
-        } else if (newState == StateType.Ready) {
-            return JobStatus.Computing;
-        } else if (newState == StateType.Terminated) {
-            return JobStatus.Finished;
+        switch (newState)
+        {
+            case StateType.Deployed:
+                if (oldState == StateType.Initialized)
+                    return JobStatus.DownloadingModel;
+                break;
+            case StateType.Ready:
+                return JobStatus.Computing;
+            case StateType.Terminated:
+                return JobStatus.Finished;
         }
         return JobStatus.Idle;
-    }
-
-    public Job? Get(String jobId)
-    {
-        return _jobs[jobId]?.Job;
     }
 
     public Task<List<IJob>> List()
