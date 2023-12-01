@@ -39,13 +39,8 @@
                     <TextBlock Grid.Row="1" Grid.Column="0" Classes="Label">Requestor Id</TextBlock>
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding RequestorId}"/>
 
-<<<<<<< HEAD
                     <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Job Status</TextBlock>
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Status}"/>
-=======
-            <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Job Status</TextBlock>
-            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Status}"/>
->>>>>>> master
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Payment Status</TextBlock>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PaymentStatus}"/>
