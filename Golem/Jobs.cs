@@ -49,7 +49,7 @@ class Jobs
             if(_jobs.TryGetValue(job.Id, out var jobAndState)) {
                 var oldJob = jobAndState.Job;
                 oldActivityState = jobAndState.State;
-                oldJob.Status = ResolveStatus((StateType)activityState, oldActivityState);
+                oldJob.Status = ResolveStatus(activityState.Value, oldActivityState);
                 oldJob.OnPropertyChanged(nameof(oldJob.Status));
                 job = oldJob;
             } else {
@@ -62,9 +62,17 @@ class Jobs
         }
     }
 
-    public void UpdateStatus(Job job, StateType activityState)
+    public StateType? GetActivityState(string joibId)
     {
-        job.Status = ResolveStatus(activityState, activityState);
+        return _jobs.ContainsKey(joibId) ? _jobs[joibId].State : null;
+    }
+
+    public void UpdateActivityState(string joibId, StateType activityState)
+    {
+        if(_jobs.ContainsKey(joibId))
+        {
+            _jobs[joibId].State = activityState;
+        }
     }
 
     public void SetAllJobsFinished()
@@ -115,7 +123,7 @@ class Jobs
         }
     }
 
-    private JobStatus ResolveStatus(StateType newState, StateType? oldState = null)
+    public JobStatus ResolveStatus(StateType newState, StateType? oldState)
     {
         switch (newState)
         {
@@ -129,11 +137,6 @@ class Jobs
                 return JobStatus.Finished;
         }
         return JobStatus.Idle;
-    }
-
-    public Job? Get(String jobId)
-    {
-        return _jobs[jobId]?.Job;
     }
 
     public Task<List<IJob>> List()

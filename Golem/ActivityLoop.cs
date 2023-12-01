@@ -34,10 +34,11 @@ class ActivityLoop
 
     public async Task Start(
         Action<Job?> setCurrentJob,
-        Action<string, GolemUsage> updateUsage,
         Func<string, string, Job> getOrCreateJob,
-        Action<Job, ActivityState.StateType> updateStatus,
-        Action setAllJobsFinished)
+        Func<ActivityState.StateType, ActivityState.StateType?, JobStatus> resolveStatus,
+        Action setAllJobsFinished,
+        Func<string, ActivityState.StateType?> getActivityState,
+        Action<string, ActivityState.StateType> updateActivityState)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -96,11 +97,16 @@ class ActivityLoop
                             }
                         }
 
-                        updateStatus(job, activity_state.State);
+                        var activityState = getActivityState(jobId);
+                        if(activityState != null)
+                        {
+                            job.Status = resolveStatus(activityState.Value, activity_state.State);
+                            updateActivityState(jobId, activity_state.State);
+                        }
                         
                         var usage = GetUsage(activity_state.Usage);
                         if(usage != null)
-                            updateUsage(jobId, usage);
+                            job.CurrentUsage = usage;
 
                         setCurrentJob(job);
                     }
