@@ -126,31 +126,35 @@ namespace Golem
             await Start();
         }
 
-        public async Task Start()
+        public Task Start()
         {
             Status = GolemStatus.Starting;
 
-            bool openConsole = true;
-
-            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
-
-            var success = await StartupYagnaAsync(yagnaOptions);
-
-            if (success)
+            var task = Task.Run(async () =>
             {
-                var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
-                if (defaultKey is not null)
+                bool openConsole = true;
+
+                var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
+
+                var success = await StartupYagnaAsync(yagnaOptions);
+
+                if (success)
                 {
-                    Status = StartupProvider(yagnaOptions) ? GolemStatus.Ready : GolemStatus.Error;
+                    var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
+                    if (defaultKey is not null)
+                    {
+                        Status = StartupProvider(yagnaOptions) ? GolemStatus.Ready : GolemStatus.Error;
+                    }
                 }
-            }
-            else
-            {
-                Status = GolemStatus.Error;
-            }
+                else
+                {
+                    Status = GolemStatus.Error;
+                }
 
-            OnPropertyChanged("WalletAddress");
-            OnPropertyChanged("NodeId");
+                OnPropertyChanged("WalletAddress");
+                OnPropertyChanged("NodeId");
+            });
+            return task;
         }
 
         public async Task Stop()
