@@ -6,6 +6,11 @@ using System.Runtime.CompilerServices;
 /// Represents price settings in Golem pricing model.
 /// TODO: We will find out later which of these options make the most sense.
 /// </summary>
+public class NotInitializedGolemPrice: GolemPrice
+{
+
+}
+
 public class GolemPrice: INotifyPropertyChanged
 {
 

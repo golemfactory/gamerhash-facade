@@ -44,11 +44,6 @@ namespace Golem
         {
             get
             {
-                // var price = ProviderConfig.GolemPrice;
-                // _golemPrice.StartPrice = price.StartPrice;
-                // _golemPrice.GpuPerHour = price.GpuPerHour;
-                // _golemPrice.EnvPerHour = price.EnvPerHour;
-                // _golemPrice.NumRequests = price.NumRequests;
                 return _golemPrice;
             }
             set
@@ -87,7 +82,6 @@ namespace Golem
         }
 
         public IJob? CurrentJob { get; private set; }
-        public string? RecentJobId { get; private set; }
 
         public string NodeId
         {
@@ -147,14 +141,7 @@ namespace Golem
                 var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
                 if (defaultKey is not null)
                 {
-                    if (StartupProvider(yagnaOptions))
-                    {
-                        Status = GolemStatus.Ready;
-                    }
-                    else
-                    {
-                        Status = GolemStatus.Error;
-                    }
+                    Status = StartupProvider(yagnaOptions) ? GolemStatus.Ready : GolemStatus.Error;
                 }
             }
             else
@@ -194,7 +181,7 @@ namespace Golem
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork);
             _golemPrice = ProviderConfig.GolemPrice;
-            _jobs = new Jobs(setCurrentJob, loggerFactory);
+            _jobs = new Jobs(SetCurrentJob, loggerFactory);
 
             _httpClient = new HttpClient
             {
@@ -315,12 +302,11 @@ namespace Golem
             return new InvoiceEventsLoop(_httpClient, token, _logger).Start(_jobs.UpdatePaymentStatus, _jobs.UpdatePaymentConfirmation);
         }
 
-        private void setCurrentJob(Job? job)
+        private void SetCurrentJob(Job? job)
         {
             if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
             {
                 CurrentJob = job;
-                RecentJobId = job?.Id ?? RecentJobId;
                 _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
                 OnPropertyChanged(nameof(CurrentJob));
             }

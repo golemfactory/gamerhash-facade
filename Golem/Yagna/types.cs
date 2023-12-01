@@ -103,7 +103,7 @@ namespace Golem.Yagna.Types
 
         public string RequestorId { get; init; } = "";
 
-        public GolemPrice _price = new GolemPrice();
+        public GolemPrice _price = new NotInitializedGolemPrice();
         public GolemPrice Price
         {
             get => _price;
