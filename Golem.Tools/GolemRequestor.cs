@@ -49,9 +49,8 @@ namespace Golem.IntegrationTests.Tools
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
-            AppKey = "2fdfe1a7a6bd4d7d81f4eb2f70ceeb45";
+            AppKey = generateRandomAppkey();
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
-            // var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
             env["YAGNA_AUTOCONF_ID_SECRET"] = getRequestorAutoconfIdSecret();
             env["YAGNA_AUTOCONF_APPKEY"] = AppKey;
             return StartProcess("yagna", working_dir, "service run", env);
@@ -120,7 +119,6 @@ namespace Golem.IntegrationTests.Tools
             {
                 WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment fund", _env));
             }
-            AppKey = getTestAppKey();
             return;
         }
 
