@@ -32,7 +32,12 @@ class ActivityLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<Job?, ActivityState.StateType?> applyJob, Action<string, GolemUsage> updateUsage, Func<string, string, Job> getOrCreateJob)
+    public async Task Start(
+        Action<Job?> setCurrentJob,
+        Action<string, GolemUsage> updateUsage,
+        Func<string, string, Job> getOrCreateJob,
+        Action<Job, ActivityState.StateType> updateStatus,
+        Action setAllJobsFinished)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -65,7 +70,8 @@ class ActivityLoop
                         if (activity_state?.AgreementId == null)
                         {
                             _logger.LogDebug("No activity");
-                            applyJob(null, null);
+                            setAllJobsFinished();
+                            setCurrentJob(null);
                             continue;
                         }
 
@@ -73,11 +79,13 @@ class ActivityLoop
                         if (agreement?.Demand?.RequestorId == null)
                         {
                             _logger.LogDebug($"No agreement for activity: {activity_state.Id} (agreement: {activity_state.AgreementId})");
-                            applyJob(null, activity_state.State);
+                            setAllJobsFinished();
+                            setCurrentJob(null);
                             continue;
                         }
 
-                        var job = getOrCreateJob(activity_state.AgreementId, agreement.Demand.RequestorId);
+                        var jobId = activity_state.AgreementId;
+                        var job = getOrCreateJob(jobId, agreement.Demand.RequestorId);
 
                         if(job.Price is NotInitializedGolemPrice)
                         {
@@ -88,15 +96,13 @@ class ActivityLoop
                             }
                         }
 
-                        applyJob(job, activity_state.State);
+                        updateStatus(job, activity_state.State);
+                        
+                        var usage = GetUsage(activity_state.Usage);
+                        if(usage != null)
+                            updateUsage(jobId, usage);
 
-                        if (activity_state != null)
-                        {
-                            var jobId = activity_state.AgreementId;
-                            var usage = GetUsage(activity_state.Usage);
-                            if(usage!=null)
-                                updateUsage(jobId, usage);
-                        }
+                        setCurrentJob(job);
                     }
                 }
                 catch (Exception e)
@@ -112,7 +118,8 @@ class ActivityLoop
         finally
         {
             _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
-            applyJob(null, null);
+            setAllJobsFinished();
+            setCurrentJob(null);
         }
     }
 

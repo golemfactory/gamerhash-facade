@@ -49,19 +49,27 @@ class Jobs
             if(_jobs.TryGetValue(job.Id, out var jobAndState)) {
                 var oldJob = jobAndState.Job;
                 oldActivityState = jobAndState.State;
-                oldJob.Status = status((StateType)activityState, oldActivityState);
+                oldJob.Status = ResolveStatus((StateType)activityState, oldActivityState);
                 oldJob.OnPropertyChanged(nameof(oldJob.Status));
                 job = oldJob;
             } else {
-                job.Status = status((StateType)activityState, oldActivityState);
+                job.Status = ResolveStatus((StateType)activityState, oldActivityState);
                 _jobs[job.Id] = new JobAndState(job, (StateType)activityState);
             }
         } else {
             //TODO fix it when handling of activities list will be supported
             finishAll();
         }
-        //TODO clean current job when Status == Finished ?
-        _setCurrentJob(job);
+    }
+
+    public void UpdateStatus(Job job, StateType activityState)
+    {
+        job.Status = ResolveStatus(activityState, activityState);
+    }
+
+    public void SetAllJobsFinished()
+    {
+        finishAll();
     }
 
     public void UpdateUsage(string jobId, GolemUsage usage)
@@ -107,7 +115,7 @@ class Jobs
         }
     }
 
-    private JobStatus status(StateType newState, StateType? oldState = null)
+    private JobStatus ResolveStatus(StateType newState, StateType? oldState = null)
     {
         switch (newState)
         {

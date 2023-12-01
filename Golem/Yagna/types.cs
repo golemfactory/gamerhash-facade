@@ -103,19 +103,31 @@ namespace Golem.Yagna.Types
 
         public string RequestorId { get; init; } = "";
 
-        public GolemPrice _price = new NotInitializedGolemPrice();
+        private GolemPrice _price = new NotInitializedGolemPrice();
         public GolemPrice Price
         {
             get => _price;
             set
             {
-                _price = value;
-                OnPropertyChanged();
+                if(_price != value)
+                {
+                    _price = value;
+                    OnPropertyChanged();
+                }
             }
-            // init => _price = value;
         }
 
-        public JobStatus Status { get; set; } = JobStatus.Idle;
+        private JobStatus _status = JobStatus.Idle;
+        public JobStatus Status { 
+            get => _status;
+            set{
+                if(_status != value)
+                {
+                    _status = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         private GolemLib.Types.PaymentStatus? _paymentStatus;
         public GolemLib.Types.PaymentStatus? PaymentStatus
@@ -144,9 +156,12 @@ namespace Golem.Yagna.Types
             get => _currentUsage;
             set
             {
-                _currentUsage = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(CurrentReward));
+                if(_currentUsage != value)
+                {
+                    _currentUsage = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(CurrentReward));
+                }
             }
         }
 
@@ -163,8 +178,11 @@ namespace Golem.Yagna.Types
             }
             set
             {
-                _paymentConfirmation = value;
-                OnPropertyChanged();
+                if(_paymentConfirmation != value)
+                {
+                    _paymentConfirmation = value;
+                    OnPropertyChanged();
+                }
             }
         }
 
