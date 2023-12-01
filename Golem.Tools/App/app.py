@@ -129,9 +129,8 @@ CAPABILITIES = "golem.runtime.capabilities"
 class AiPayload(Payload):
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
-    # min_mem_gib: float = constraint(inf.INF_MEM, operator=">=", default=4)
-    # min_storage_gib: float = constraint(inf.INF_STORAGE, operator=">=", default=512)
     capabilities: str = constraint(CAPABILITIES, default="dummy")
+    node: str = constraint("golem.node.id.name", operator="=", default="nieznanysprawiciel-gamerhash")
 
 
 class AiRuntimeService(Service):
@@ -140,10 +139,6 @@ class AiRuntimeService(Service):
         return AiPayload()
 
     async def start(self):
-        # async for script in super().start():
-        #     yield script
-
-        # every `DATE_POLL_INTERVAL` write output of `date` to `DATE_OUTPUT_PATH`
         script = self._ctx.new_script()
         # script.start(
         #     "--model",

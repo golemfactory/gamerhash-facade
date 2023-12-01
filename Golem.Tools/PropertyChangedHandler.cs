@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace Golem.IntegrationTests.Tools
+namespace Golem.Tools
 {
     public class PropertyChangedHandler<T, V>
     {
@@ -31,10 +31,10 @@ namespace Golem.IntegrationTests.Tools
 
             if (sender is not T || e.PropertyName != PropertyName)
                 return;
-            
+
             if (value is null)
-                Handler(default(V));
-            else 
+                Handler(default);
+            else
                 Handler((V)value);
 
             Console.WriteLine($"Property has changed: {e.PropertyName} to {value}");

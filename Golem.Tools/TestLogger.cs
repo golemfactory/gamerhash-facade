@@ -6,7 +6,7 @@ using Xunit.Sdk;
 using Xunit.Abstractions;
 
 
-namespace Golem.IntegrationTests.Tools
+namespace Golem.Tools
 {
 
     public sealed class TestLogger : ILogger
@@ -47,7 +47,7 @@ namespace Golem.IntegrationTests.Tools
     {
         private readonly IMessageSink _msgSink;
 
-        public TestLoggerProvider(IMessageSink msgSink) => (_msgSink) = (msgSink);
+        public TestLoggerProvider(IMessageSink msgSink) => _msgSink = msgSink;
 
         public ILogger CreateLogger(string categoryName) =>
             new TestLogger(categoryName, () => _msgSink);

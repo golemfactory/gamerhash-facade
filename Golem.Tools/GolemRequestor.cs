@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json.Linq;
 
-namespace Golem.IntegrationTests.Tools
+namespace Golem.Tools
 {
     public class GolemRequestor : GolemRunnable
     {
@@ -86,18 +86,20 @@ namespace Golem.IntegrationTests.Tools
 
                 var payment_status_process = RunCommand("yagna", workingDir(), "payment status --json", env);
                 payment_status_process.Wait();
-                var payment_status_output_json = String.Join("\n", payment_status_process.GetOutputAndErrorLines());
+                var payment_status_output_json = string.Join("\n", payment_status_process.GetOutputAndErrorLines());
                 var payment_status_output_obj = JObject.Parse(payment_status_output_json);
                 totalGlm = (float)payment_status_output_obj["amount"];
                 var reserved = (float)payment_status_output_obj["reserved"];
-                
-                if (reserved > 0.0) {
+
+                if (reserved > 0.0)
+                {
                     var release_allocations_process = RunCommand("yagna", workingDir(), "payment release-allocations", _env);
                     release_allocations_process.Wait();
-                } 
+                }
             }
 
-            if (totalGlm < 100.0) {
+            if (totalGlm < 100.0)
+            {
                 try
                 {
                     var payment_fund_process = RunCommand("yagna", workingDir(), "payment fund", _env);
@@ -123,7 +125,7 @@ namespace Golem.IntegrationTests.Tools
 
             var app_key_list_process = RunCommand("yagna", workingDir(), "app-key list --json", env);
             app_key_list_process.Wait();
-            var app_key_list_output_json = String.Join("\n", app_key_list_process.GetOutputAndErrorLines());
+            var app_key_list_output_json = string.Join("\n", app_key_list_process.GetOutputAndErrorLines());
 
             var objects = JArray.Parse(app_key_list_output_json);
             foreach (JObject root in objects)
@@ -139,7 +141,7 @@ namespace Golem.IntegrationTests.Tools
             return null;
         }
 
-        private String workingDir()
+        private string workingDir()
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
@@ -155,8 +157,8 @@ namespace Golem.IntegrationTests.Tools
 
         public GolemAppKey(string key, string id)
         {
-            this.Key = key;
-            this.Id = id;
+            Key = key;
+            Id = id;
         }
     }
 }
