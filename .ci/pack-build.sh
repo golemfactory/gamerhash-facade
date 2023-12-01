@@ -34,7 +34,7 @@ generate_asset() {
   local TARGET_DIR="releases/"${asset_type}-${OS_NAME}-${TAG_NAME}
 
   mkdir -p "$TARGET_DIR"
-  mv package "$TARGET_DIR"
+  mv package/* "$TARGET_DIR"
 
   if [ "$OS_NAME" = "windows" ]; then
     echo "::set-output name=${asset_type}Artifact::${asset_type}-${OS_NAME}-${TAG_NAME}.zip"
