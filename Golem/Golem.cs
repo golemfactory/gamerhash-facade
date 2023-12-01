@@ -33,10 +33,6 @@ namespace Golem
         private CancellationTokenSource? _tokenSource;
 
         private readonly ILogger _logger;
-<<<<<<< HEAD
-        private CancellationTokenSource _tokenSource;
-=======
->>>>>>> master
 
         private readonly HttpClient _httpClient;
 
@@ -222,16 +218,9 @@ namespace Golem
 
             account = await WaitForIdentityAsync();
 
-<<<<<<< HEAD
-            //TODO what if activityLoop != null?
-            this._tokenSource = new CancellationTokenSource();
-            this._activityLoop = StartActivityLoop();
-            this._invoiceEventsLoop = StartInvoiceEventsLoop();
-=======
             resetToken();
             _activityLoop = StartActivityLoop();
             _invoiceEventsLoop = StartInvoiceEventsLoop();
->>>>>>> master
 
             Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
 
@@ -303,7 +292,7 @@ namespace Golem
         {
             var token = _tokenSource.Token;
             token.Register(_httpClient.CancelPendingRequests);
-            return new ActivityLoop(_httpClient, token, _logger).Start(_jobs.ApplyJob, _jobs.UpdateUsage);
+            return new ActivityLoop(_httpClient, token, _logger).Start(_jobs.ApplyJob, _jobs.UpdateUsage, _jobs.GetOrCreateJob);
         }
 
         private Task StartInvoiceEventsLoop()
@@ -327,22 +316,6 @@ namespace Golem
             }
         }
 
-<<<<<<< HEAD
-        private void UpdateUsage(string jobId, GolemUsage usage)
-        {
-            if(Jobs.TryGetValue(jobId, out var job))
-            {
-                job.CurrentUsage = usage;
-                OnPropertyChanged(nameof(CurrentJob));
-            }
-            else
-            {
-                _logger.LogError("Job not found: {}", jobId);
-            }
-        }
-
-=======
->>>>>>> master
         public async ValueTask DisposeAsync()
         {
             await (this as IGolem).Stop();

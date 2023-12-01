@@ -18,7 +18,7 @@ class Jobs
     /// <summary>
     /// Dictionary mapping AgreementId to aggregated `Job` with its `ActivityState`
     /// </summary>
-    private readonly Dictionary<string, JobAndState> _jobs = new Dictionary<string, JobAndState>();
+    private readonly Dictionary<string, JobAndState> _jobs = new();
 
     private readonly ReaderWriterLock _jobsLock = new ReaderWriterLock();
 
@@ -26,6 +26,19 @@ class Jobs
     {
         _setCurrentJob = setCurrentJob;
         _logger = loggerFactory.CreateLogger(nameof(Jobs));
+    }
+
+    public Job GetOrCreateJob(string jobId, string requestorId)
+    {
+        if(_jobs.TryGetValue(jobId, out var job))
+            return job.Job;
+        var newJob = new Job
+        {
+            Id = jobId,
+            RequestorId = requestorId
+        };
+        _jobs[jobId] = new JobAndState(newJob, StateType.New);
+        return newJob;
     }
 
     public void ApplyJob(Job? job, StateType? activityState)
@@ -96,12 +109,16 @@ class Jobs
 
     private JobStatus status(StateType newState, StateType? oldState = null)
     {
-        if (oldState == StateType.Initialized && newState == StateType.Deployed) {
-            return JobStatus.DownloadingModel;
-        } else if (newState == StateType.Ready) {
-            return JobStatus.Computing;
-        } else if (newState == StateType.Terminated) {
-            return JobStatus.Finished;
+        switch (newState)
+        {
+            case StateType.Deployed:
+                if (oldState == StateType.Initialized)
+                    return JobStatus.DownloadingModel;
+                break;
+            case StateType.Ready:
+                return JobStatus.Computing;
+            case StateType.Terminated:
+                return JobStatus.Finished;
         }
         return JobStatus.Idle;
     }

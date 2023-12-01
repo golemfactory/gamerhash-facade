@@ -32,7 +32,7 @@ class ActivityLoop
         _logger = logger;
     }
 
-    public async Task Start(Action<Job?, ActivityState.StateType?> applyJob, Action<string, GolemUsage> updateUsage)
+    public async Task Start(Action<Job?, ActivityState.StateType?> applyJob, Action<string, GolemUsage> updateUsage, Func<string, string, Job> getOrCreateJob)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -77,11 +77,7 @@ class ActivityLoop
                             continue;
                         }
 
-                        var job = new Job()
-                        {
-                            Id = activity_state.AgreementId,
-                            RequestorId = agreement.Demand.RequestorId,
-                        };
+                        var job = getOrCreateJob(activity_state.AgreementId, agreement.Demand.RequestorId);
 
                         if(job.Price is NotInitializedGolemPrice)
                         {
