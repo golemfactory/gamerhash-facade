@@ -17,6 +17,13 @@ using Newtonsoft.Json.Linq;
 
 namespace Golem.IntegrationTests.Tools
 {
+
+    public class AppKey
+    {
+        public string? Key;
+        public string? Id;
+    };
+
     public class GolemRequestor : GolemRunnable
     {
         private readonly Dictionary<string, string> _env;
@@ -137,7 +144,7 @@ namespace Golem.IntegrationTests.Tools
             return cmd;
         }
 
-        private string? getTestAppKey()
+        public AppKey getTestAppKey()
         {
             var dataDir = _env["YAGNA_DATADIR"];
             if (!Path.Exists(dataDir) || Directory.EnumerateFiles(dataDir).Count() == 0)
@@ -160,10 +167,10 @@ namespace Golem.IntegrationTests.Tools
                 {
                     var key = (string)root.GetValue("key") ?? throw new Exception("Failed to get app key");
                     var id = (string)root.GetValue("id") ?? throw new Exception("Failed to get app id");
-                    return key;
+                    return new AppKey() { Id = id, Key = key };
                 }
             }
-            return null;
+            return new AppKey();
         }
 
         private String workingDir()
