@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using GolemLib;
 using App;
 using System.Reflection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 
 namespace MockGUI.ViewModels
@@ -49,37 +50,39 @@ namespace MockGUI.ViewModels
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-        public GolemViewModel(string modulesDir)
+        public GolemViewModel(string modulesDir, IGolem golem, ILoggerFactory? loggerFactory = null)
         {
-            _loggerFactory = LoggerFactory.Create(builder =>
-               builder.AddSimpleConsole()
-            );
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<GolemViewModel>();
 
             WorkDir = modulesDir;
-
-            Golem = LoadLib(WorkDir, _loggerFactory);
+            Golem = golem;
             _jobsHistory = new ObservableCollection<IJob>();
         }
 
-        public IGolem LoadLib(string modulesDir, ILoggerFactory? loggerFactory)
+        public static async Task<GolemViewModel> Create(string modulesDir)
         {
-            const string _golemNamespace = "Golem.Golem";
+            var loggerFactory = LoggerFactory.Create(builder =>
+                builder.AddSimpleConsole()
+            );
+
+            var golem = await LoadLib("Golem.dll", modulesDir, loggerFactory);
+            return new GolemViewModel(modulesDir, golem, loggerFactory);
+        }
+
+        public static async Task<IGolem> LoadLib(string lib, string modulesDir, ILoggerFactory? loggerFactory)
+        {
+            const string factoryType = "Golem.Factory";
 
             var binaries = Path.Combine(modulesDir, "golem");
-            var datadir = Path.Combine(modulesDir, "golem-data");
-
-            string dllPath = Path.GetFullPath(Path.Combine(binaries, "Golem.dll"));
+            string dllPath = Path.GetFullPath(Path.Combine(binaries, lib));
 
             Assembly ass = Assembly.LoadFrom(dllPath);
-            Type? t = ass.GetType(_golemNamespace);
-            if (t == null)
-            {
-                throw new Exception("Type not found. Lib not loaded: " + dllPath);
-            }
-            object? obj = Activator.CreateInstance(t, binaries, datadir, loggerFactory);
-            obj = obj ?? throw new Exception("Creating instance failed. Lib not loaded: " + dllPath);
-            return obj as IGolem ?? throw new Exception("Cast to IGolem failed.");
+            Type? t = ass.GetType(factoryType) ?? throw new Exception("Factory Type not found. Lib not loaded: " + dllPath);
+            var obj = Activator.CreateInstance(t) ?? throw new Exception("Creating Factory instance failed. Lib not loaded: " + dllPath);
+            var factory = obj as IFactory ?? throw new Exception("Cast to IFactory failed.");
+
+            return await factory.Create(modulesDir, loggerFactory);
         }
 
         public void OnStartCommand()

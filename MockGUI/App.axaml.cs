@@ -3,6 +3,9 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using MockGUI.ViewModels;
 using CommandLine;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Avalonia.Threading;
 
 namespace MockGUI;
 
@@ -28,8 +31,17 @@ public partial class App : Application
                {
                    desktop.MainWindow = new MainWindow
                    {
-                       DataContext = new GolemViewModel(o.GolemPath ?? "")
+                       DataContext = null
                    };
+
+                   new Task(async () =>
+                   {
+                       var view = await GolemViewModel.Create(o.GolemPath ?? "");
+                       Dispatcher.UIThread.Post(() =>
+                            desktop.MainWindow.DataContext = view
+                           );
+                   }).Start();
+
                });
 
 
