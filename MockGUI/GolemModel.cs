@@ -27,8 +27,19 @@ namespace MockGUI.ViewModels
             get { return _jobsHistory; }
             set { _jobsHistory = value; OnPropertyChanged(); }
         }
-        private GolemRequestor? Requestor { get; set; }
-        private SampleApp? App { get; set; }
+        private FullExample? _app;
+        public FullExample? App
+        {
+            get => _app;
+            private set
+            {
+                if (_app != value)
+                {
+                    _app = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
         private string WorkDir { get; set; }
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
@@ -79,25 +90,13 @@ namespace MockGUI.ViewModels
         {
             try
             {
-                _logger.LogInformation("Starting Requestor daemon");
-
-                var datadir = Path.Combine(WorkDir, "requestor");
-                Requestor = await GolemRequestor.BuildRelative(datadir, _loggerFactory.CreateLogger("Requestor"), false);
-                Requestor.Start();
-
-                _logger.LogInformation("Initializing payment accounts");
-                Requestor.InitPayment();
-
-                _logger.LogInformation("Creating requestor application");
-                App = Requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
-                App.Start();
-
-                _logger.LogInformation("Application started");
+                App = new FullExample(WorkDir, "Requestor1", _loggerFactory);
+                await App.Run();
             }
             catch (Exception e)
             {
                 _logger.LogInformation("Error starting app: " + e.ToString());
-                await StopRequestor();
+                App = null;
             }
 
         }
@@ -113,21 +112,15 @@ namespace MockGUI.ViewModels
         {
             if (App != null)
             {
-                _logger.LogInformation("Stopping Example Application");
-                await App.Stop(StopMethod.SigInt);
-            }
-
-            if (Requestor != null)
-            {
-                _logger.LogInformation("Stopping Example Requestor");
-                await Requestor.Stop(StopMethod.SigInt);
+                await App.Stop();
+                App = null;
             }
         }
 
         async ValueTask IAsyncDisposable.DisposeAsync()
         {
-            await Golem.Stop();
             await StopRequestor();
+            await Golem.Stop();
 
             // Suppress finalization.
             GC.SuppressFinalize(this);
