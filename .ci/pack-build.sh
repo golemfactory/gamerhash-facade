@@ -48,4 +48,4 @@ generate_asset() {
   fi
 }
 
-generate_asset "golem-ai"
+generate_asset "gamerhash-ai-facade"
