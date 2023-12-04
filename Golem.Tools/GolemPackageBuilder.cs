@@ -18,7 +18,7 @@ namespace Golem.IntegrationTests.Tools
     public class PackageBuilder
     {
         const string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc4";
-        const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc16";
+        const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc17";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
