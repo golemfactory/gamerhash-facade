@@ -44,5 +44,5 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         files: |
-          releases/golem-ai-*
+          releases/gamerhash-ai-facade-*
         prerelease: ${{ startsWith(github.ref, 'refs/tags/pre-rel-v') }}
