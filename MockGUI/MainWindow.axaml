@@ -91,6 +91,7 @@
                 <Border Classes="Panel">
                     <StackPanel Margin="20">
                         <TextBlock Classes="Section">Node Info</TextBlock>
+
                         <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                             <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Status</TextBlock>
                             <TextBlock Grid.Row="0" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.Status}"/>
@@ -139,26 +140,30 @@
                             <Button Width="160" Command="{Binding OnResumeCommand}">Resume</Button>
 
                             <Button Margin="0 30" Width="160" Command="{Binding OnRunExample}">Run example</Button>
-                            <Button Width="160" Command="{Binding StopRequestor}">Terminate example</Button>
+                            <Button Margin="0 30" Width="160" Command="{Binding StopRequestor}">Terminate example</Button>
+                            <TextBlock Classes="Label" Text="{Binding App.Message}"/>
+
                         </StackPanel>
                     </Border>
                     <Border Classes="Panel">
                         <StackPanel Margin="20">
-                            <TextBlock Classes="Section">Current Task</TextBlock>
-                            <Canvas Height="25" Width="25" HorizontalAlignment="Left">
-                                <Ellipse
-                                    Width="25"
-                                    Height="25"
-                                    Fill="Gray"
-                                    IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNull}}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Classes="Section">Current Task</TextBlock>
+                                <Canvas Margin="5" Height="25" Width="25" HorizontalAlignment="Left">
+                                    <Ellipse
+                                        Width="25"
+                                        Height="25"
+                                        Fill="Gray"
+                                        IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNull}}"/>
 
-                                <Ellipse
-                                    Width="25"
-                                    Height="25"
-                                    Fill="Green"
-                                    IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                    <Ellipse
+                                        Width="25"
+                                        Height="25"
+                                        Fill="Green"
+                                        IsVisible="{Binding Golem.CurrentJob, Converter={x:Static ObjectConverters.IsNotNull}}"/>
 
-                            </Canvas>
+                                </Canvas>
+                            </StackPanel>
                             <ContentControl Content="{Binding Golem.CurrentJob}" />
                         </StackPanel>
                     </Border>
