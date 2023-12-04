@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -7,10 +6,9 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-using Golem.IntegrationTests.Tools;
-
 using GolemLib;
 using App;
+using System.Reflection;
 
 
 namespace MockGUI.ViewModels
@@ -59,11 +57,29 @@ namespace MockGUI.ViewModels
             _logger = _loggerFactory.CreateLogger<GolemViewModel>();
 
             WorkDir = modulesDir;
+
+            Golem = LoadLib(WorkDir, _loggerFactory);
+            _jobsHistory = new ObservableCollection<IJob>();
+        }
+
+        public IGolem LoadLib(string modulesDir, ILoggerFactory? loggerFactory)
+        {
+            const string _golemNamespace = "Golem.Golem";
+
             var binaries = Path.Combine(modulesDir, "golem");
             var datadir = Path.Combine(modulesDir, "golem-data");
 
-            Golem = new Golem.Golem(binaries, datadir, _loggerFactory);
-            _jobsHistory = new ObservableCollection<IJob>();
+            string dllPath = Path.GetFullPath(Path.Combine(binaries, "Golem.dll"));
+
+            Assembly ass = Assembly.LoadFrom(dllPath);
+            Type? t = ass.GetType(_golemNamespace);
+            if (t == null)
+            {
+                throw new Exception("Type not found. Lib not loaded: " + dllPath);
+            }
+            object? obj = Activator.CreateInstance(t, binaries, datadir, loggerFactory);
+            obj = obj ?? throw new Exception("Creating instance failed. Lib not loaded: " + dllPath);
+            return obj as IGolem ?? throw new Exception("Cast to IGolem failed.");
         }
 
         public void OnStartCommand()
