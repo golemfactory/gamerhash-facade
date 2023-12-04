@@ -11,8 +11,10 @@ namespace MockGUI;
 
 public class AppArguments
 {
-    [Option('g', "golem", Required = true, HelpText = "Path to a folder with golem executables")]
+    [Option('g', "golem", Required = true, HelpText = "Path to a folder with golem executables (modules)")]
     public string? GolemPath { get; set; }
+    [Option('d', "use-dll", Required = false, HelpText = "Load Golem object from dll found in binaries directory. (Simulates how GamerHash will use it. Otherwise project dependency will be used.)")]
+    public bool UseDll { get; set; }
 }
 
 public partial class App : Application
@@ -34,14 +36,20 @@ public partial class App : Application
                        DataContext = null
                    };
 
-                   new Task(async () =>
+                   if (o.UseDll)
                    {
-                       var view = await GolemViewModel.Create(o.GolemPath ?? "");
-                       Dispatcher.UIThread.Post(() =>
-                            desktop.MainWindow.DataContext = view
-                           );
-                   }).Start();
-
+                       new Task(async () =>
+                       {
+                           var view = await GolemViewModel.Load(o.GolemPath ?? "");
+                           Dispatcher.UIThread.Post(() =>
+                                desktop.MainWindow.DataContext = view
+                               );
+                       }).Start();
+                   }
+                   else
+                   {
+                       desktop.MainWindow.DataContext = GolemViewModel.CreateStatic(o.GolemPath ?? "");
+                   }
                });
 
 

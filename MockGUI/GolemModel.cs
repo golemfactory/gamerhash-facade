@@ -60,13 +60,26 @@ namespace MockGUI.ViewModels
             _jobsHistory = new ObservableCollection<IJob>();
         }
 
-        public static async Task<GolemViewModel> Create(string modulesDir)
+        public static async Task<GolemViewModel> Load(string modulesDir)
         {
             var loggerFactory = LoggerFactory.Create(builder =>
                 builder.AddSimpleConsole()
             );
 
             var golem = await LoadLib("Golem.dll", modulesDir, loggerFactory);
+            return new GolemViewModel(modulesDir, golem, loggerFactory);
+        }
+
+        public static GolemViewModel CreateStatic(string modulesDir)
+        {
+            var loggerFactory = LoggerFactory.Create(builder =>
+                builder.AddSimpleConsole()
+            );
+
+            var binaries = Path.Combine(modulesDir, "golem");
+            var datadir = Path.Combine(modulesDir, "golem-data");
+
+            var golem = new Golem.Golem(binaries, datadir, loggerFactory);
             return new GolemViewModel(modulesDir, golem, loggerFactory);
         }
 
