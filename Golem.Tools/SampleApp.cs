@@ -107,29 +107,38 @@ namespace App
 
         public async Task Stop()
         {
-            if (App != null)
+            try
             {
-                _logger.LogInformation("Stopping Example Application: " + Name);
-                Message = "Stopping App";
+                if (App != null)
+                {
+                    _logger.LogInformation("Stopping Example Application: " + Name);
+                    Message = "Stopping App";
 
-                await App.Stop(StopMethod.SigInt);
-                App = null;
+                    await App.Stop(StopMethod.SigInt);
+                    App = null;
 
-                Message = "App Stopped";
+                    Message = "App Stopped";
+                }
+
+                if (Requestor != null)
+                {
+                    _logger.LogInformation("Stopping Example Requestor: " + Name);
+                    Message = "Stopping Daemon";
+
+                    await Requestor.Stop(StopMethod.SigInt);
+                    Requestor = null;
+
+                    Message = "Daemon Stopped";
+                }
+
+                Message = "Example stopped";
             }
-
-            if (Requestor != null)
+            catch (Exception e)
             {
-                _logger.LogInformation("Stopping Example Requestor: " + Name);
-                Message = "Stopping Daemon";
-
-                await Requestor.Stop(StopMethod.SigInt);
-                Requestor = null;
-
-                Message = "Daemon Stopped";
+                _logger.LogInformation("Error stopping app: " + Name + " Error: " + e.ToString());
+                Message = "Error";
+                throw;
             }
-
-            Message = "Example stopped";
         }
 
         public async ValueTask DisposeAsync()
