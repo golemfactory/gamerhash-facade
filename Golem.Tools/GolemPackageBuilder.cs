@@ -13,12 +13,12 @@ using ICSharpCode.SharpZipLib.Tar;
 
 using Newtonsoft.Json.Linq;
 
-namespace Golem.IntegrationTests.Tools
+namespace Golem.Tools
 {
     public class PackageBuilder
     {
-        const string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc4";
-        const string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc16";
+        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc4";
+        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc16";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
@@ -81,9 +81,8 @@ namespace Golem.IntegrationTests.Tools
                     if ("ai".Equals(name))
                     {
                         var runtime_name = $"ya-runtime-ai{GolemRunnable.ExecutableFileExtension()}";
-                        var runtime_path = Path.Combine(exeUnitDir, runtime_name);
                         descriptor.Remove("supervisor-path");
-                        descriptor.Add("supervisor-path", runtime_path);
+                        descriptor.Add("supervisor-path", runtime_name);
                     }
                 }
                 File.WriteAllText(exeUnitDir + "/ya-dummy-ai.json", descriptors.ToString());
@@ -96,7 +95,7 @@ namespace Golem.IntegrationTests.Tools
 
         public async static Task<string> BuildRequestorDirectory(string test_name, bool cleanupData = true)
         {
-            var dir = InitTestDirectory(String.Format("{0}_requestor", test_name), cleanupData);
+            var dir = InitTestDirectory(string.Format("{0}_requestor", test_name), cleanupData);
             return await BuildRequestorDirectoryRelative(dir, cleanupData);
         }
 
@@ -143,7 +142,7 @@ namespace Golem.IntegrationTests.Tools
         }
 
         // Based on: https://stackoverflow.com/a/3822913
-        private static void CopyFilesRecursively(string sourcePath, string targetPath)
+        public static void CopyFilesRecursively(string sourcePath, string targetPath)
         {
             //Now Create all of the directories
             foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
@@ -257,7 +256,7 @@ namespace Golem.IntegrationTests.Tools
         }
 
         // Based on: https://stackoverflow.com/a/52200001
-        static void ExtractTGZ(String gzArchiveName, String destFolder)
+        static void ExtractTGZ(string gzArchiveName, string destFolder)
         {
             Stream inStream = File.OpenRead(gzArchiveName);
             Stream gzipStream = new GZipInputStream(inStream);
@@ -277,9 +276,9 @@ namespace Golem.IntegrationTests.Tools
             var file = new FileInfo(fileName);
             if (OperatingSystem.IsWindows())
             {
-                FileSecurity fSecurity = FileSystemAclExtensions.GetAccessControl(file);
+                FileSecurity fSecurity = file.GetAccessControl();
                 fSecurity.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), FileSystemRights.ExecuteFile, AccessControlType.Allow));
-                FileSystemAclExtensions.SetAccessControl(file, fSecurity);
+                file.SetAccessControl(fSecurity);
             }
             else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {

@@ -3,7 +3,7 @@ using System.Threading.Channels;
 using App;
 
 using Golem;
-using Golem.IntegrationTests.Tools;
+using Golem.Tools;
 using Golem.Yagna;
 using Golem.Yagna.Types;
 
@@ -67,7 +67,7 @@ namespace Golem.Tests
             _requestor.InitAccount();
         }
 
-        [Fact(Skip="Skipped until payment issue resovled")]
+        [Fact(Skip = "Skipped until payment issue resovled")]
         public async Task StartStop_Job()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory(nameof(JobTests));

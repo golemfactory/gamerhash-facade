@@ -8,12 +8,12 @@ using Medallion.Shell;
 
 using Microsoft.Extensions.Logging;
 
-namespace Golem.IntegrationTests.Tools
+namespace Golem.Tools
 {
     public abstract class GolemRunnable
     {
         // Delegate type to be used as the Handler Routine for SCCH
-        delegate Boolean ConsoleCtrlDelegate(uint CtrlType);
+        delegate bool ConsoleCtrlDelegate(uint CtrlType);
 
         protected string _dir;
 
@@ -31,14 +31,14 @@ namespace Golem.IntegrationTests.Tools
         protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env, bool openConsole = true)
         {
             Command process = RunCommand(file_name, working_dir, args, env);
-            GolemRunnable.AddShutdownHook(process);
+            AddShutdownHook(process);
             if (!process.Process.HasExited)
             {
                 _golemProcess = process;
                 return !_golemProcess.Process.HasExited;
             }
 
-            _logger.LogInformation("Command stopped. Output:\n{0}", String.Join("\n", _golemProcess.GetOutputAndErrorLines()));
+            _logger.LogInformation("Command stopped. Output:\n{0}", string.Join("\n", _golemProcess.GetOutputAndErrorLines()));
             _golemProcess = null;
             return false;
         }
@@ -88,14 +88,14 @@ namespace Golem.IntegrationTests.Tools
         protected static async Task<string> DownloadBinaryArtifact(string artifact, string tag, string repository)
         {
             var ext = ExecutableFileExtension();
-            var url = String.Format("https://github.com/{1}/releases/download/{0}/{2}", tag, repository, artifact);
+            var url = string.Format("https://github.com/{1}/releases/download/{0}/{2}", tag, repository, artifact);
             url += ext;
 
             Console.WriteLine($"Download binary: {url}");
             return await PackageBuilder.Download(url);
         }
 
-        public static String ExecutableFileExtension()
+        public static string ExecutableFileExtension()
         {
             return OperatingSystem.IsWindows() ? ".exe" : "";
         }
