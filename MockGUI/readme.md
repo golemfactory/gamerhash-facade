@@ -20,3 +20,11 @@ gamerhash-facade/
         ├── dummy.exe
         └── ya-runtime-ai.exe
 ```
+
+## Running from dynamic dlls
+
+This example assumes that `modules/golem` contains Golem.dll.
+```sh
+./modules.sh .exe;
+dotnet run --golem modules --use-dll`
+```
