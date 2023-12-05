@@ -1,7 +1,6 @@
-
 using Microsoft.Extensions.Logging;
 
-namespace Golem.IntegrationTests.Tools
+namespace Golem.Tools
 {
     public class GolemRelay : GolemRunnable
     {
