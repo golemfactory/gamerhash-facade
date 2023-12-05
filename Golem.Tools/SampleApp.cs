@@ -79,18 +79,18 @@ namespace App
                 _logger.LogInformation("Starting Requestor daemon: " + Name);
                 Message = "Starting Daemon";
 
-                Requestor = await GolemRequestor.BuildRelative(WorkDir, _logger, false);
-                Requestor.Start();
+                Requestor = await Task.Run(async () => await GolemRequestor.BuildRelative(WorkDir, _logger, false));
+                await Task.Run(() => Requestor.Start());
 
                 Message = "Funding accounts";
                 _logger.LogInformation("Initializing payment accounts for: " + Name);
-                Requestor.InitAccount();
+                await Task.Run(() => Requestor.InitAccount());
 
                 _logger.LogInformation("Creating requestor application: " + Name);
                 Message = "Starting Application";
 
                 App = Requestor?.CreateSampleApp() ?? throw new Exception("Requestor '" + Name + "' not started yet");
-                App.Start();
+                await Task.Run(() => App.Start());
 
                 _logger.LogInformation("Application started: " + Name);
                 Message = "App running";

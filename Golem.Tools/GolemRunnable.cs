@@ -77,7 +77,7 @@ namespace Golem.Tools
             }
             try
             {
-                _golemProcess.Wait();
+                await Task.Run(() => _golemProcess.Wait());
             }
             finally
             {
