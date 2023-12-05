@@ -130,7 +130,6 @@ class AiPayload(Payload):
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
     capabilities: str = constraint(CAPABILITIES, default="dummy")
-    node: str = constraint("golem.node.id.name", operator="=", default="nieznanysprawiciel-gamerhash")
 
 
 class AiRuntimeService(Service):
