@@ -21,7 +21,9 @@ namespace Golem.Tests
 
         public GolemTests(ITestOutputHelper outputHelper)
         {
-            _golemLib = Path.Combine(Directory.GetCurrentDirectory(), "Golem.dll");
+            var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+
+            _golemLib = Path.Combine(dir, "Golem.dll");
 
             XunitContext.Register(outputHelper);
             _loggerFactory = LoggerFactory.Create(builder =>
@@ -99,7 +101,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory("StartAndStopWithoutWaiting_VerifyStatusAsync");
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(_golemLib, PackageBuilder.ModulesDir(golemPath), _loggerFactory);
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), _loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
