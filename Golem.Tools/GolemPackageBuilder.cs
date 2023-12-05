@@ -191,6 +191,11 @@ namespace Golem.Tools
             return Path.Combine(test_dir, "modules", "golem-data");
         }
 
+        public static string ModulesDir(string test_dir)
+        {
+            return Path.Combine(test_dir, "modules");
+        }
+
         public static string ProviderDataDir(string test_dir)
         {
             return Path.Combine(DataDir(test_dir), "provider");

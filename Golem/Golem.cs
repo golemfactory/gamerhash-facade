@@ -163,6 +163,7 @@ namespace Golem
             _tokenSource?.Cancel();
             await Provider.Stop();
             await Yagna.Stop();
+            await Yagna.Stop();
             Status = GolemStatus.Off;
         }
 
