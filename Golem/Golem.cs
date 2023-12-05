@@ -160,9 +160,9 @@ namespace Golem
         public async Task Stop()
         {
             _logger.LogInformation("Stopping Golem");
+            _tokenSource?.Cancel();
             await Provider.Stop();
             await Yagna.Stop();
-            _tokenSource?.Cancel();
             Status = GolemStatus.Off;
         }
 

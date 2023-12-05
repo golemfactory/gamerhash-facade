@@ -84,7 +84,7 @@ namespace App
 
                 Message = "Funding accounts";
                 _logger.LogInformation("Initializing payment accounts for: " + Name);
-                Requestor.InitAccount();
+                Requestor.InitPayment();
 
                 _logger.LogInformation("Creating requestor application: " + Name);
                 Message = "Starting Application";

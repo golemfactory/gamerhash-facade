@@ -20,7 +20,7 @@ namespace Golem.Tools
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "relay");
             Directory.CreateDirectory(working_dir);
-            return StartProcess("ya-relay-server", working_dir, "-a 127.0.0.1:17464", new Dictionary<string, string>());
+            return StartProcess("ya-relay-server", working_dir, "-a 127.0.0.1:16464", new Dictionary<string, string>());
         }
 
         protected static async Task<string> BuildRelayDir(string test_name)

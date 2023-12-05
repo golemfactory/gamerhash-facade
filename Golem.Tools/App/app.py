@@ -130,7 +130,6 @@ class AiPayload(Payload):
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
     capabilities: str = constraint(CAPABILITIES, default="dummy")
-    node: str = constraint("golem.node.id.name", operator="=", default="nieznanysprawiciel-gamerhash")
 
 
 class AiRuntimeService(Service):
@@ -140,10 +139,11 @@ class AiRuntimeService(Service):
 
     async def start(self):
         script = self._ctx.new_script()
-        # script.start(
-        #     "--model",
-        #     "dummy_model"
-        # )
+        script.deploy()
+        script.start(
+            "--model",
+            "dummy_model"
+        )
         await asyncio.sleep(3)
 
         yield script
