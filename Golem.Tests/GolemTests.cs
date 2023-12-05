@@ -1,7 +1,7 @@
 using App;
 
 using Golem;
-using Golem.IntegrationTests.Tools;
+using Golem.Tools;
 using Golem.Yagna.Types;
 
 using GolemLib;
@@ -91,7 +91,7 @@ namespace Golem.Tests
             Console.WriteLine("Path: " + golemPath);
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
-            
+
             decimal price = 0;
 
             Action<decimal> updatePrice = (v) => price = v;

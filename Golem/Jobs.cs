@@ -55,7 +55,6 @@ class Jobs
             } else {
                 job.Status = ResolveStatus((StateType)activityState, oldActivityState);
                 _jobs[job.Id] = new JobAndState(job, (StateType)activityState);
-                return;
             }
         } else {
             //TODO fix it when handling of activities list will be supported

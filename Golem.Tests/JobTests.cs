@@ -4,7 +4,7 @@ using System.Threading.Channels;
 using App;
 
 using Golem;
-using Golem.IntegrationTests.Tools;
+using Golem.Tools;
 using Golem.Yagna;
 using Golem.Yagna.Types;
 

@@ -7,10 +7,10 @@ using System.IO;
 using Xunit.Abstractions;
 using Golem.Yagna;
 using System.Diagnostics;
-using Golem.IntegrationTests.Tools;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Golem.Tools;
 
 namespace App
 {

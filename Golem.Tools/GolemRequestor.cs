@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json.Linq;
 
-namespace Golem.IntegrationTests.Tools
+namespace Golem.Tools
 {
 
     public class AppKey
@@ -157,7 +157,7 @@ namespace Golem.IntegrationTests.Tools
 
             var app_key_list_process = RunCommand("yagna", workingDir(), "app-key list --json", env);
             app_key_list_process.Wait();
-            var app_key_list_output_json = String.Join("\n", app_key_list_process.GetOutputAndErrorLines());
+            var app_key_list_output_json = string.Join("\n", app_key_list_process.GetOutputAndErrorLines());
 
             var objects = JArray.Parse(app_key_list_output_json);
             foreach (JObject root in objects)
@@ -173,7 +173,7 @@ namespace Golem.IntegrationTests.Tools
             return new AppKey();
         }
 
-        private String workingDir()
+        private string workingDir()
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
