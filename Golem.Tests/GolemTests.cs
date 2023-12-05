@@ -70,7 +70,7 @@ namespace Golem.Tests
         [Fact]
         public async Task LoadBinaryStartAndStop_VerifyStatusAsync()
         {
-            string golemPath = await PackageBuilder.BuildTestDirectory("StartStop_VerifyStatusAsync");
+            string golemPath = await PackageBuilder.BuildTestDirectory("LoadBinaryStartAndStop_VerifyStatusAsync");
             Console.WriteLine("Path: " + golemPath);
 
             var golem = await LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), _loggerFactory);
@@ -96,10 +96,10 @@ namespace Golem.Tests
         [Fact]
         public async Task StartAndStopWithoutWaiting_VerifyStatusAsync()
         {
-            string golemPath = await PackageBuilder.BuildTestDirectory("StartStop_VerifyStatusAsync");
+            string golemPath = await PackageBuilder.BuildTestDirectory("StartAndStopWithoutWaiting_VerifyStatusAsync");
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = await LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), _loggerFactory);
+            var golem = new Golem(_golemLib, PackageBuilder.ModulesDir(golemPath), _loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
