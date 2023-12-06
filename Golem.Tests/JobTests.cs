@@ -169,7 +169,7 @@ namespace Golem.Tests
             // _logger.LogInformation($"Invoice amount {payments[0].Amount}");
             // Assert.True(Convert.ToDouble(payments[0].Amount) > 0.0);
 
-            foreach (Payment payment in payments) {
+            foreach (Payment payment in payments ?? new List<Payment>()) {
                 _logger.LogInformation($"Got payment confirmation {payment.PaymentId}, payee {payment.PayeeId}, payee adr {payment.PayeeAddr}, amount {payment.Amount}, details {payment.Details}");
             }
 

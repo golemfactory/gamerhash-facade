@@ -37,7 +37,7 @@ namespace Golem.Tools
             else if (value is V v)
                 Handler(v);
             else
-                Console.WriteLine("Cannot handle property changed for {0} - incorrect type: {1}", PropertyName, v);
+                Console.WriteLine("Cannot handle property changed for {0} - incorrect type: {1}", PropertyName, value);
 
             Console.WriteLine($"Property has changed: {e.PropertyName} to {value}");
         }
