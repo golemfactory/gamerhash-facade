@@ -67,8 +67,8 @@ namespace Golem.Tools
             await DownloadExtractPackage(exeUnitDir, "runtime", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION);
             await DownloadExtractPackage(exeUnitDir, "dummy-framework", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION);
 
-            string dummy_descriptors = null;
-            using (StreamReader r = new StreamReader(Path.Combine(exeUnitDir, "ya-dummy-ai.json")))
+            string? dummy_descriptors = null;
+            using (StreamReader r = new(Path.Combine(exeUnitDir, "ya-dummy-ai.json")))
             {
                 dummy_descriptors = r.ReadToEnd();
             }
@@ -77,8 +77,8 @@ namespace Golem.Tools
                 var descriptors = JArray.Parse(dummy_descriptors);
                 foreach (JObject descriptor in descriptors)
                 {
-                    var name = (string)descriptor.GetValue("name");
-                    if ("ai".Equals(name))
+                    var name = descriptor.GetValue("name");
+                    if (name!=null && "ai".Equals(name.ToString()))
                     {
                         var runtime_name = $"ya-runtime-ai{GolemRunnable.ExecutableFileExtension()}";
                         var runtime_path = Path.Combine(exeUnitDir, runtime_name);

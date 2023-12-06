@@ -200,7 +200,11 @@ namespace Golem.Yagna
 
             if (process.Start())
             {
-                process.WaitForExitAsync();
+                process
+                    .WaitForExitAsync()
+                    .ContinueWith(task => {
+                        Console.WriteLine("Yagna process finished: {0}", task.Status);
+                    });
                 YagnaProcess = process;
                 ChildProcessTracker.AddProcess(process);
                 return !YagnaProcess.HasExited;

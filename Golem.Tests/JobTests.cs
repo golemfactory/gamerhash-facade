@@ -80,7 +80,7 @@ namespace Golem.Tests
             var jobPaymentConfirmationChannel = PropertyChangeChannel<IJob, List<Payment>>(null, "");
 
             #pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
-            Channel<Job> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) =>
+            Channel<Job?> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) =>
             {
                 _logger.LogInformation($"Current Job update: {currentJob}");
 
@@ -194,9 +194,9 @@ namespace Golem.Tests
             matcher ??= FalseMatcher;
             while (await channel.WaitToReadAsync(cancelTokenSource.Token))
             {
-                if (channel.TryRead(out T value) && !matcher.Invoke(value))
+                if (channel.TryRead(out var value) && value is T tValue && !matcher.Invoke(tValue))
                 {
-                    return value;
+                    return tValue;
                 }
                 else
                 {

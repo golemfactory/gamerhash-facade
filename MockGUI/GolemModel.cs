@@ -98,9 +98,9 @@ namespace MockGUI.ViewModels
             return await factory.Create(modulesDir, loggerFactory);
         }
 
-        public void OnStartCommand()
+        public Task OnStartCommand()
         {
-            this.Golem.Start();
+            return Task.Run(Golem.Start);
         }
 
         public void OnStopCommand()

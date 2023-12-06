@@ -17,6 +17,7 @@ using Golem.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Specialized;
+using System.Security.Principal;
 
 namespace Golem
 {
@@ -130,7 +131,7 @@ namespace Golem
         {
             Status = GolemStatus.Starting;
 
-            var task = Task.Run(async () =>
+            var task = async () =>
             {
                 bool openConsole = true;
 
@@ -153,8 +154,8 @@ namespace Golem
 
                 OnPropertyChanged("WalletAddress");
                 OnPropertyChanged("NodeId");
-            });
-            return task;
+            };
+            return task();
         }
 
         public async Task Stop()
@@ -293,9 +294,20 @@ namespace Golem
             Console.WriteLine($"[Data]: {e.Data}");
         }
 
+        private CancellationToken GetCancellationToken()
+        {
+            if (_tokenSource != null)
+                return _tokenSource.Token;
+
+            _logger.LogError("Missing cancellationToken");
+            return CancellationToken.None;
+        }
+
         private Task StartActivityLoop()
         {
-            var token = _tokenSource.Token;
+            var token = GetCancellationToken();
+
+            _logger.LogError("Missing cancellationToken");
             token.Register(_httpClient.CancelPendingRequests);
             return new ActivityLoop(_httpClient, token, _logger).Start(
                 SetCurrentJob,
@@ -309,7 +321,8 @@ namespace Golem
 
         private Task StartInvoiceEventsLoop()
         {
-            var token = _tokenSource.Token;
+            var token = GetCancellationToken();
+            
             token.Register(_httpClient.CancelPendingRequests);
             return new InvoiceEventsLoop(_httpClient, token, _logger).Start(_jobs.UpdatePaymentStatus, _jobs.UpdatePaymentConfirmation);
         }

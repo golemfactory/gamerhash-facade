@@ -38,7 +38,7 @@ namespace Golem.Tools
                 return !_golemProcess.Process.HasExited;
             }
 
-            _logger.LogInformation("Command stopped. Output:\n{0}", string.Join("\n", _golemProcess.GetOutputAndErrorLines()));
+            _logger.LogInformation("Command stopped. Output:\n{0}", string.Join("\n", process.GetOutputAndErrorLines()));
             _golemProcess = null;
             return false;
         }
