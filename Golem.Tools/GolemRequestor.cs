@@ -45,7 +45,7 @@ namespace Golem.Tools
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
-            return StartProcess("yagna", working_dir, "service run", _env);
+            return StartProcess("yagna", working_dir, "service run", _env, false);
         }
 
         public SampleApp CreateSampleApp()
@@ -69,7 +69,7 @@ namespace Golem.Tools
 
         public void InitAccount()
         {
-            Thread.Sleep(3000);
+            Thread.Sleep(6000);
 
             var totalGlm = 0.0;
             AppKey = getTestAppKey();
@@ -88,8 +88,8 @@ namespace Golem.Tools
                 payment_status_process.Wait();
                 var payment_status_output_json = string.Join("\n", payment_status_process.GetOutputAndErrorLines());
                 var payment_status_output_obj = JObject.Parse(payment_status_output_json);
-                totalGlm = (float)payment_status_output_obj["amount"];
-                var reserved = (float)payment_status_output_obj["reserved"];
+                totalGlm = payment_status_output_obj.Value<float>("amount");
+                var reserved = payment_status_output_obj.Value<float>("reserved");
 
                 if (reserved > 0.0)
                 {
@@ -130,11 +130,11 @@ namespace Golem.Tools
             var objects = JArray.Parse(app_key_list_output_json);
             foreach (JObject root in objects)
             {
-                var name = (string)root.GetValue("name");
+                var name = root.Value<string>("name");
                 if (AppKeyName.Equals(name))
                 {
-                    var key = (string)root.GetValue("key") ?? throw new Exception("Failed to get app key");
-                    var id = (string)root.GetValue("id") ?? throw new Exception("Failed to get app id");
+                    var key = root.Value<string>("key") ?? throw new Exception("Failed to get app key");
+                    var id = root.Value<string>("id") ?? throw new Exception("Failed to get app id");
                     return new GolemAppKey(key, id);
                 }
             }

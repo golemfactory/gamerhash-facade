@@ -1,6 +1,7 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 using Golem.Yagna;
 
@@ -28,9 +29,9 @@ namespace Golem.Tools
 
         public abstract bool Start();
 
-        protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env, bool openConsole = true)
+        protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env, bool console_output = false)
         {
-            Command process = RunCommand(file_name, working_dir, args, env);
+            Command process = RunCommand(file_name, working_dir, args, env, console_output);
             AddShutdownHook(process);
             if (!process.Process.HasExited)
             {
@@ -38,24 +39,32 @@ namespace Golem.Tools
                 return !_golemProcess.Process.HasExited;
             }
 
-            _logger.LogInformation("Command stopped. Output:\n{0}", string.Join("\n", _golemProcess.GetOutputAndErrorLines()));
+            if (_golemProcess != null)
+                _logger.LogInformation("Command stopped. Output:\n{0}", string.Join("\n", _golemProcess.GetOutputAndErrorLines()));
+
             _golemProcess = null;
             return false;
         }
 
-        protected Command RunCommand(string file_name, string working_dir, string args, Dictionary<string, string> env)
+        protected Command RunCommand(string file_name, string working_dir, string args, Dictionary<string, string> env, bool console_output = false)
         {
             var file_name_w_ext = ProcessFactory.BinName(file_name);
             var dir = Path.GetFullPath(_dir);
             var runnable_path = Path.Combine(dir, "modules", "golem", file_name_w_ext);
 
             var args_list = args.Split(null);
+
             return Command.Run(runnable_path, args_list, options => options
                 .EnvironmentVariables(env)
                 .WorkingDirectory(working_dir)
                 .ThrowOnError(true)
                 .DisposeOnExit(false)
-            );
+                .StartInfo(info =>
+                {
+                    info.RedirectStandardError = !console_output;
+                    info.RedirectStandardOutput = !console_output;
+                    info.UseShellExecute = false;
+                }));
         }
 
         public async Task Stop(StopMethod stopMethod = StopMethod.SigKill)
@@ -77,12 +86,18 @@ namespace Golem.Tools
             }
             try
             {
-                await Task.Run(() => _golemProcess.Wait());
+                await WaitForFinish();
             }
             finally
             {
                 _golemProcess = null;
             }
+        }
+
+        public async Task WaitForFinish()
+        {
+            if (_golemProcess != null)
+                await Task.Run(() => _golemProcess.Wait());
         }
 
         protected static async Task<string> DownloadBinaryArtifact(string artifact, string tag, string repository)
@@ -102,10 +117,21 @@ namespace Golem.Tools
 
         public static void AddShutdownHook(Command childProcess)
         {
-            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
-            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
-            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
+            static void Kill(Command childProcess, object? obj, EventArgs eventArgs)
+            {
+                // if (obj != null)
+                //     Console.WriteLine($"Exception: {obj.ToString()}, args: {eventArgs.ToString()}");
+
+                //childProcess.Kill();
+                childProcess.Wait();
+            }
+
+            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
+            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
+            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
         }
+
+
     }
 
     public enum StopMethod

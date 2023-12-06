@@ -22,7 +22,7 @@ namespace App
         {
             _env = env;
             var app_filename = ProcessFactory.BinName("app");
-            var app_src = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, app_filename);
+            var app_src = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", app_filename);
             var app_dst = Path.Combine(dir, "modules", "golem", app_filename);
             File.Copy(app_src, app_dst, true);
         }
@@ -117,17 +117,19 @@ namespace App
                     await App.Stop(StopMethod.SigInt);
                     App = null;
 
+                    _logger.LogInformation("Stopped Example Application: " + Name);
                     Message = "App Stopped";
                 }
 
                 if (Requestor != null)
                 {
-                    _logger.LogInformation("Stopping Example Requestor: " + Name);
+                    _logger.LogInformation("Stopping Example Requestor Daemon: " + Name);
                     Message = "Stopping Daemon";
 
                     await Requestor.Stop(StopMethod.SigInt);
                     Requestor = null;
 
+                    _logger.LogInformation("Requestor Daemon stopped: " + Name);
                     Message = "Daemon Stopped";
                 }
 
@@ -139,6 +141,13 @@ namespace App
                 Message = "Error";
                 throw;
             }
+        }
+
+        public Task WaitForFinish()
+        {
+            if (App != null)
+                return App.WaitForFinish();
+            return Task.CompletedTask;
         }
 
         public async ValueTask DisposeAsync()

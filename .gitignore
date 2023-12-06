@@ -29,6 +29,9 @@ Mock/obj/
 /Golem.Package/tests/
 /Golem.Package/package/
 
+/ExampleRunner/bin/
+/ExampleRunner/obj/
+
 /MockGUI/bin/
 /MockGUI/obj/
 /modules/
