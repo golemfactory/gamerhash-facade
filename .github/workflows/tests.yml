@@ -27,7 +27,7 @@ jobs:
     - name: Build
       run: dotnet build
     - name: Test with the dotnet CLI
-      run: dotnet test -v d
+      run: dotnet test -v n
     - name: Archive JobTests artifacts
       uses: actions/upload-artifact@v3
       if: always()
