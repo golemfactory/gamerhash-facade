@@ -145,12 +145,18 @@ namespace Golem.Tests
             var currentJobPaymentStatusChannel = jobPaymentStatusChannel;
             var currentJobPaymentConfirmationChannel = jobPaymentConfirmationChannel;
 
+            var jobId = currentJob.Id;
             // Stopping Sample App
             _logger.LogInformation("Stopping App");
             await app.Stop(StopMethod.SigInt);
 
-            Job? finishedCurrentJob = await SkipMatching(jobChannel, (Job? j) => { return j?.Status == JobStatus.Finished; });
-            _logger.LogInformation("No more jobs");
+            var jobs = await golem.ListJobs(DateTime.MinValue);
+
+            var job = jobs.SingleOrDefault(j => j.Id == jobId);
+
+            Assert.True(job!=null && job.Status == JobStatus.Finished);
+            // Job? finishedCurrentJob = await SkipMatching(jobChannel, (Job? j) => { return j?.Status == JobStatus.Finished; });
+            // _logger.LogInformation("No more jobs");
             Assert.Null(golem.CurrentJob);
 
             // Checking payments
