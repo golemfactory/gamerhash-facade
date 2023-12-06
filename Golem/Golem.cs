@@ -127,35 +127,33 @@ namespace Golem
             await Start();
         }
 
-        public Task Start()
+        public async Task Start()
         {
             Status = GolemStatus.Starting;
 
-            var task = async () =>
+            await Task.Yield();
+
+            bool openConsole = true;
+
+            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
+
+            var success = await StartupYagnaAsync(yagnaOptions);
+
+            if (success)
             {
-                bool openConsole = true;
-
-                var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
-
-                var success = await StartupYagnaAsync(yagnaOptions);
-
-                if (success)
+                var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
+                if (defaultKey is not null)
                 {
-                    var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
-                    if (defaultKey is not null)
-                    {
-                        Status = StartupProvider(yagnaOptions) ? GolemStatus.Ready : GolemStatus.Error;
-                    }
+                    Status = StartupProvider(yagnaOptions) ? GolemStatus.Ready : GolemStatus.Error;
                 }
-                else
-                {
-                    Status = GolemStatus.Error;
-                }
+            }
+            else
+            {
+                Status = GolemStatus.Error;
+            }
 
-                OnPropertyChanged("WalletAddress");
-                OnPropertyChanged("NodeId");
-            };
-            return task();
+            OnPropertyChanged("WalletAddress");
+            OnPropertyChanged("NodeId");
         }
 
         public async Task Stop()
@@ -163,7 +161,6 @@ namespace Golem
             _logger.LogInformation("Stopping Golem");
             _tokenSource?.Cancel();
             await Provider.Stop();
-            await Yagna.Stop();
             await Yagna.Stop();
             Status = GolemStatus.Off;
         }

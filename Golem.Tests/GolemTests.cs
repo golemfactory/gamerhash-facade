@@ -59,8 +59,9 @@ namespace Golem.Tests
 
             golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
 
-            var startTask =  golem.Start();
+            var startTask = golem.Start();
             Assert.Equal(GolemStatus.Starting, status);
+            // Console.WriteLine("Status: {0}", status);
             await startTask;
 
             Assert.Equal(GolemStatus.Ready, status);
@@ -85,7 +86,7 @@ namespace Golem.Tests
 
             golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
 
-            var startTask =  golem.Start();
+            var startTask = golem.Start();
             Assert.Equal(GolemStatus.Starting, status);
             await startTask;
             
