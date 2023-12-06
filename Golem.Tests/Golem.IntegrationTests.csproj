@@ -30,8 +30,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Golem.Tools\Golem.Tools.csproj" />
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-
-
 
 </Project>
