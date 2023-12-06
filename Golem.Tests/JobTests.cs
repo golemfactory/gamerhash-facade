@@ -1,21 +1,13 @@
 using System.ComponentModel;
 using System.Threading.Channels;
 
-using App;
-
-using Golem;
 using Golem.Tools;
-using Golem.Yagna;
 using Golem.Yagna.Types;
 
 using GolemLib;
 using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Configuration;
-
-using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace Golem.Tests
 {
@@ -85,7 +77,7 @@ namespace Golem.Tests
             var jobStatusChannel = PropertyChangeChannel<IJob, JobStatus>(null, "");
             var jobPaymentStatusChannel = PropertyChangeChannel<IJob, GolemLib.Types.PaymentStatus?>(null, "");
             var jobGolemUsageChannel = PropertyChangeChannel<IJob, GolemUsage>(null, "");
-            var jobPaymentConfirmationChannel = PropertyChangeChannel<IJob, Payment>(null, "");
+            var jobPaymentConfirmationChannel = PropertyChangeChannel<IJob, List<Payment>>(null, "");
 
             #pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
             Channel<Job> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) =>
@@ -99,7 +91,7 @@ namespace Golem.Tests
                 jobGolemUsageChannel = PropertyChangeChannel(currentJob, nameof(currentJob.CurrentUsage),
                     (GolemUsage? v) => _logger.LogInformation($"Current job Usage update: {v}"));
                 jobPaymentConfirmationChannel = PropertyChangeChannel(currentJob, nameof(currentJob.PaymentConfirmation),
-                    (Payment? v) => _logger.LogInformation($"Current job Payment Confirmation update: {v}"));
+                    (List<Payment>? v) => _logger.LogInformation($"Current job Payment Confirmation update: {v}"));
 
             });
             #pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
@@ -133,7 +125,7 @@ namespace Golem.Tests
             Assert.True(app.Start());
 
             // `CurrentJob` property update notification.
-            Job? currentJob = await SkipMatching(jobChannel, (Job? j) => { return j == null; });
+            Job? currentJob = await SkipMatching<Job?>(jobChannel);
             // `CurrentJob` object property and object arriving as a property notification are the same.
             Assert.Same(currentJob, golem.CurrentJob);
             Assert.NotNull(currentJob);
@@ -149,15 +141,37 @@ namespace Golem.Tests
 
             _logger.LogInformation($"Got a job. Status {golem.CurrentJob?.Status}, Id: {golem.CurrentJob?.Id}, RequestorId: {golem.CurrentJob?.RequestorId}");
 
+            // keep references to a finishing job status channels
+            var currentJobPaymentStatusChannel = jobPaymentStatusChannel;
+            var currentJobPaymentConfirmationChannel = jobPaymentConfirmationChannel;
 
             // Stopping Sample App
-
             _logger.LogInformation("Stopping App");
             await app.Stop(StopMethod.SigInt);
 
             Job? finishedCurrentJob = await SkipMatching(jobChannel, (Job? j) => { return j?.Status == JobStatus.Finished; });
             _logger.LogInformation("No more jobs");
             Assert.Null(golem.CurrentJob);
+
+            // Checking payments
+
+            // TODO where is InvoiceSent?
+            // Assert.Equal(GolemLib.Types.PaymentStatus.InvoiceSent , await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel));
+            Assert.Equal(GolemLib.Types.PaymentStatus.Settled , await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent));
+            // TODO when these will arrive?
+            // Assert.Equal(GolemLib.Types.PaymentStatus.Accepted , await SkipMatching(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.Settled));
+            // Assert.Equal(GolemLib.Types.PaymentStatus.InvoiceSent , await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel));
+
+            //TODO payments is empty
+            var payments = await SkipMatching<List<GolemLib.Types.Payment>?>(currentJobPaymentConfirmationChannel);
+            // Assert.Single(payments);
+            // Assert.Equal(_requestorAppKey.Id, payments[0].PayerId);
+            // _logger.LogInformation($"Invoice amount {payments[0].Amount}");
+            // Assert.True(Convert.ToDouble(payments[0].Amount) > 0.0);
+
+            foreach (Payment payment in payments) {
+                _logger.LogInformation($"Got payment confirmation {payment.PaymentId}, payee {payment.PayeeId}, payee adr {payment.PayeeAddr}, amount {payment.Amount}, details {payment.Details}");
+            }
 
             // Stopping Golem
 
@@ -172,10 +186,12 @@ namespace Golem.Tests
         /// Reads from `channel` and returns first `T` for which `matcher` returns `false`
         /// </summary>
         /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
-        public async Task<T> SkipMatching<T>(ChannelReader<T> channel, Func<T, bool> matcher, double timeoutMs = 10_000)
+        public async Task<T> SkipMatching<T>(ChannelReader<T> channel, Func<T, bool>? matcher = null, double timeoutMs = 10_000)
         {
             var cancelTokenSource = new CancellationTokenSource();
             cancelTokenSource.CancelAfter(TimeSpan.FromMilliseconds(timeoutMs));
+            static bool FalseMatcher(T x) => false;
+            matcher ??= FalseMatcher;
             while (await channel.WaitToReadAsync(cancelTokenSource.Token))
             {
                 if (channel.TryRead(out T value) && !matcher.Invoke(value))
