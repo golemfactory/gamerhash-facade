@@ -262,15 +262,16 @@ namespace Golem.Tools
         // Based on: https://stackoverflow.com/a/52200001
         static void ExtractTGZ(string gzArchiveName, string destFolder)
         {
-            Stream inStream = File.OpenRead(gzArchiveName);
-            Stream gzipStream = new GZipInputStream(inStream);
-
-            TarArchive tarArchive = TarArchive.CreateInputTarArchive(gzipStream, Encoding.UTF8);
-            tarArchive.ExtractContents(destFolder);
-            tarArchive.Close();
-
-            gzipStream.Close();
-            inStream.Close();
+            using (Stream inStream = File.OpenRead(gzArchiveName))
+            {
+                using (Stream gzipStream = new GZipInputStream(inStream))
+                {
+                    using (TarArchive tarArchive = TarArchive.CreateInputTarArchive(gzipStream, Encoding.UTF8))
+                    {
+                        tarArchive.ExtractContents(destFolder);
+                    }
+                }
+            }
         }
 
         public static void SetFilePermissions(string fileName)
@@ -299,12 +300,7 @@ namespace Golem.Tools
             {
                 if (!exclude_dirs.Contains(Path.GetFileName(dir)))
                 {
-                    Console.WriteLine($"Set execute permissions for content of directory: {dir} ({Path.GetFileName(dir)})");
                     SetPermissions(dir);
-                }
-                else
-                {
-                    Console.WriteLine($"Excluded directory from setting permissions: {dir}");
                 }
             }
 
@@ -312,12 +308,7 @@ namespace Golem.Tools
             {
                 if (!exclude_files.Contains(Path.GetFileName(file)))
                 {
-                    Console.WriteLine($"Set execute permissions for file: {file} ({Path.GetFileName(file)})");
                     SetFilePermissions(file);
-                }
-                else
-                {
-                    Console.WriteLine($"Excluded file from setting permissions: {file}");
                 }
             }
         }

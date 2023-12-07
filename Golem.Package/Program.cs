@@ -54,6 +54,8 @@ static async Task Build(BuildArgs args)
         Directory.Delete(package_dir, true);
     }
     PackageBuilder.CopyFilesRecursively(Path.Combine(root, "modules"), package_dir);
-    Directory.Delete(root, true);
+
+    if (Directory.Exists(root))
+        Directory.Delete(root, true);
 }
 
