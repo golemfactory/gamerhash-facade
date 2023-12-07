@@ -201,7 +201,7 @@ namespace Golem.Yagna
             if (process.Start())
             {
                 process
-                    .WaitForExitAsync()
+                    .WaitForExitAsync(cancellationToken)
                     .ContinueWith(task => {
                         if(task.Status == TaskStatus.RanToCompletion && process.HasExited)
                         {

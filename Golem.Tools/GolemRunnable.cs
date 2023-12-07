@@ -102,9 +102,17 @@ namespace Golem.Tools
 
         public static void AddShutdownHook(Command childProcess)
         {
-            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
-            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
-            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
+            var killAndWait = () => {
+                try
+                {
+                    childProcess.Kill();
+                    childProcess.Wait();
+                }
+                catch{}
+            };
+            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => killAndWait();
+            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => killAndWait();
+            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => killAndWait();
         }
     }
 

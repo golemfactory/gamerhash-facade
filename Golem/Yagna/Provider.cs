@@ -223,7 +223,7 @@ namespace Golem.Yagna
             this.ExecToText("profile update " + param + " " + value + " default");
         }
 
-        public bool Run(string appKey, Network network, string? yagnaApiUrl, bool openConsole = false, bool enableDebugLogs = false, Action<int> exitHandler)
+        public bool Run(string appKey, Network network, string? yagnaApiUrl, Action<int> exitHandler, CancellationToken cancellationToken, bool openConsole = false, bool enableDebugLogs = false)
         {
             string debugSwitch = "";
             if (enableDebugLogs)
@@ -241,7 +241,7 @@ namespace Golem.Yagna
             if (process.Start())
             {
                 process
-                    .WaitForExitAsync()
+                    .WaitForExitAsync(cancellationToken)
                     .ContinueWith(task =>
                     {
                         if(task.Status == TaskStatus.RanToCompletion && process.HasExited)
