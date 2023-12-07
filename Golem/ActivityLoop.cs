@@ -34,15 +34,13 @@ class ActivityLoop
 
     public async Task Start(
         Action<Job?> setCurrentJob,
-        Func<string, string, Job> getOrCreateJob,
-        Func<ActivityState.StateType, ActivityState.StateType?, JobStatus> resolveStatus,
-        Action setAllJobsFinished,
-        Func<string, ActivityState.StateType?> getActivityState,
-        Action<string, ActivityState.StateType> updateActivityState)
+        Jobs jobs
+    )
     {
         _logger.LogInformation("Starting monitoring activities");
 
         DateTime newReconnect = DateTime.Now;
+
         try
         {
             while (!_token.IsCancellationRequested)
@@ -67,53 +65,29 @@ class ActivityLoop
                     await foreach (string json in EnumerateMessages(reader).WithCancellation(_token))
                     {
                         _logger.LogInformation("got json {0}", json);
-                        var activity_state = parseActivityState(json);
-                        if (activity_state?.AgreementId == null)
+                        var activityStates = parseActivityStates(json);
+                        activityStates = filterEmptyOrIncomplete(activityStates);
+                        if (activityStates.Count == 0)
                         {
-                            _logger.LogDebug("No activity");
-                            setAllJobsFinished();
+                            jobs.SetAllJobsFinished();
                             setCurrentJob(null);
                             continue;
                         }
-
-                        var agreement = await GetAgreement(activity_state.AgreementId);
-                        if (agreement?.Demand?.RequestorId == null)
-                        {
-                            _logger.LogDebug($"No agreement for activity: {activity_state.Id} (agreement: {activity_state.AgreementId})");
-                            setAllJobsFinished();
-                            setCurrentJob(null);
-                            continue;
-                        }
-
-                        var jobId = activity_state.AgreementId;
-                        var job = getOrCreateJob(jobId, agreement.Demand.RequestorId);
-
-                        if(job.Price is NotInitializedGolemPrice)
-                        {
-                            var price = GetPriceFromAgreement(agreement);
-                            if (price != null)
-                            {
-                                job.Price = price;
-                            }
-                        }
-
-                        var activityState = getActivityState(jobId);
-                        if(activityState != null)
-                        {
-                            job.Status = resolveStatus(activityState.Value, activity_state.State);
-                            updateActivityState(jobId, activity_state.State);
-                        }
-                        
-                        var usage = GetUsage(activity_state.Usage);
-                        if(usage != null)
-                            job.CurrentUsage = usage;
-
-                        setCurrentJob(job);
+                        List<Job> currentJob = activityStates
+                            .Select(async state => await updateJob(state, jobs))
+                                .Select(t => t.Result)
+                                .ToList()
+                                .FindAll(j => j != null)
+                        // foreach (ActivityState activityState in activityStates)
+                        // {
+                        //     await updateJobs(activityState, jobs
+                        //     );
+                        // }
                     }
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Activity request failure");
+                    _logger.LogError(e, "Activity monitoring request failure");
                 }
             }
         }
@@ -124,9 +98,56 @@ class ActivityLoop
         finally
         {
             _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
-            setAllJobsFinished();
+            jobs.SetAllJobsFinished();
             setCurrentJob(null);
         }
+    }
+
+    List<ActivityState> filterEmptyOrIncomplete(List<ActivityState>? activityStates)
+    {
+        return activityStates?.FindAll((activityState) => activityState.AgreementId != null);
+    }
+
+    /// <param name="activity_state"></param>
+    /// <param name="setCurrentJob"></param>
+    /// <param name="jobs"></param>
+    /// <returns>optional current job</returns>
+    private async Task<Job?> updateJob(
+        ActivityState activity_state,
+        Jobs jobs
+    )
+    {
+        var agreement = await GetAgreement(activity_state.AgreementId);
+        if (agreement?.Demand?.RequestorId == null)
+        {
+            _logger.LogDebug($"No agreement for activity: {activity_state.Id} (agreement: {activity_state.AgreementId})");
+            jobs.SetAllJobsFinished();
+            return null;
+        }
+
+        var jobId = activity_state.AgreementId;
+        var job = jobs.GetOrCreateJob(jobId, agreement.Demand.RequestorId);
+
+        if (job.Price is NotInitializedGolemPrice)
+        {
+            var price = GetPriceFromAgreement(agreement);
+            if (price != null)
+            {
+                job.Price = price;
+            }
+        }
+
+        var activityState = jobs.GetActivityState(jobId);
+        if (activityState != null)
+        {
+            job.Status = jobs.ResolveStatus(activityState.Value, activity_state.State);
+            jobs.UpdateActivityState(jobId, activity_state.State);
+        }
+
+        var usage = GetUsage(activity_state.Usage);
+        if (usage != null)
+            job.CurrentUsage = usage;
+        return job;
     }
 
     private GolemUsage? GetUsage(Dictionary<string, decimal>? usageDict)
@@ -147,7 +168,7 @@ class ActivityLoop
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
     {
-        if (agreement?.Offer?.Properties!=null && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
+        if (agreement?.Offer?.Properties != null && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
         {
             if (usageVector != null)
             {
@@ -163,7 +184,7 @@ class ActivityLoop
                         if (agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
                         {
                             var vals = usageVectorValues is JsonElement valuesElement ? valuesElement.EnumerateArray().Select(x => x.GetDecimal()).ToList() : null;
-                            if(vals != null)
+                            if (vals != null)
                             {
                                 var gpuSec = vals[gpuSecIdx];
                                 var durationSec = vals[durationSecIdx];
@@ -186,68 +207,19 @@ class ActivityLoop
         return null;
     }
 
-    private ActivityState? parseActivityState(string message)
+    private List<ActivityState> parseActivityStates(string message)
     {
         try
         {
             var trackingEvent = JsonSerializer.Deserialize<TrackingEvent>(message, s_serializerOptions);
-            var _activities = trackingEvent?.Activities ?? new List<ActivityState>();
-            if (!_activities.Any())
-            {
-                _logger.LogInformation("No activities");
-                return null;
-            }
-            //TODO take latest? the one with specific status?
-            ActivityState _activity = _activities.First();
-            if (_activity.AgreementId == null)
-            {
-                _logger.LogInformation("Activity without agreement id: {}", _activity);
-                return null;
-            }
-            return _activity;
+            var activities = trackingEvent?.Activities ?? new List<ActivityState>();
+            _logger.LogDebug("Received {0} activities", activities.Count);
+            return activities;
         }
         catch (JsonException e)
         {
             _logger.LogError(e, "Invalid monitoring event: {0}", message);
-            return null;
-        }
-    }
-
-    private ActivityState? parsePayments(string message)
-    {
-        try
-        {
-            var trackingEvent = JsonSerializer.Deserialize<TrackingEvent>(message, s_serializerOptions);
-            var _activities = trackingEvent?.Activities ?? new List<ActivityState>();
-            if (!_activities.Any())
-            {
-                _logger.LogInformation("No activities");
-                return null;
-            }
-            var _active_activities = _activities.FindAll(activity => activity.State != ActivityState.StateType.Terminated);
-            if (!_active_activities.Any())
-            {
-                _logger.LogInformation("All activities terminated: {}", _activities);
-                return null;
-            }
-            if (_active_activities.Count > 1)
-            {
-                _logger.LogWarning("Multiple non terminated activities: {}", _active_activities);
-                //TODO what now?
-            }
-            //TODO take latest? the one with specific status?
-            ActivityState _activity = _activities.First();
-            if (_activity.AgreementId == null)
-            {
-                _logger.LogInformation("Activity without agreement id: {}", _activity);
-                return null;
-            }
-            return _activity;
-        }
-        catch (JsonException e)
-        {
-            _logger.LogError(e, "Invalid monitoring event: {0}", message);
-            return null;
+            throw;
         }
     }
 

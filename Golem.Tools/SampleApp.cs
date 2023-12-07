@@ -27,11 +27,11 @@ namespace App
             File.Copy(app_src, app_dst, true);
         }
 
-        public override bool Start()
+        public override bool Start(string? working_dir_name = null)
         {
-            var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
+            var working_dir = Path.Combine(_dir, "modules", "golem-data", working_dir_name ?? "app");
             Directory.CreateDirectory(working_dir);
-            return StartProcess("app", Path.Combine(_dir, "modules", "golem-data", "yagna"), "--network goerli --subnet-tag public", _env, true);
+            return StartProcess("app", working_dir, "--network goerli --subnet-tag public", _env, true);
         }
     }
 
