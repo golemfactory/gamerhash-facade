@@ -3,6 +3,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Golem.Tools\Golem.Tools.csproj" />
     <ProjectReference Include="..\Golem\Golem.csproj" />
+
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
   </ItemGroup>
 
   <PropertyGroup>
