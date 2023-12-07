@@ -117,18 +117,30 @@ namespace Golem.Tools
 
         public static void AddShutdownHook(Command childProcess)
         {
-            static void Kill(Command childProcess, object? obj, EventArgs eventArgs)
+            // static void Kill(Command childProcess, object? obj, EventArgs eventArgs)
+            // {
+            //     // if (obj != null)
+            //     //     Console.WriteLine($"Exception: {obj.ToString()}, args: {eventArgs.ToString()}");
+
+            //     //childProcess.Kill();
+            //     childProcess.Wait();
+            // }
+
+            // AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
+            // AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
+            // AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
+            var killAndWait = () =>
             {
-                // if (obj != null)
-                //     Console.WriteLine($"Exception: {obj.ToString()}, args: {eventArgs.ToString()}");
-
-                //childProcess.Kill();
-                childProcess.Wait();
-            }
-
-            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
-            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
-            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
+                try
+                {
+                    childProcess.Kill();
+                    childProcess.Wait();
+                }
+                catch { }
+            };
+            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => killAndWait();
+            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => killAndWait();
+            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => killAndWait();
         }
 
 

@@ -84,7 +84,7 @@ namespace App
 
                 Message = "Funding accounts";
                 _logger.LogInformation("Initializing payment accounts for: " + Name);
-                await Task.Run(() => Requestor.InitAccount());
+                await Task.Run(() => Requestor.InitPayment());
 
                 _logger.LogInformation("Creating requestor application: " + Name);
                 Message = "Starting Application";
@@ -124,7 +124,7 @@ namespace App
                 if (Requestor != null)
                 {
                     _logger.LogInformation("Stopping Example Requestor Daemon: " + Name);
-                    Message = "Stopping Daemon";
+                    Message = "qStopping Daemon";
 
                     await Requestor.Stop(StopMethod.SigInt);
                     Requestor = null;

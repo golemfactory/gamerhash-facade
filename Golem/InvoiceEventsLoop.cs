@@ -55,7 +55,7 @@ class InvoiceEventsLoop
 
                 try
                 {
-                    var invoiceEventsResponse = await _httpClient.SendAsync(requestMessage);
+                    var invoiceEventsResponse = await _httpClient.SendAsync(requestMessage, _token);
                     if (invoiceEventsResponse.IsSuccessStatusCode)
                     {
                         var result = await invoiceEventsResponse.Content.ReadAsStringAsync();
@@ -127,41 +127,48 @@ class InvoiceEventsLoop
 
     private async Task<Invoice?> GetInvoice(string id)
     {
-        var invoiceResponse = await _httpClient.GetAsync($"/payment-api/v1/invoices/{id}");
+        Invoice? invoice = null;
 
-        if(invoiceResponse.IsSuccessStatusCode)
+        try
         {
-            var result = await invoiceResponse.Content.ReadAsStringAsync();
-            if(result != null)
+            var invoiceResponse = await _httpClient.GetAsync($"/payment-api/v1/invoices/{id}", _token);
+
+            if(invoiceResponse.IsSuccessStatusCode)
             {
-                var invoice = JsonSerializer.Deserialize<Invoice>(result, _serializerOptions);
-                _logger.LogInformation("Invoice[{}]: {}", id, invoice);
-                return invoice;
+                var result = await invoiceResponse.Content.ReadAsStringAsync();
+                if(result != null)
+                {
+                    invoice = JsonSerializer.Deserialize<Invoice>(result, _serializerOptions);
+                    _logger.LogInformation("Invoice[{}]: {}", id, invoice);
+                }
             }
         }
-        return null;
+        catch {}
+
+        return invoice;
     }
 
     private async Task<List<Payment>> GetPayments()
     {
-        var paymentsResponse = await _httpClient.GetAsync($"/payment-api/v1/payments");
         List<Payment>? payments = null;
-
-        if(paymentsResponse.IsSuccessStatusCode)
+        try
         {
-            var result = await paymentsResponse.Content.ReadAsStringAsync();
-            if(result != null)
+            var paymentsResponse = await _httpClient.GetAsync($"/payment-api/v1/payments", _token);
+
+            if(paymentsResponse.IsSuccessStatusCode)
             {
-                payments = JsonSerializer.Deserialize<List<Payment>>(result, _serializerOptions);
-                _logger.LogInformation("payments {}", payments!=null?payments.SelectMany(x => x.AgreementPayments.Select(y => y.AgreementId + ": " + y.Amount)).ToList():"(null)");
+                var result = await paymentsResponse.Content.ReadAsStringAsync();
+                if(result != null)
+                {
+                    payments = JsonSerializer.Deserialize<List<Payment>>(result, _serializerOptions);
+                    _logger.LogInformation("payments {}", payments!=null?payments.SelectMany(x => x.AgreementPayments.Select(y => y.AgreementId + ": " + y.Amount)).ToList():"(null)");
+                }
             }
         }
+        catch {}
+
         return payments ?? new List<Payment>();
     }
+
+
 }
-
-
-
-
-
-    

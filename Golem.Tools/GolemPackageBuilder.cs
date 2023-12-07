@@ -17,8 +17,8 @@ namespace Golem.Tools
 {
     public class PackageBuilder
     {
-        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.13.1-rc4";
-        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc16";
+        public static string CURRENT_GOLEM_VERSION = "v0.13.2";
+        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc17";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
@@ -78,11 +78,12 @@ namespace Golem.Tools
                 foreach (JObject descriptor in descriptors)
                 {
                     var name = descriptor.Value<string>("name");
-                    if ("ai".Equals(name))
+                    if (name != null && "ai".Equals(name))
                     {
                         var runtime_name = $"ya-runtime-ai{GolemRunnable.ExecutableFileExtension()}";
+                        var runtime_path = Path.Combine(exeUnitDir, runtime_name);
                         descriptor.Remove("supervisor-path");
-                        descriptor.Add("supervisor-path", runtime_name);
+                        descriptor.Add("supervisor-path", runtime_path);
                     }
                 }
                 File.WriteAllText(exeUnitDir + "/ya-dummy-ai.json", descriptors.ToString());
@@ -187,6 +188,11 @@ namespace Golem.Tools
         public static string DataDir(string test_dir)
         {
             return Path.Combine(test_dir, "modules", "golem-data");
+        }
+
+        public static string ModulesDir(string test_dir)
+        {
+            return Path.Combine(test_dir, "modules");
         }
 
         public static string ProviderDataDir(string test_dir)
