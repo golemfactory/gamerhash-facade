@@ -97,7 +97,7 @@ namespace Golem.Tools
         public async Task WaitForFinish()
         {
             if (_golemProcess != null)
-                await Task.Run(() => _golemProcess.Wait());
+                await _golemProcess.Process.WaitForExitAsync();
         }
 
         protected static async Task<string> DownloadBinaryArtifact(string artifact, string tag, string repository)
