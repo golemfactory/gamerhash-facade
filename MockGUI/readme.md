@@ -22,6 +22,9 @@ Run followin command from top level project directory:
 dotnet run --project Golem.Package -- build --target modules
 ```
 
+WARNING! Using this command will overwrite previous content of `modules` directory including
+golem data directories.
+
 ### Selecting versions
 
 You can choose specific release to be downloaded:
@@ -31,7 +34,7 @@ dotnet run --project Golem.Package -- download --target modules --version pre-re
 
 In case of building artifacts locally you can specify `yagna` and `runtimes` versions:
 ```sh
-dotnet run --project Golem.Package -- build --target modules --yagna-version v0.13.2 --runtime-version pre-rel-v0.1.0-rc16
+dotnet run --project Golem.Package -- build --target modules --yagna-version v0.13.2 --runtime-version pre-rel-v0.1.0-rc17
 ```
 
 

@@ -70,7 +70,7 @@ namespace Golem.Tools
             {
                 return key;
             }
-            var keyPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, "test_key.plain");
+            var keyPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", "test_key.plain");
             var keyReader = new StreamReader(keyPath);
             return keyReader.ReadLine() ?? throw new Exception($"Failed to read key from file {keyPath}");
         }

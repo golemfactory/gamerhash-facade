@@ -140,7 +140,8 @@ namespace Golem
 
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
-            var processExitHandler = (int exitCode) => {
+            var processExitHandler = (int exitCode) =>
+            {
                 Status = exitCode == 0 ? GolemStatus.Off : GolemStatus.Error;
             };
 
@@ -252,7 +253,7 @@ namespace Golem
             //yagna is starting and /me won't work until all services are running
             for (int tries = 0; tries < 300; ++tries)
             {
-                if(token.IsCancellationRequested)
+                if (token.IsCancellationRequested)
                     return null;
 
                 Thread.Sleep(300);
@@ -313,7 +314,6 @@ namespace Golem
 
         private Task StartActivityLoop(CancellationToken token)
         {
-            _logger.LogError("Missing cancellationToken");
             token.Register(_httpClient.CancelPendingRequests);
             return new ActivityLoop(_httpClient, token, _logger).Start(
                 SetCurrentJob,

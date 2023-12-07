@@ -81,9 +81,8 @@ namespace Golem.Tools
                     if (name != null && "ai".Equals(name))
                     {
                         var runtime_name = $"ya-runtime-ai{GolemRunnable.ExecutableFileExtension()}";
-                        var runtime_path = Path.Combine(exeUnitDir, runtime_name);
                         descriptor.Remove("supervisor-path");
-                        descriptor.Add("supervisor-path", runtime_path);
+                        descriptor.Add("supervisor-path", runtime_name);
                     }
                 }
                 File.WriteAllText(exeUnitDir + "/ya-dummy-ai.json", descriptors.ToString());
@@ -128,9 +127,9 @@ namespace Golem.Tools
 
             CopyFilesRecursively(extract_dir_nested, dir);
 
-            SetPermissions(dir);
-
             Directory.Delete(extract_dir, true);
+
+            SetPermissions(dir);
         }
 
         public static void BuildDirectoryStructure(string gamerhash_dir)
@@ -293,9 +292,33 @@ namespace Golem.Tools
 
         public static void SetPermissions(string directory)
         {
+            string[] exclude_dirs = { "golem-data" };
+            string[] exclude_files = { "ya-dummy-ai.json" };
+
+            foreach (var dir in Directory.EnumerateDirectories(directory))
+            {
+                if (!exclude_dirs.Contains(Path.GetFileName(dir)))
+                {
+                    Console.WriteLine($"Set execute permissions for content of directory: {dir} ({Path.GetFileName(dir)})");
+                    SetPermissions(dir);
+                }
+                else
+                {
+                    Console.WriteLine($"Excluded directory from setting permissions: {dir}");
+                }
+            }
+
             foreach (var file in Directory.EnumerateFiles(directory))
             {
-                SetFilePermissions(file);
+                if (!exclude_files.Contains(Path.GetFileName(file)))
+                {
+                    Console.WriteLine($"Set execute permissions for file: {file} ({Path.GetFileName(file)})");
+                    SetFilePermissions(file);
+                }
+                else
+                {
+                    Console.WriteLine($"Excluded file from setting permissions: {file}");
+                }
             }
         }
 
