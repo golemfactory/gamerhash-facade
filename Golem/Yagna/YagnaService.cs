@@ -208,7 +208,7 @@ namespace Golem.Yagna
                             var exitCode = process.ExitCode;
                             Console.WriteLine("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
                             exitHandler(exitCode);
-                        }                        
+                        }                             
                     });
                 YagnaProcess = process;
                 ChildProcessTracker.AddProcess(process);

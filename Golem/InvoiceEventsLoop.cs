@@ -55,7 +55,7 @@ class InvoiceEventsLoop
 
                 try
                 {
-                    var invoiceEventsResponse = await _httpClient.SendAsync(requestMessage);
+                    var invoiceEventsResponse = await _httpClient.SendAsync(requestMessage, _token);
                     if (invoiceEventsResponse.IsSuccessStatusCode)
                     {
                         var result = await invoiceEventsResponse.Content.ReadAsStringAsync();
@@ -131,7 +131,7 @@ class InvoiceEventsLoop
 
         try
         {
-            var invoiceResponse = await _httpClient.GetAsync($"/payment-api/v1/invoices/{id}");
+            var invoiceResponse = await _httpClient.GetAsync($"/payment-api/v1/invoices/{id}", _token);
 
             if(invoiceResponse.IsSuccessStatusCode)
             {
@@ -153,7 +153,7 @@ class InvoiceEventsLoop
         List<Payment>? payments = null;
         try
         {
-            var paymentsResponse = await _httpClient.GetAsync($"/payment-api/v1/payments");
+            var paymentsResponse = await _httpClient.GetAsync($"/payment-api/v1/payments", _token);
 
             if(paymentsResponse.IsSuccessStatusCode)
             {
