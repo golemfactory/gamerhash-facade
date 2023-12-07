@@ -37,6 +37,7 @@ namespace Golem.Yagna
             var process = new Process
             {
                 StartInfo = startInfo,
+                EnableRaisingEvents = true
             };
 
             return process;

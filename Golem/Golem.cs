@@ -31,7 +31,7 @@ namespace Golem
 
         private Task? _activityLoop;
         private Task? _invoiceEventsLoop;
-        private CancellationTokenSource? _tokenSource;
+        private CancellationTokenSource _tokenSource;
 
         private readonly ILogger _logger;
 
@@ -129,6 +129,9 @@ namespace Golem
 
         public async Task Start()
         {
+            if (Status == GolemStatus.Starting)
+                return;
+
             Status = GolemStatus.Starting;
 
             await Task.Yield();
@@ -137,14 +140,18 @@ namespace Golem
 
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
-            var success = await StartupYagnaAsync(yagnaOptions);
+            var processExitHandler = (int exitCode) => {
+                Status = exitCode == 0 ? GolemStatus.Off : GolemStatus.Error;
+            };
+
+            var success = await StartupYagnaAsync(yagnaOptions, processExitHandler);
 
             if (success)
             {
                 var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
                 if (defaultKey is not null)
                 {
-                    Status = StartupProvider(yagnaOptions) ? GolemStatus.Ready : GolemStatus.Error;
+                    Status = StartupProvider(yagnaOptions, processExitHandler) ? GolemStatus.Ready : GolemStatus.Error;
                 }
             }
             else
@@ -202,9 +209,9 @@ namespace Golem
             }
         }
 
-        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions)
+        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandle)
         {
-            var success = Yagna.Run(yagnaOptions);
+            var success = Yagna.Run(yagnaOptions, exitHandle, _tokenSource.Token);
 
             if (!yagnaOptions.OpenConsole)
             {
@@ -230,11 +237,11 @@ namespace Golem
             return success;
         }
 
-        public bool StartupProvider(YagnaStartupOptions yagnaOptions)
+        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler)
         {
             Provider.PresetConfig.InitilizeDefaultPreset();
 
-            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, yagnaOptions.OpenConsole, true);
+            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, yagnaOptions.OpenConsole, true, exitHandler);
         }
 
         async Task<string?> WaitForIdentityAsync()
