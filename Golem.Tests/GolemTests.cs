@@ -57,14 +57,14 @@ namespace Golem.Tests
                 status = v;
             };
 
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, _loggerFactory).Subscribe();
 
             var startTask = golem.Start();
             Assert.Equal(GolemStatus.Starting, status);
-            // Console.WriteLine("Status: {0}", status);
             await startTask;
-
             Assert.Equal(GolemStatus.Ready, status);
+
+
             await golem.Stop();
 
             Assert.Equal(GolemStatus.Off, status);
@@ -84,7 +84,7 @@ namespace Golem.Tests
                 status = v;
             };
 
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, _loggerFactory).Subscribe();
 
             var startTask = golem.Start();
             Assert.Equal(GolemStatus.Starting, status);
@@ -110,7 +110,7 @@ namespace Golem.Tests
                 status = v;
             };
 
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, _loggerFactory).Subscribe();
 
             var startTask = golem.Start();
             await golem.Stop();
@@ -143,7 +143,7 @@ namespace Golem.Tests
                 status = v;
             };
 
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, _loggerFactory).Subscribe();
 
             await golem.Start();
 
@@ -166,10 +166,10 @@ namespace Golem.Tests
 
             Action<decimal> updatePrice = (v) => price = v;
 
-            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.StartPrice), updatePrice).Subscribe();
-            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.GpuPerHour), updatePrice).Subscribe();
-            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.EnvPerHour), updatePrice).Subscribe();
-            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.NumRequests), updatePrice).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.StartPrice), updatePrice, _loggerFactory).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.GpuPerHour), updatePrice, _loggerFactory).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.EnvPerHour), updatePrice, _loggerFactory).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.NumRequests), updatePrice, _loggerFactory).Subscribe();
 
 
             //Assert property changes

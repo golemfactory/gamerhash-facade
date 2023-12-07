@@ -1,16 +1,23 @@
 ﻿using System.ComponentModel;
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Golem.Tools
 {
     public class PropertyChangedHandler<T, V>
     {
         private Action<V?> Handler { get; set; }
         private string PropertyName { get; set; }
+        private readonly ILogger _logger;
 
-        public PropertyChangedHandler(string propertyName, Action<V?> handler)
+        public PropertyChangedHandler(string propertyName, Action<V?> handler, ILoggerFactory? loggerFactory = null)
         {
             Handler = handler;
             PropertyName = propertyName;
+
+            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            _logger = loggerFactory.CreateLogger<PropertyChangedHandler<T, V>>();
         }
 
         public PropertyChangedEventHandler Subscribe()

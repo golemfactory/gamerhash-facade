@@ -162,11 +162,11 @@ namespace Golem.Tools
             var objects = JArray.Parse(app_key_list_output_json);
             foreach (JObject root in objects)
             {
-                var name = (string)root.GetValue("name");
+                var name = root.Value<string>("name");
                 if ("autoconfigured".Equals(name))
                 {
-                    var key = (string)root.GetValue("key") ?? throw new Exception("Failed to get app key");
-                    var id = (string)root.GetValue("id") ?? throw new Exception("Failed to get app id");
+                    var key = root.Value<string>("key") ?? throw new Exception("Failed to get app key");
+                    var id = root.Value<string>("id") ?? throw new Exception("Failed to get app id");
                     return new AppKey() { Id = id, Key = key };
                 }
             }
