@@ -28,7 +28,7 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release
     - name: Collect binaries
-      run: dotnet run --project Golem.Package --configuration Release
+      run: dotnet run --project Golem.Package --configuration Release build
 
     - name: Pack
       id: pack

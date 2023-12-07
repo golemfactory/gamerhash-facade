@@ -109,7 +109,7 @@ namespace Golem.Tools
             return dir;
         }
 
-        static async Task DownloadExtractPackage(string dir, string artifact, string repo, string tag)
+        public static async Task DownloadExtractPackage(string dir, string artifact, string repo, string tag)
         {
             var downloaded_artifact = await DownloadArchiveArtifact(artifact, tag, repo);
 
@@ -130,7 +130,6 @@ namespace Golem.Tools
             SetPermissions(dir);
 
             Directory.Delete(extract_dir, true);
-
         }
 
         public static void BuildDirectoryStructure(string gamerhash_dir)

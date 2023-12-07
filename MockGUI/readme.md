@@ -2,15 +2,36 @@
 
 ## Preparing directories
 
+There are 2 options:
+- Building package locally
+- Downloading public released package from github repository
+
+### Downloading artifacts
+
 You can use `Golem.Package` builder tool to create directory structure for MockGUI app.
 Run followin command from top level project directory:
 ```sh
-dotnet run --project Golem.Package -- --target modules
+dotnet run --project Golem.Package -- donwload --target modules
 ```
 
-You can choose specific versions of `yagna` and `runtimes` to be downloaded:
+### Building locally
+
+You can use `Golem.Package` builder tool to create directory structure for MockGUI app.
+Run followin command from top level project directory:
 ```sh
-dotnet run --project Golem.Package -- --target modules --yagna-version v0.13.2 --runtime-version pre-rel-v0.1.0-rc16
+dotnet run --project Golem.Package -- build --target modules
+```
+
+### Selecting versions
+
+You can choose specific release to be downloaded:
+```sh
+dotnet run --project Golem.Package -- download --target modules --version pre-rel-v0.1.0-rc5
+```
+
+In case of building artifacts locally you can specify `yagna` and `runtimes` versions:
+```sh
+dotnet run --project Golem.Package -- build --target modules --yagna-version v0.13.2 --runtime-version pre-rel-v0.1.0-rc16
 ```
 
 
