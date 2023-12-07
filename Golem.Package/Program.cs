@@ -17,15 +17,14 @@ var package_dir = Path.Combine(current, "package");
 
 File.Copy(Path.Combine(build_dir, "Golem.dll"), Path.Combine(bins, "Golem.dll"));
 File.Copy(Path.Combine(build_dir, "GolemLib.dll"), Path.Combine(bins, "GolemLib.dll"));
-PackageBuilder.CopyFilesRecursively(PackageBuilder.ExeUnitsDir(root), bins);
-
 Directory.Delete(Path.Combine(bins, "plugins"), true);
-Directory.Delete(PackageBuilder.DataDir(root), true);
-Directory.Delete(PackageBuilder.ExeUnitsDir(root), true);
 File.Delete(Path.Combine(bins, "golemsp"));
+
+Directory.Delete(PackageBuilder.DataDir(root), true);
 
 if (Directory.Exists(package_dir))
 {
     Directory.Delete(package_dir, true);
 }
-Directory.Move(bins, package_dir);
+PackageBuilder.CopyFilesRecursively(root, package_dir);
+Directory.Delete(root, true);
