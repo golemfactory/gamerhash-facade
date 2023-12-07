@@ -80,7 +80,7 @@ namespace Golem.Tests
             var jobPaymentConfirmationChannel = PropertyChangeChannel<IJob, List<Payment>>(null, "");
 
             #pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
-            Channel<Job> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) =>
+            Channel<Job?> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) =>
             {
                 _logger.LogInformation($"Current Job update: {currentJob}");
 
@@ -145,12 +145,16 @@ namespace Golem.Tests
             var currentJobPaymentStatusChannel = jobPaymentStatusChannel;
             var currentJobPaymentConfirmationChannel = jobPaymentConfirmationChannel;
 
+            var jobId = currentJob.Id;
             // Stopping Sample App
             _logger.LogInformation("Stopping App");
             await app.Stop(StopMethod.SigInt);
 
-            Job? finishedCurrentJob = await SkipMatching(jobChannel, (Job? j) => { return j?.Status == JobStatus.Finished; });
-            _logger.LogInformation("No more jobs");
+            var jobs = await golem.ListJobs(DateTime.MinValue);
+            var job = jobs.SingleOrDefault(j => j.Id == jobId);
+            Assert.True(job!=null && job.Status == JobStatus.Finished);
+            // Job? finishedCurrentJob = await SkipMatching(jobChannel, (Job? j) => { return j?.Status == JobStatus.Finished; });
+            // _logger.LogInformation("No more jobs");
             Assert.Null(golem.CurrentJob);
 
             // Checking payments
@@ -169,7 +173,7 @@ namespace Golem.Tests
             // _logger.LogInformation($"Invoice amount {payments[0].Amount}");
             // Assert.True(Convert.ToDouble(payments[0].Amount) > 0.0);
 
-            foreach (Payment payment in payments) {
+            foreach (Payment payment in payments ?? new List<Payment>()) {
                 _logger.LogInformation($"Got payment confirmation {payment.PaymentId}, payee {payment.PayeeId}, payee adr {payment.PayeeAddr}, amount {payment.Amount}, details {payment.Details}");
             }
 
@@ -194,9 +198,9 @@ namespace Golem.Tests
             matcher ??= FalseMatcher;
             while (await channel.WaitToReadAsync(cancelTokenSource.Token))
             {
-                if (channel.TryRead(out T value) && !matcher.Invoke(value))
+                if (channel.TryRead(out var value) && value is T tValue && !matcher.Invoke(tValue))
                 {
-                    return value;
+                    return tValue;
                 }
                 else
                 {

@@ -38,7 +38,7 @@ namespace Golem.Tools
                 return !_golemProcess.Process.HasExited;
             }
 
-            _logger.LogInformation("Command stopped. Output:\n{0}", string.Join("\n", _golemProcess.GetOutputAndErrorLines()));
+            _logger.LogInformation("Command stopped. Output:\n{0}", string.Join("\n", process.GetOutputAndErrorLines()));
             _golemProcess = null;
             return false;
         }
@@ -102,9 +102,17 @@ namespace Golem.Tools
 
         public static void AddShutdownHook(Command childProcess)
         {
-            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
-            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
-            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => { childProcess.Kill(); childProcess.Wait(); };
+            var killAndWait = () => {
+                try
+                {
+                    childProcess.Kill();
+                    childProcess.Wait();
+                }
+                catch{}
+            };
+            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => killAndWait();
+            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => killAndWait();
+            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => killAndWait();
         }
     }
 

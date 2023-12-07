@@ -173,7 +173,7 @@ namespace Golem.Yagna
 
         public bool HasExited => YagnaProcess?.HasExited ?? true;
 
-        public bool Run(YagnaStartupOptions options)
+        public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
         {
             if (YagnaProcess != null)
             {
@@ -200,7 +200,16 @@ namespace Golem.Yagna
 
             if (process.Start())
             {
-                process.WaitForExitAsync();
+                process
+                    .WaitForExitAsync(cancellationToken)
+                    .ContinueWith(task => {
+                        if(task.Status == TaskStatus.RanToCompletion && process.HasExited)
+                        {
+                            var exitCode = process.ExitCode;
+                            Console.WriteLine("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
+                            exitHandler(exitCode);
+                        }                             
+                    });
                 YagnaProcess = process;
                 ChildProcessTracker.AddProcess(process);
                 return !YagnaProcess.HasExited;

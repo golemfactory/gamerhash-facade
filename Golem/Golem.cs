@@ -17,6 +17,7 @@ using Golem.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Specialized;
+using System.Security.Principal;
 
 namespace Golem
 {
@@ -30,7 +31,7 @@ namespace Golem
 
         private Task? _activityLoop;
         private Task? _invoiceEventsLoop;
-        private CancellationTokenSource? _tokenSource;
+        private CancellationTokenSource _tokenSource;
 
         private readonly ILogger _logger;
 
@@ -126,35 +127,42 @@ namespace Golem
             await Start();
         }
 
-        public Task Start()
+        public async Task Start()
         {
+            if (Status == GolemStatus.Starting)
+                return;
+
             Status = GolemStatus.Starting;
 
-            var task = Task.Run(async () =>
+            await Task.Yield();
+
+            bool openConsole = true;
+
+            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
+
+            var processExitHandler = (int exitCode) => {
+                Status = exitCode == 0 ? GolemStatus.Off : GolemStatus.Error;
+            };
+
+            resetToken();
+
+            var success = await StartupYagnaAsync(yagnaOptions, processExitHandler);
+
+            if (success)
             {
-                bool openConsole = true;
-
-                var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
-
-                var success = await StartupYagnaAsync(yagnaOptions);
-
-                if (success)
+                var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
+                if (defaultKey is not null)
                 {
-                    var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
-                    if (defaultKey is not null)
-                    {
-                        Status = StartupProvider(yagnaOptions) ? GolemStatus.Ready : GolemStatus.Error;
-                    }
+                    Status = StartupProvider(yagnaOptions, processExitHandler) ? GolemStatus.Ready : GolemStatus.Error;
                 }
-                else
-                {
-                    Status = GolemStatus.Error;
-                }
+            }
+            else
+            {
+                Status = GolemStatus.Error;
+            }
 
-                OnPropertyChanged("WalletAddress");
-                OnPropertyChanged("NodeId");
-            });
-            return task;
+            OnPropertyChanged("WalletAddress");
+            OnPropertyChanged("NodeId");
         }
 
         public async Task Stop()
@@ -203,9 +211,9 @@ namespace Golem
             }
         }
 
-        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions)
+        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandler)
         {
-            var success = Yagna.Run(yagnaOptions);
+            var success = Yagna.Run(yagnaOptions, exitHandler, _tokenSource.Token);
 
             if (!yagnaOptions.OpenConsole)
             {
@@ -220,31 +228,33 @@ namespace Golem
 
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
 
-            account = await WaitForIdentityAsync();
+            account = await WaitForIdentityAsync(_tokenSource.Token);
 
-            resetToken();
-            _activityLoop = StartActivityLoop();
-            _invoiceEventsLoop = StartInvoiceEventsLoop();
+            _activityLoop = StartActivityLoop(_tokenSource.Token);
+            _invoiceEventsLoop = StartInvoiceEventsLoop(_tokenSource.Token);
 
             Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20.Id, account ?? "");
 
             return success;
         }
 
-        public bool StartupProvider(YagnaStartupOptions yagnaOptions)
+        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler)
         {
             Provider.PresetConfig.InitilizeDefaultPreset();
 
-            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, yagnaOptions.OpenConsole, true);
+            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, exitHandler, _tokenSource.Token, yagnaOptions.OpenConsole, true);
         }
 
-        async Task<string?> WaitForIdentityAsync()
+        async Task<string?> WaitForIdentityAsync(CancellationToken token)
         {
             string? identity = null;
 
             //yagna is starting and /me won't work until all services are running
             for (int tries = 0; tries < 300; ++tries)
             {
+                if(token.IsCancellationRequested)
+                    return null;
+
                 Thread.Sleep(300);
 
                 if (Yagna.HasExited) // yagna has stopped
@@ -254,7 +264,7 @@ namespace Golem
 
                 try
                 {
-                    var response = _httpClient.GetAsync($"/me").Result;
+                    var response = _httpClient.GetAsync($"/me", token).Result;
                     if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     {
                         throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
@@ -292,9 +302,18 @@ namespace Golem
             Console.WriteLine($"[Data]: {e.Data}");
         }
 
-        private Task StartActivityLoop()
+        private CancellationToken GetCancellationToken()
         {
-            var token = _tokenSource.Token;
+            if (_tokenSource != null)
+                return _tokenSource.Token;
+
+            _logger.LogError("Missing cancellationToken");
+            return CancellationToken.None;
+        }
+
+        private Task StartActivityLoop(CancellationToken token)
+        {
+            _logger.LogError("Missing cancellationToken");
             token.Register(_httpClient.CancelPendingRequests);
             return new ActivityLoop(_httpClient, token, _logger).Start(
                 SetCurrentJob,
@@ -306,9 +325,8 @@ namespace Golem
                 );
         }
 
-        private Task StartInvoiceEventsLoop()
+        private Task StartInvoiceEventsLoop(CancellationToken token)
         {
-            var token = _tokenSource.Token;
             token.Register(_httpClient.CancelPendingRequests);
             return new InvoiceEventsLoop(_httpClient, token, _logger).Start(_jobs.UpdatePaymentStatus, _jobs.UpdatePaymentConfirmation);
         }
