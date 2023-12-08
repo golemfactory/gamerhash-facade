@@ -1,5 +1,7 @@
 
 
+using System.Text.Json;
+
 using Golem.Model;
 using Golem.Yagna.Types;
 
@@ -11,15 +13,16 @@ using Microsoft.Extensions.Logging;
 using StateType = Golem.Model.ActivityState.StateType;
 
 
-public interface IJobsUpdater {
-    Job GetOrCreateJob(string jobId, string requestorId);
+public interface IJobsUpdater
+{
+    Job GetOrCreateJob(string jobId, YagnaAgreement agreement);
     void SetAllJobsFinished();
     StateType? GetActivityState(string joibId);
     JobStatus ResolveStatus(StateType newState, StateType? oldState);
     void UpdateActivityState(string joibId, StateType activityState);
 }
 
-class Jobs: IJobsUpdater
+class Jobs : IJobsUpdater
 {
     private readonly Action<Job?> _setCurrentJob;
     private readonly ILogger _logger;
@@ -37,17 +40,26 @@ class Jobs: IJobsUpdater
         _logger = loggerFactory.CreateLogger(nameof(Jobs));
     }
 
-    public Job GetOrCreateJob(string jobId, string requestorId)
+    public Job GetOrCreateJob(string jobId, YagnaAgreement agreement)
     {
-        if(_jobs.TryGetValue(jobId, out var job))
-            return job.Job;
-        var newJob = new Job
+        var requestorId = agreement.Demand?.RequestorId
+                ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
+        Job? job = null;
+        if (_jobs.TryGetValue(jobId, out var j))
+            job = j.Job;
+        else
         {
-            Id = jobId,
-            RequestorId = requestorId
-        };
-        _jobs[jobId] = new JobAndState(newJob, StateType.New);
-        return newJob;
+            job = new Job
+            {
+                Id = jobId,
+                RequestorId = requestorId,
+            };
+            _jobs[jobId] = new JobAndState(job, StateType.New);
+        }
+
+        var price = GetPriceFromAgreement(agreement);
+        job.Price = price ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
+        return job;
     }
 
     public StateType? GetActivityState(string joibId)
@@ -57,7 +69,7 @@ class Jobs: IJobsUpdater
 
     public void UpdateActivityState(string joibId, StateType activityState)
     {
-        if(_jobs.ContainsKey(joibId))
+        if (_jobs.ContainsKey(joibId))
         {
             _jobs[joibId].State = activityState;
         }
@@ -133,9 +145,11 @@ class Jobs: IJobsUpdater
 
     private void finishAll()
     {
-        foreach (var jobAndStatus in _jobs.Values) {
+        foreach (var jobAndStatus in _jobs.Values)
+        {
             var job = jobAndStatus.Job;
-            if (job.Status != JobStatus.Finished) {
+            if (job.Status != JobStatus.Finished)
+            {
                 job.Status = JobStatus.Finished;
                 job.OnPropertyChanged();
             }
@@ -145,12 +159,53 @@ class Jobs: IJobsUpdater
     class JobAndState
     {
         public Job Job { get; set; }
-        public StateType State { get; set;  }
+        public StateType State { get; set; }
 
         public JobAndState(Job job, StateType state)
         {
             Job = job;
             State = state;
         }
+    }
+
+    private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
+    {
+        if (agreement?.Offer?.Properties != null && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
+        {
+            if (usageVector != null)
+            {
+                var list = usageVector is JsonElement element ? element.EnumerateArray().Select(e => e.ToString()).ToList() : null;
+                if (list != null)
+                {
+                    var gpuSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.gpu-sec"));
+                    var durationSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.duration_sec"));
+                    var requestsIdx = list.FindIndex(x => x.ToString().Equals("ai-runtime.requests"));
+
+                    if (gpuSecIdx >= 0 && durationSecIdx >= 0 && requestsIdx >= 0)
+                    {
+                        if (agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
+                        {
+                            var vals = usageVectorValues is JsonElement valuesElement ? valuesElement.EnumerateArray().Select(x => x.GetDecimal()).ToList() : null;
+                            if (vals != null)
+                            {
+                                var gpuSec = vals[gpuSecIdx];
+                                var durationSec = vals[durationSecIdx];
+                                var requests = vals[requestsIdx];
+                                var initialPrice = vals.Last();
+
+                                return new GolemPrice
+                                {
+                                    StartPrice = initialPrice,
+                                    GpuPerHour = gpuSec,
+                                    EnvPerHour = durationSec,
+                                    NumRequests = requests,
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 }

@@ -140,16 +140,7 @@ class ActivityLoop
         }
 
         var jobId = activityState.AgreementId;
-        var job = jobs.GetOrCreateJob(jobId, agreement.Demand.RequestorId);
-
-        if (job.Price is NotInitializedGolemPrice)
-        {
-            var price = GetPriceFromAgreement(agreement);
-            if (price != null)
-            {
-                job.Price = price;
-            }
-        }
+        var job = jobs.GetOrCreateJob(jobId, agreement);
 
         var usage = GetUsage(activityState.Usage);
         if (usage != null)
@@ -180,47 +171,6 @@ class ActivityLoop
                 NumRequests = usageDict["ai-runtime.requests"],
             };
             return usage;
-        }
-        return null;
-    }
-
-    private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
-    {
-        if (agreement?.Offer?.Properties != null && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
-        {
-            if (usageVector != null)
-            {
-                var list = usageVector is JsonElement element ? element.EnumerateArray().Select(e => e.ToString()).ToList() : null;
-                if (list != null)
-                {
-                    var gpuSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.gpu-sec"));
-                    var durationSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.duration_sec"));
-                    var requestsIdx = list.FindIndex(x => x.ToString().Equals("ai-runtime.requests"));
-
-                    if (gpuSecIdx >= 0 && durationSecIdx >= 0 && requestsIdx >= 0)
-                    {
-                        if (agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
-                        {
-                            var vals = usageVectorValues is JsonElement valuesElement ? valuesElement.EnumerateArray().Select(x => x.GetDecimal()).ToList() : null;
-                            if (vals != null)
-                            {
-                                var gpuSec = vals[gpuSecIdx];
-                                var durationSec = vals[durationSecIdx];
-                                var requests = vals[requestsIdx];
-                                var initialPrice = vals.Last();
-
-                                return new GolemPrice
-                                {
-                                    StartPrice = initialPrice,
-                                    GpuPerHour = gpuSec,
-                                    EnvPerHour = durationSec,
-                                    NumRequests = requests,
-                                };
-                            }
-                        }
-                    }
-                }
-            }
         }
         return null;
     }
