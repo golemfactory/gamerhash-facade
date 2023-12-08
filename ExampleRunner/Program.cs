@@ -23,7 +23,7 @@ class ExampleRunner
         var parsed = Parser.Default.ParseArguments<AppArguments>(args).Value;
         var workDir = parsed.GolemPath ?? "";
 
-        var App = new FullExample(workDir, "Requestor1", loggerFactory);
+        var App = new FullExample(workDir, "Requestor", loggerFactory);
         var logger = loggerFactory.CreateLogger("Example");
 
         _ = Task.Run(async () =>
@@ -39,36 +39,39 @@ class ExampleRunner
             }
         });
 
-        Console.TreatControlCAsInput = true;
         logger.LogInformation("Press Ctrl+C To Terminate");
+
+        waitForCtrlC();
+
+        Task[] tasks = new Task[2];
+        tasks[0] = Task.Run(() =>
+        {
+            logger.LogInformation("Captured Ctrl-C. Finishing example...");
+            var success = App.Stop().Wait(10000);
+            logger.LogInformation("Example application finished");
+        });
+
+        tasks[1] = Task.Run(() =>
+        {
+            waitForCtrlC();
+
+            logger.LogInformation("Captured second Ctrl-C. Killing...");
+            App.Kill().Wait(100);
+            logger.LogInformation("Example application killed");
+        });
+
+        Task.WaitAny(tasks);
+    }
+
+    static void waitForCtrlC()
+    {
+        Console.TreatControlCAsInput = true;
 
         ConsoleKeyInfo cki;
         do
         {
             cki = Console.ReadKey();
-
-            if (((cki.Modifiers & ConsoleModifiers.Control) != 0) && (cki.Key == ConsoleKey.C))
-            {
-                logger.LogInformation("Captured Ctrl-C. Finishing example...");
-                logger.LogInformation("Press Ctrl+X To Kill application.");
-
-                // _ = Task.Run(async () =>
-                // {
-                //     await App.Stop();
-                //     logger.LogInformation("App shutdown");
-                // });
-
-                App.Stop().Wait(10000);
-                logger.LogInformation("App finished");
-                break;
-            }
-            // else if (((cki.Modifiers & ConsoleModifiers.Control) != 0) && (cki.Key == ConsoleKey.X))
-            // {
-            //     logger.LogInformation("Captured Ctrl-X. Killing...");
-            //     App.Kill().Wait(100);
-            //     break;
-            // }
-        } while (true);
+        } while (!(((cki.Modifiers & ConsoleModifiers.Control) != 0) && (cki.Key == ConsoleKey.C)));
     }
 }
 
