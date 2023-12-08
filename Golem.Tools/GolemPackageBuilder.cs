@@ -104,7 +104,8 @@ namespace Golem.Tools
             Directory.CreateDirectory(BinariesDir(dir));
             Directory.CreateDirectory(YagnaDataDir(dir));
 
-            await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
+            if (!File.Exists(Path.Combine(BinariesDir(dir), "yagna")))
+                await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
 
             return dir;
         }

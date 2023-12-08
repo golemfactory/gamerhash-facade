@@ -11,7 +11,7 @@ There are 2 options:
 You can use `Golem.Package` builder tool to create directory structure for MockGUI app.
 Run followin command from top level project directory:
 ```sh
-dotnet run --project Golem.Package -- donwload --target modules
+dotnet run --project Golem.Package -- download --target modules
 ```
 
 ### Building locally
