@@ -34,14 +34,14 @@ dotnet run --project Golem.Package -- download --target modules --version pre-re
 
 In case of building artifacts locally you can specify `yagna` and `runtimes` versions:
 ```sh
-dotnet run --project Golem.Package -- build --target modules --yagna-version v0.13.2 --runtime-version pre-rel-v0.1.0-rc17
+dotnet run --project Golem.Package -- build --target modules --yagna-version v0.14.0 --runtime-version pre-rel-v0.1.0-rc17
 ```
 
 
 ## Running
 
 ```sh
-dotnet run --golem modules
+dotnet run  --project MockGUI --golem modules
 ```
 
 Application requires following directory structure:
