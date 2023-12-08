@@ -35,8 +35,16 @@ class ExampleRunner
 
             Console.CancelKeyPress += async (sender, eventArgs) =>
             {
-                eventArgs.Cancel = true;
-                await App.Stop();
+                if (eventArgs.SpecialKey == ConsoleSpecialKey.ControlC)
+                {
+                    eventArgs.Cancel = true;
+                    await App.Stop();
+                }
+                else
+                {
+                    eventArgs.Cancel = true;
+                    await App.Kill();
+                }
             };
 
 

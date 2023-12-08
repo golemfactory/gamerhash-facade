@@ -124,7 +124,7 @@ namespace App
                 if (Requestor != null)
                 {
                     _logger.LogInformation("Stopping Example Requestor Daemon: " + Name);
-                    Message = "qStopping Daemon";
+                    Message = "Stopping Daemon";
 
                     await Requestor.Stop(StopMethod.SigInt);
                     Requestor = null;
@@ -141,6 +141,31 @@ namespace App
                 Message = "Error";
                 throw;
             }
+        }
+
+        public async Task Kill()
+        {
+            _logger.LogInformation("Requested hard kill of: " + Name);
+
+            if (App != null)
+            {
+                _logger.LogInformation("Killing Example Application: " + Name);
+                Message = "Killing App";
+
+                await App.Stop(StopMethod.SigKill);
+                App = null;
+            }
+
+            if (Requestor != null)
+            {
+                _logger.LogInformation("Killing Example Requestor Daemon: " + Name);
+                Message = "Killing Daemon";
+
+                await Requestor.Stop(StopMethod.SigKill);
+                Requestor = null;
+            }
+
+            _logger.LogInformation("Example killed");
         }
 
         public Task WaitForFinish()
