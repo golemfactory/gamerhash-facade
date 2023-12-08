@@ -61,8 +61,6 @@ namespace Golem.Yagna
                 var preset = new Preset(DefaultPresetName, "ai", coefs);
 
                 AddPreset(preset, out string args, out string info);
-                Console.WriteLine($"Args {args}");
-                Console.WriteLine($"Args {info}");
 
             }
             ActivatePreset(DefaultPresetName);
@@ -73,7 +71,6 @@ namespace Golem.Yagna
                 {
                     DeactivatePreset(preset);
                 }
-                Console.WriteLine($"Preset {preset}");
             }
         }
 
