@@ -34,7 +34,7 @@ class ActivityLoop
 
     public async Task Start(
         Action<Job?> setCurrentJob,
-        Jobs jobs
+        IJobsUpdater jobs
     )
     {
         _logger.LogInformation("Starting monitoring activities");
@@ -79,7 +79,7 @@ class ActivityLoop
                         } else {
                             _logger.LogWarning($"Multiple ({currentJobs.Count}) non terminated jobs");
                             currentJobs.ForEach(job => _logger.LogWarning($"Non terminated job {job.Id}, status {job.Status}"));
-                            Job job = null;
+                            Job? job = null;
                             if ((job = currentJobs.First(job => job.Status == JobStatus.DownloadingModel || job.Status == JobStatus.Computing)) != null) {
                                 setCurrentJob(job);
                             } else if ((job = currentJobs.First(job => job.Status == JobStatus.Idle)) != null) {
@@ -108,16 +108,16 @@ class ActivityLoop
         }
     }
 
-    private async Task<List<Job>> updateJobs(
+    private Task<List<Job>> updateJobs(
         List<ActivityState> activityStates,
-        Jobs jobs
+        IJobsUpdater jobs
     ) {
-        return activityStates
+        return Task.FromResult(activityStates
             .Select(async state => await updateJob(state, jobs))
                 .Select(task => task.Result)
                 .Where(job => job != null)
                 .Cast<Job>()
-                .ToList();
+                .ToList());
     }
 
     /// <param name="activityState"></param>
@@ -126,7 +126,7 @@ class ActivityLoop
     /// <returns>optional current job</returns>
     private async Task<Job?> updateJob(
         ActivityState activityState,
-        Jobs jobs
+        IJobsUpdater jobs
     )
     {
         if (activityState.AgreementId == null)
