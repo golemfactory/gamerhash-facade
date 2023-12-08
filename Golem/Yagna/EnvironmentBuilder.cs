@@ -10,7 +10,8 @@ namespace Golem.Yagna
             { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
             // { "EXE_UNIT_PATH", exeUnitPath },
             // { "DATA_DIR", dataDir },
-            // { "YA_NET_RELAY_HOST", "10.0.2.2:7464" },
+            { "YA_NET_BROADCAST_SIZE", "20" },
+            { "YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477" },
             // { "YA_NET_RELAY_HOST", "127.0.0.1:7464" },
         };
 

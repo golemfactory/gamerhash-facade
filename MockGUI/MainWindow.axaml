@@ -183,7 +183,7 @@
                         </StackPanel>
                     </Border>
 
-                    <Border MaxHeight="700" Classes="Panel">
+                    <Border MaxHeight="500" Classes="Panel">
                         <ScrollViewer>
                             <ListBox    ItemsSource="{Binding JobsHistory}"
                                         HorizontalAlignment="Stretch"

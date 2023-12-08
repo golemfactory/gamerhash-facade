@@ -77,5 +77,3 @@ For this reason Payment Status won't be displayed, when the job is finished. To 
 > [!NOTE]  
 > Current imlementation of `List Jobs` displays only tasks computed during current session of `MockGUI` application.
 > This is temporary behavior which will be reimplemented according to specification later.
-
-## Troubleshooting
