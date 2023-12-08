@@ -16,12 +16,6 @@ class ExampleRunner
 {
     static void Main(string[] args)
     {
-        MainAsync(args).Wait();
-
-    }
-
-    static async Task MainAsync(string[] args)
-    {
         var loggerFactory = LoggerFactory.Create(builder =>
             builder.AddSimpleConsole()
         );
@@ -29,32 +23,52 @@ class ExampleRunner
         var parsed = Parser.Default.ParseArguments<AppArguments>(args).Value;
         var workDir = parsed.GolemPath ?? "";
 
-        try
-        {
-            var App = new FullExample(workDir, "Requestor1", loggerFactory);
+        var App = new FullExample(workDir, "Requestor1", loggerFactory);
+        var logger = loggerFactory.CreateLogger("Example");
 
-            Console.CancelKeyPress += async (sender, eventArgs) =>
+        _ = Task.Run(async () =>
+        {
+            try
             {
-                if (eventArgs.SpecialKey == ConsoleSpecialKey.ControlC)
-                {
-                    eventArgs.Cancel = true;
-                    await App.Stop();
-                }
-                else
-                {
-                    eventArgs.Cancel = true;
-                    await App.Kill();
-                }
-            };
+                await App.Run();
+                await App.WaitForFinish();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error starting app: " + e.ToString());
+            }
+        });
 
+        Console.TreatControlCAsInput = true;
+        logger.LogInformation("Press Ctrl+C To Terminate");
 
-            await App.Run();
-            await App.WaitForFinish();
-        }
-        catch (Exception e)
+        ConsoleKeyInfo cki;
+        do
         {
-            Console.WriteLine("Error starting app: " + e.ToString());
-        }
+            cki = Console.ReadKey();
+
+            if (((cki.Modifiers & ConsoleModifiers.Control) != 0) && (cki.Key == ConsoleKey.C))
+            {
+                logger.LogInformation("Captured Ctrl-C. Finishing example...");
+                logger.LogInformation("Press Ctrl+X To Kill application.");
+
+                // _ = Task.Run(async () =>
+                // {
+                //     await App.Stop();
+                //     logger.LogInformation("App shutdown");
+                // });
+
+                App.Stop().Wait(10000);
+                logger.LogInformation("App finished");
+                break;
+            }
+            // else if (((cki.Modifiers & ConsoleModifiers.Control) != 0) && (cki.Key == ConsoleKey.X))
+            // {
+            //     logger.LogInformation("Captured Ctrl-X. Killing...");
+            //     App.Kill().Wait(100);
+            //     break;
+            // }
+        } while (true);
     }
 }
 

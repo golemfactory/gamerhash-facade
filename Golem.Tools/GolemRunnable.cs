@@ -32,7 +32,6 @@ namespace Golem.Tools
         protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env, bool console_output = false)
         {
             Command process = RunCommand(file_name, working_dir, args, env, console_output);
-            AddShutdownHook(process);
             if (!process.Process.HasExited)
             {
                 _golemProcess = process;
@@ -114,36 +113,6 @@ namespace Golem.Tools
         {
             return OperatingSystem.IsWindows() ? ".exe" : "";
         }
-
-        public static void AddShutdownHook(Command childProcess)
-        {
-            // static void Kill(Command childProcess, object? obj, EventArgs eventArgs)
-            // {
-            //     // if (obj != null)
-            //     //     Console.WriteLine($"Exception: {obj.ToString()}, args: {eventArgs.ToString()}");
-
-            //     //childProcess.Kill();
-            //     childProcess.Wait();
-            // }
-
-            // AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
-            // AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
-            // AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => Kill(childProcess, obj, eventArgs);
-            var killAndWait = () =>
-            {
-                try
-                {
-                    childProcess.Kill();
-                    childProcess.Wait();
-                }
-                catch { }
-            };
-            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => killAndWait();
-            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => killAndWait();
-            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => killAndWait();
-        }
-
-
     }
 
     public enum StopMethod
