@@ -27,8 +27,13 @@ jobs:
       
     - name: Build
       run: dotnet build --configuration Release
+
     - name: Collect binaries
-      run: dotnet run --project Golem.Package --configuration Release build
+      if: matrix.os == 'ubuntu'
+      run: Golem.Package/bin/Release/net7.0/Golem.Package build
+    - name: Collect binaries
+      if: matrix.os == 'windows'
+      run: Golem.Package/bin/Release/net7.0/Golem.Package.exe build
 
     - name: Pack
       id: pack
