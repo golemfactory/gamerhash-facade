@@ -224,7 +224,7 @@ namespace Golem.Tests
                 await eventChannel.Writer.WriteAsync(v);
             };
             if (obj != null) {
-                obj.PropertyChanged += new PropertyChangedHandler<OBJ, T>(propName, emitEvent).Subscribe();
+                obj.PropertyChanged += new PropertyChangedHandler<OBJ, T>(propName, emitEvent, _loggerFactory).Subscribe();
             } else {
                 _logger.LogInformation($"Property {typeof(OBJ)} is null. Event channel will be empty.");
             }

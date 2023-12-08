@@ -97,7 +97,7 @@ namespace Golem.Yagna
             }
         }
 
-        private readonly ILogger? _logger;
+        private readonly ILogger _logger;
 
 
         private static Process? ProviderProcess { get; set; }
@@ -247,7 +247,7 @@ namespace Golem.Yagna
                         if(task.Status == TaskStatus.RanToCompletion && process.HasExited)
                         {
                             var exitCode = process.ExitCode;
-                            Console.WriteLine("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
+                            _logger.LogInformation("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
                             exitHandler(exitCode);
                         }
                     });

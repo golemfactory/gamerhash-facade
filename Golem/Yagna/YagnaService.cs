@@ -59,7 +59,7 @@ namespace Golem.Yagna
         private readonly string _yaExePath;
         private readonly string? _dataDir;
         private static Process? YagnaProcess { get; set; }
-        private readonly ILogger? _logger;
+        private readonly ILogger _logger;
 
         private EnvironmentBuilder Env
         {
@@ -70,10 +70,10 @@ namespace Golem.Yagna
             }
         }
 
-        public YagnaService(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
+        public YagnaService(string golemPath, string? dataDir, ILoggerFactory? loggerFactory)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
-            _logger =  loggerFactory.CreateLogger<YagnaService>();
+            _logger = loggerFactory.CreateLogger<YagnaService>();
             
             _yaExePath = Path.Combine(golemPath, ProcessFactory.BinName("yagna"));
             _dataDir = dataDir;
@@ -206,7 +206,7 @@ namespace Golem.Yagna
                         if(task.Status == TaskStatus.RanToCompletion && process.HasExited)
                         {
                             var exitCode = process.ExitCode;
-                            Console.WriteLine("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
+                            _logger.LogDebug("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
                             exitHandler(exitCode);
                         }                             
                     });

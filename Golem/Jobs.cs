@@ -98,8 +98,7 @@ class Jobs
         if (_jobs.TryGetValue(id, out var jobAndState))
         {
             var job = jobAndState.Job;
-            _logger.LogInformation("New payment status for job {}: {}", job.Id, paymentStatus);
-            Console.WriteLine($"New payment status for job {job.Id}: {paymentStatus} requestor: {job.RequestorId}");
+            _logger.LogInformation($"New payment status for job {job.Id}: {paymentStatus} requestor: {job.RequestorId}");
             job.PaymentStatus = paymentStatus;
         }
         else
