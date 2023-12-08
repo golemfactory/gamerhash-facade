@@ -146,7 +146,6 @@ class ActivityLoop
         if (agreement?.Demand?.RequestorId == null)
         {
             _logger.LogDebug($"No agreement for activity: {activityState.Id} (agreement: {activityState.AgreementId})");
-            jobs.SetAllJobsFinished();
             return null;
         }
 
