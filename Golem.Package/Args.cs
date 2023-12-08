@@ -18,6 +18,6 @@ public class DownloadArgs
 {
     [Option('t', "target", Default = "modules", Required = false, HelpText = "Directory where binaries will be generated relative to working dir")]
     public required string Target { get; set; }
-    [Option('p', "version", Default = "pre-rel-v0.1.0-rc11", Required = false, HelpText = "Yagna version github tag")]
+    [Option('p', "version", Default = "v0.1.0", Required = false, HelpText = "Yagna version github tag")]
     public required string PackageVersion { get; set; }
 }
