@@ -79,7 +79,6 @@ namespace Golem.Tests
             var jobGolemUsageChannel = PropertyChangeChannel<IJob, GolemUsage>(null, "");
             var jobPaymentConfirmationChannel = PropertyChangeChannel<IJob, List<Payment>>(null, "");
 
-            #pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
             Channel<Job?> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) =>
             {
                 _logger.LogInformation($"Current Job update: {currentJob}");
@@ -94,7 +93,6 @@ namespace Golem.Tests
                     (List<Payment>? v) => _logger.LogInformation($"Current job Payment Confirmation update: {v}"));
 
             });
-            #pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
 
 
             // Then
@@ -130,11 +128,10 @@ namespace Golem.Tests
             Assert.Same(currentJob, golem.CurrentJob);
             Assert.NotNull(currentJob);
 
-            // TODO should go from Idle -> DownloadingModel -> Computing
             // // Job starts with `Idle` status and transitions to `DownloadingModel`
-            // Assert.Equal(JobStatus.DownloadingModel, await SkipMatching(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle));
+            Assert.Equal(JobStatus.DownloadingModel, await SkipMatching(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle));
             // Then it transitions into `Computing`.
-            Assert.Equal(JobStatus.Computing, await SkipMatching(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle));
+            Assert.Equal(JobStatus.Computing, await SkipMatching(jobStatusChannel, (JobStatus s) => s == JobStatus.DownloadingModel));
             Assert.Same(currentJob, golem.CurrentJob);
             Assert.NotNull(currentJob);
             Assert.Equal(currentJob.RequestorId, _requestorAppKey?.Id);
@@ -152,7 +149,7 @@ namespace Golem.Tests
 
             var jobs = await golem.ListJobs(DateTime.MinValue);
             var job = jobs.SingleOrDefault(j => j.Id == jobId);
-            Assert.True(job!=null && job.Status == JobStatus.Finished);
+            Assert.True(job != null && job.Status == JobStatus.Finished);
             // Job? finishedCurrentJob = await SkipMatching(jobChannel, (Job? j) => { return j?.Status == JobStatus.Finished; });
             // _logger.LogInformation("No more jobs");
             Assert.Null(golem.CurrentJob);
@@ -161,7 +158,7 @@ namespace Golem.Tests
 
             // TODO where is InvoiceSent?
             // Assert.Equal(GolemLib.Types.PaymentStatus.InvoiceSent , await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel));
-            Assert.Equal(GolemLib.Types.PaymentStatus.Settled , await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent));
+            Assert.Equal(GolemLib.Types.PaymentStatus.Settled, await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent));
             // TODO when these will arrive?
             // Assert.Equal(GolemLib.Types.PaymentStatus.Accepted , await SkipMatching(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.Settled));
             // Assert.Equal(GolemLib.Types.PaymentStatus.InvoiceSent , await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel));
@@ -173,7 +170,8 @@ namespace Golem.Tests
             // _logger.LogInformation($"Invoice amount {payments[0].Amount}");
             // Assert.True(Convert.ToDouble(payments[0].Amount) > 0.0);
 
-            foreach (Payment payment in payments ?? new List<Payment>()) {
+            foreach (Payment payment in payments ?? new List<Payment>())
+            {
                 _logger.LogInformation($"Got payment confirmation {payment.PaymentId}, payee {payment.PayeeId}, payee adr {payment.PayeeAddr}, amount {payment.Amount}, details {payment.Details}");
             }
 
@@ -223,9 +221,12 @@ namespace Golem.Tests
                 extraHandler?.Invoke(v);
                 await eventChannel.Writer.WriteAsync(v);
             };
-            if (obj != null) {
+            if (obj != null)
+            {
                 obj.PropertyChanged += new PropertyChangedHandler<OBJ, T>(propName, emitEvent, _loggerFactory).Subscribe();
-            } else {
+            }
+            else
+            {
                 _logger.LogInformation($"Property {typeof(OBJ)} is null. Event channel will be empty.");
             }
             return eventChannel;
