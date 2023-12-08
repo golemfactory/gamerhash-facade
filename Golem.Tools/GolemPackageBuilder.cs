@@ -115,6 +115,10 @@ namespace Golem.Tools
             var downloaded_artifact = await DownloadArchiveArtifact(artifact, tag, repo);
 
             var extract_dir = Path.Combine(dir, "unpack");
+            if (Path.Exists(extract_dir)) {
+                Directory.Delete(extract_dir, true);
+                Directory.CreateDirectory(extract_dir);
+            }
 
             Extract(downloaded_artifact, extract_dir);
 

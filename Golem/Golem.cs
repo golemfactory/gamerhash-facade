@@ -317,11 +317,7 @@ namespace Golem
             token.Register(_httpClient.CancelPendingRequests);
             return new ActivityLoop(_httpClient, token, _logger).Start(
                 SetCurrentJob,
-                _jobs.GetOrCreateJob,
-                _jobs.ResolveStatus,
-                _jobs.SetAllJobsFinished,
-                _jobs.GetActivityState,
-                _jobs.UpdateActivityState
+                _jobs
                 );
         }
 
