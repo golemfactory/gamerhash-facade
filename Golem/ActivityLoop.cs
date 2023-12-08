@@ -68,23 +68,33 @@ class ActivityLoop
                         var activityStates = parseActivityStates(json);
 
                         List<Job> currentJobs = await updateJobs(activityStates, jobs);
-                        
-                        if (currentJobs.Count == 0) {
+
+                        if (currentJobs.Count == 0)
+                        {
                             _logger.LogDebug("Cleaning current job field");
                             setCurrentJob(null);
-                        } else if (currentJobs.Count == 1) {
+                        }
+                        else if (currentJobs.Count == 1)
+                        {
                             var job = currentJobs[0];
                             _logger.LogDebug($"Setting current job to {job.Id}, status {job.Status}");
                             setCurrentJob(job);
-                        } else {
+                        }
+                        else
+                        {
                             _logger.LogWarning($"Multiple ({currentJobs.Count}) non terminated jobs");
                             currentJobs.ForEach(job => _logger.LogWarning($"Non terminated job {job.Id}, status {job.Status}"));
                             Job? job = null;
-                            if ((job = currentJobs.First(job => job.Status == JobStatus.DownloadingModel || job.Status == JobStatus.Computing)) != null) {
+                            if ((job = currentJobs.First(job => job.Status == JobStatus.DownloadingModel || job.Status == JobStatus.Computing)) != null)
+                            {
                                 setCurrentJob(job);
-                            } else if ((job = currentJobs.First(job => job.Status == JobStatus.Idle)) != null) {
+                            }
+                            else if ((job = currentJobs.First(job => job.Status == JobStatus.Idle)) != null)
+                            {
                                 setCurrentJob(job);
-                            } else {
+                            }
+                            else
+                            {
                                 setCurrentJob(currentJobs[0]);
                             }
                         }
@@ -111,7 +121,8 @@ class ActivityLoop
     private Task<List<Job>> updateJobs(
         List<ActivityState> activityStates,
         IJobsUpdater jobs
-    ) {
+    )
+    {
         return Task.FromResult(activityStates
             .Select(async state => await updateJob(state, jobs))
                 .Select(task => task.Result)
@@ -146,12 +157,7 @@ class ActivityLoop
         if (usage != null)
             job.CurrentUsage = usage;
 
-        var oldActivityState = jobs.GetActivityState(jobId);
-        if (oldActivityState != null)
-        {
-            job.Status = jobs.ResolveStatus(activityState.State, oldActivityState.Value);
-            jobs.UpdateActivityState(jobId, activityState.State);
-        }
+        jobs.UpdateActivityState(jobId, activityState.State);
 
         if (job.Status == JobStatus.Finished)
             return null;

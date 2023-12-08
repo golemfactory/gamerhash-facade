@@ -17,9 +17,7 @@ public interface IJobsUpdater
 {
     Job GetOrCreateJob(string jobId, YagnaAgreement agreement);
     void SetAllJobsFinished();
-    StateType? GetActivityState(string joibId);
-    JobStatus ResolveStatus(StateType newState, StateType? oldState);
-    void UpdateActivityState(string joibId, StateType activityState);
+    void UpdateActivityState(string jobId, StateType activityState);
 }
 
 class Jobs : IJobsUpdater
@@ -67,17 +65,28 @@ class Jobs : IJobsUpdater
         return _jobs.ContainsKey(joibId) ? _jobs[joibId].State : null;
     }
 
-    public void UpdateActivityState(string joibId, StateType activityState)
+    public void UpdateActivityState(string jobId, StateType activityState)
     {
-        if (_jobs.ContainsKey(joibId))
+        var job = _jobs[jobId]?.Job ?? throw new Exception($"Unable to find job {jobId}");
+        var oldActivityState = GetActivityState(jobId);
+        if (oldActivityState != null)
         {
-            _jobs[joibId].State = activityState;
+            job.Status = ResolveStatus(activityState, oldActivityState.Value);
+            _jobs[jobId].State = activityState;
         }
     }
 
     public void SetAllJobsFinished()
     {
-        finishAll();
+        foreach (var jobAndStatus in _jobs.Values)
+        {
+            var job = jobAndStatus.Job;
+            if (job.Status != JobStatus.Finished)
+            {
+                job.Status = JobStatus.Finished;
+                job.OnPropertyChanged();
+            }
+        }
     }
 
     public void UpdateUsage(string jobId, GolemUsage usage)
@@ -122,7 +131,7 @@ class Jobs : IJobsUpdater
         }
     }
 
-    public JobStatus ResolveStatus(StateType newState, StateType? oldState)
+    private JobStatus ResolveStatus(StateType newState, StateType? oldState)
     {
         switch (newState)
         {
@@ -141,19 +150,6 @@ class Jobs : IJobsUpdater
     public Task<List<IJob>> List()
     {
         return Task.FromResult(_jobs.Values.Select(j => j.Job as IJob).ToList());
-    }
-
-    private void finishAll()
-    {
-        foreach (var jobAndStatus in _jobs.Values)
-        {
-            var job = jobAndStatus.Job;
-            if (job.Status != JobStatus.Finished)
-            {
-                job.Status = JobStatus.Finished;
-                job.OnPropertyChanged();
-            }
-        }
     }
 
     class JobAndState
