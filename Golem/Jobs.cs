@@ -60,9 +60,9 @@ class Jobs : IJobsUpdater
         return job;
     }
 
-    public StateType? GetActivityState(string joibId)
+    public StateType? GetActivityState(string jobId)
     {
-        return _jobs.ContainsKey(joibId) ? _jobs[joibId].State : null;
+        return _jobs.ContainsKey(jobId) ? _jobs[jobId].State : null;
     }
 
     public void UpdateActivityState(string jobId, StateType activityState)
