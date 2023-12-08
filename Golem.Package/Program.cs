@@ -55,15 +55,10 @@ static async Task Build(BuildArgs args)
     }
     PackageBuilder.CopyFilesRecursively(Path.Combine(root, "modules"), package_dir);
 
-    if (Directory.Exists(root))
+    if (Directory.Exists(root) && !args.DontClean)
     {
-        foreach (var path in Directory.GetFiles(root, "*.*", SearchOption.AllDirectories))
-        {
-            Console.WriteLine(path); // full path
-        }
-
+        Console.WriteLine($"Removing root dir: {root}");
         Directory.Delete(root, true);
     }
-
 }
 

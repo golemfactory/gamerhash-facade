@@ -9,6 +9,8 @@ public class BuildArgs
     public required string GolemVersion { get; set; }
     [Option('r', "runtime-version", Default = "pre-rel-v0.1.0-rc17", Required = false, HelpText = "Runtime version github tag")]
     public required string RuntimeVersion { get; set; }
+    [Option('c', "dont-clean", Default = false, Required = false, HelpText = "Remove temporary directories")]
+    public required bool DontClean { get; set; }
 }
 
 [Verb("download", HelpText = "Downloads package from public repository.")]
