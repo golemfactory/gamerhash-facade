@@ -23,12 +23,12 @@ nieznanysprawiciel@nieznanysprawiciel-laptop-Leopard-9SCXR:~/Repos/clones/gamerh
 │   ├── golem
 │   │   ├── Golem.dll
 │   │   ├── GolemLib.dll
-│   │   ├── yagna
-│   │   └── ya-provider
+│   │   ├── yagna.exe
+│   │   └── ya-provider.exe
 │   └── plugins
-│       ├── dummy
+│       ├── dummy.exe
 │       ├── ya-dummy-ai.json
-│       └── ya-runtime-ai
+│       └── ya-runtime-ai.exe
 └── Readme.md
 ```
 
