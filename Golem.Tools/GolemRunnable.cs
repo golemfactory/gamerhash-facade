@@ -26,7 +26,7 @@ namespace Golem.Tools
             _logger = logger;
         }
 
-        public abstract bool Start(string? working_dir_name = null);
+        public abstract bool Start();
 
         protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env, bool openConsole = true)
         {

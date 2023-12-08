@@ -16,9 +16,9 @@ namespace Golem.Tools
             return new GolemRelay(dir, logger);
         }
 
-        public override bool Start(string working_dir_name = null)
+        public override bool Start()
         {
-            var working_dir = Path.Combine(_dir, "modules", "golem-data", working_dir_name ?? "relay");
+            var working_dir = Path.Combine(_dir, "modules", "golem-data", "relay");
             Directory.CreateDirectory(working_dir);
             return StartProcess("ya-relay-server", working_dir, "-a 127.0.0.1:16464", new Dictionary<string, string>());
         }

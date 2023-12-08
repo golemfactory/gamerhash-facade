@@ -52,9 +52,9 @@ namespace Golem.Tools
             return new GolemRequestor(dir, logger);
         }
 
-        public override bool Start(string working_dir_name = null)
+        public override bool Start()
         {
-            var working_dir = Path.Combine(_dir, "modules", "golem-data", working_dir_name ?? "yagna");
+            var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
             AppKey = generateRandomAppkey();
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);

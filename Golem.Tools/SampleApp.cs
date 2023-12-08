@@ -27,9 +27,9 @@ namespace App
             File.Copy(app_src, app_dst, true);
         }
 
-        public override bool Start(string? working_dir_name = null)
+        public override bool Start()
         {
-            var working_dir = Path.Combine(_dir, "modules", "golem-data", working_dir_name ?? "app");
+            var working_dir = Path.Combine(_dir, "modules", "golem-data", "app");
             Directory.CreateDirectory(working_dir);
             return StartProcess("app", working_dir, "--network goerli --subnet-tag public", _env, true);
         }
