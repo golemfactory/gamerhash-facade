@@ -95,7 +95,7 @@ class ActivityLoop
                             }
                             else
                             {
-                                setCurrentJob(currentJobs[0]);
+                                setCurrentJob(null);
                             }
                         }
                     }
