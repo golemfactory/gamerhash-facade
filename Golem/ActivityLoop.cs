@@ -66,23 +66,28 @@ class ActivityLoop
                     {
                         _logger.LogInformation("got json {0}", json);
                         var activityStates = parseActivityStates(json);
-                        activityStates = filterEmptyOrIncomplete(activityStates);
-                        if (activityStates.Count == 0)
-                        {
-                            jobs.SetAllJobsFinished();
+
+                        List<Job> currentJobs = await updateJobs(activityStates, jobs);
+                        
+                        if (currentJobs.Count == 0) {
+                            _logger.LogDebug("Cleaning current job field");
                             setCurrentJob(null);
-                            continue;
+                        } else if (currentJobs.Count == 1) {
+                            var job = currentJobs[0];
+                            _logger.LogDebug($"Setting current job to {job.Id}, status {job.Status}");
+                            setCurrentJob(job);
+                        } else {
+                            _logger.LogWarning($"Multiple ({currentJobs.Count}) non terminated jobs");
+                            currentJobs.ForEach(job => _logger.LogWarning($"Non terminated job {job.Id}, status {job.Status}"));
+                            Job job = null;
+                            if ((job = currentJobs.First(job => job.Status == JobStatus.DownloadingModel || job.Status == JobStatus.Computing)) != null) {
+                                setCurrentJob(job);
+                            } else if ((job = currentJobs.First(job => job.Status == JobStatus.Idle)) != null) {
+                                setCurrentJob(job);
+                            } else {
+                                setCurrentJob(currentJobs[0]);
+                            }
                         }
-                        List<Job> currentJob = activityStates
-                            .Select(async state => await updateJob(state, jobs))
-                                .Select(t => t.Result)
-                                .ToList()
-                                .FindAll(j => j != null)
-                        // foreach (ActivityState activityState in activityStates)
-                        // {
-                        //     await updateJobs(activityState, jobs
-                        //     );
-                        // }
                     }
                 }
                 catch (Exception e)
@@ -103,29 +108,38 @@ class ActivityLoop
         }
     }
 
-    List<ActivityState> filterEmptyOrIncomplete(List<ActivityState>? activityStates)
-    {
-        return activityStates?.FindAll((activityState) => activityState.AgreementId != null);
+    private async Task<List<Job>> updateJobs(
+        List<ActivityState> activityStates,
+        Jobs jobs
+    ) {
+        return activityStates
+            .Select(async state => await updateJob(state, jobs))
+                .Select(task => task.Result)
+                .Where(job => job != null)
+                .Cast<Job>()
+                .ToList();
     }
 
-    /// <param name="activity_state"></param>
+    /// <param name="activityState"></param>
     /// <param name="setCurrentJob"></param>
     /// <param name="jobs"></param>
     /// <returns>optional current job</returns>
     private async Task<Job?> updateJob(
-        ActivityState activity_state,
+        ActivityState activityState,
         Jobs jobs
     )
     {
-        var agreement = await GetAgreement(activity_state.AgreementId);
+        if (activityState.AgreementId == null)
+            return null;
+        var agreement = await GetAgreement(activityState.AgreementId);
         if (agreement?.Demand?.RequestorId == null)
         {
-            _logger.LogDebug($"No agreement for activity: {activity_state.Id} (agreement: {activity_state.AgreementId})");
+            _logger.LogDebug($"No agreement for activity: {activityState.Id} (agreement: {activityState.AgreementId})");
             jobs.SetAllJobsFinished();
             return null;
         }
 
-        var jobId = activity_state.AgreementId;
+        var jobId = activityState.AgreementId;
         var job = jobs.GetOrCreateJob(jobId, agreement.Demand.RequestorId);
 
         if (job.Price is NotInitializedGolemPrice)
@@ -137,16 +151,20 @@ class ActivityLoop
             }
         }
 
-        var activityState = jobs.GetActivityState(jobId);
-        if (activityState != null)
-        {
-            job.Status = jobs.ResolveStatus(activityState.Value, activity_state.State);
-            jobs.UpdateActivityState(jobId, activity_state.State);
-        }
-
-        var usage = GetUsage(activity_state.Usage);
+        var usage = GetUsage(activityState.Usage);
         if (usage != null)
             job.CurrentUsage = usage;
+
+        var oldActivityState = jobs.GetActivityState(jobId);
+        if (oldActivityState != null)
+        {
+            job.Status = jobs.ResolveStatus(activityState.State, oldActivityState.Value);
+            jobs.UpdateActivityState(jobId, activityState.State);
+        }
+
+        if (job.Status == JobStatus.Finished)
+            return null;
+
         return job;
     }
 
