@@ -73,6 +73,8 @@ class ActivityLoop
                         {
                             _logger.LogDebug("Cleaning current job field");
                             setCurrentJob(null);
+                            //TODO why jobs terminated as Idle stay Idle?
+                            jobs.SetAllJobsFinished();
                         }
                         else if (currentJobs.Count == 1)
                         {
