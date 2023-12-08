@@ -37,7 +37,6 @@ namespace Golem.Tools
                 { "YAGNA_DATADIR", Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")) },
                 { "YAGNA_API_URL", "http://127.0.0.1:7465" },
                 { "GSB_URL", "tcp://127.0.0.1:7464" },
-                { "YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477" },
             };
         }
 

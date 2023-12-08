@@ -9,6 +9,8 @@ public class AppArguments
 {
     [Option('g', "golem", Required = true, HelpText = "Path to a folder with golem executables (modules)")]
     public string? GolemPath { get; set; }
+    [Option('r', "devnet-relay", Default = false, Required = false, HelpText = "Change relay to devnet yacn2a")]
+    public required bool DevnetRelay { get; set; }
 }
 
 
@@ -22,6 +24,9 @@ class ExampleRunner
 
         var parsed = Parser.Default.ParseArguments<AppArguments>(args).Value;
         var workDir = parsed.GolemPath ?? "";
+
+        if (parsed.DevnetRelay)
+            System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477");
 
         var App = new FullExample(workDir, "Requestor", loggerFactory);
         var logger = loggerFactory.CreateLogger("Example");

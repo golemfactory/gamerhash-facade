@@ -15,6 +15,8 @@ public class AppArguments
     public string? GolemPath { get; set; }
     [Option('d', "use-dll", Required = false, HelpText = "Load Golem object from dll found in binaries directory. (Simulates how GamerHash will use it. Otherwise project dependency will be used.)")]
     public bool UseDll { get; set; }
+    [Option('r', "devnet-relay", Default = false, Required = false, HelpText = "Change relay to devnet yacn2a")]
+    public required bool DevnetRelay { get; set; }
 }
 
 public partial class App : Application
@@ -35,6 +37,10 @@ public partial class App : Application
                    {
                        DataContext = null
                    };
+
+                   if (o.DevnetRelay)
+                       System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477");
+
 
                    if (o.UseDll)
                    {
