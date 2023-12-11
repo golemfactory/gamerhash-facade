@@ -80,6 +80,3 @@ class ExampleRunner
         } while (!(((cki.Modifiers & ConsoleModifiers.Control) != 0) && (cki.Key == ConsoleKey.C)));
     }
 }
-
-
-

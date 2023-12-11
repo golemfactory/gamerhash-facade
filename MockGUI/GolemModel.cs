@@ -71,7 +71,7 @@ namespace MockGUI.ViewModels
             );
 
             var golem = await LoadLib("Golem.dll", modulesDir, loggerFactory);
-            var relay = await CreateRelay(modulesDir, relayType);
+            var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
             return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
         }
 
@@ -85,17 +85,18 @@ namespace MockGUI.ViewModels
             var datadir = Path.Combine(modulesDir, "golem-data");
 
             var golem = new Golem.Golem(binaries, datadir, loggerFactory);
-            var relay = await CreateRelay(modulesDir, relayType);
+            var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
             return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
         }
 
-        public static async Task<GolemRelay?> CreateRelay(string modulesDir, RelayType relayType)
+        public static async Task<GolemRelay?> CreateRelay(string modulesDir, RelayType relayType, ILoggerFactory loggerFactory)
         {
             GolemRelay.SetEnv(relayType);
 
             if (relayType == RelayType.Local)
             {
-                return await GolemRelay.Build();
+                var logger = loggerFactory.CreateLogger(nameof(GolemRelay));
+                return await GolemRelay.Build("local_relay", logger);
             }
             else
                 return null;
