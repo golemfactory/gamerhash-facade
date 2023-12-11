@@ -8,7 +8,7 @@ namespace Golem.Yagna
             { "YAGNA_API_URL", "http://127.0.0.1:12502" },
             { "YA_PAYMENT_NETWORK_GROUP", "testnet" },
             { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
-            { "YA_NET_BROADCAST_SIZE", "20" },
+            { "YA_NET_BROADCAST_SIZE", "12" },
             { "YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477" },
         };
 
