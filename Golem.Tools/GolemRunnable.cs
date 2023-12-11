@@ -1,6 +1,7 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 using Golem.Yagna;
 
@@ -28,34 +29,41 @@ namespace Golem.Tools
 
         public abstract bool Start();
 
-        protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env, bool openConsole = true)
+        protected bool StartProcess(string file_name, string working_dir, string args, Dictionary<string, string> env, bool console_output = false)
         {
-            Command process = RunCommand(file_name, working_dir, args, env);
-            AddShutdownHook(process);
+            Command process = RunCommand(file_name, working_dir, args, env, console_output);
             if (!process.Process.HasExited)
             {
                 _golemProcess = process;
                 return !_golemProcess.Process.HasExited;
             }
 
-            _logger.LogInformation("Command stopped. Output:\n{0}", string.Join("\n", process.GetOutputAndErrorLines()));
+            if (_golemProcess != null)
+                _logger.LogInformation("Command stopped. Output:\n{0}", string.Join("\n", _golemProcess.GetOutputAndErrorLines()));
+
             _golemProcess = null;
             return false;
         }
 
-        protected Command RunCommand(string file_name, string working_dir, string args, Dictionary<string, string> env)
+        protected Command RunCommand(string file_name, string working_dir, string args, Dictionary<string, string> env, bool console_output = false)
         {
             var file_name_w_ext = ProcessFactory.BinName(file_name);
             var dir = Path.GetFullPath(_dir);
             var runnable_path = Path.Combine(dir, "modules", "golem", file_name_w_ext);
 
             var args_list = args.Split(null);
+
             return Command.Run(runnable_path, args_list, options => options
                 .EnvironmentVariables(env)
                 .WorkingDirectory(working_dir)
                 .ThrowOnError(true)
                 .DisposeOnExit(false)
-            );
+                .StartInfo(info =>
+                {
+                    info.RedirectStandardError = !console_output;
+                    info.RedirectStandardOutput = !console_output;
+                    info.UseShellExecute = false;
+                }));
         }
 
         public async Task Stop(StopMethod stopMethod = StopMethod.SigKill)
@@ -77,12 +85,18 @@ namespace Golem.Tools
             }
             try
             {
-                _golemProcess.Wait();
+                await WaitForFinish();
             }
             finally
             {
                 _golemProcess = null;
             }
+        }
+
+        public async Task WaitForFinish()
+        {
+            if (_golemProcess != null)
+                await _golemProcess.Process.WaitForExitAsync();
         }
 
         protected static async Task<string> DownloadBinaryArtifact(string artifact, string tag, string repository)
@@ -98,21 +112,6 @@ namespace Golem.Tools
         public static string ExecutableFileExtension()
         {
             return OperatingSystem.IsWindows() ? ".exe" : "";
-        }
-
-        public static void AddShutdownHook(Command childProcess)
-        {
-            var killAndWait = () => {
-                try
-                {
-                    childProcess.Kill();
-                    childProcess.Wait();
-                }
-                catch{}
-            };
-            AppDomain.CurrentDomain.DomainUnload += (obj, eventArgs) => killAndWait();
-            AppDomain.CurrentDomain.ProcessExit += (obj, eventArgs) => killAndWait();
-            AppDomain.CurrentDomain.UnhandledException += (obj, eventArgs) => killAndWait();
         }
     }
 

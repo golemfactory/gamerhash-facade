@@ -17,7 +17,7 @@ namespace Golem.Tools
 {
     public class PackageBuilder
     {
-        public static string CURRENT_GOLEM_VERSION = "v0.13.2";
+        public static string CURRENT_GOLEM_VERSION = "v0.14.0";
         public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc17";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
@@ -68,7 +68,7 @@ namespace Golem.Tools
             await DownloadExtractPackage(exeUnitDir, "dummy-framework", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION);
 
             string? dummy_descriptors = null;
-            using (StreamReader r = new(Path.Combine(exeUnitDir, "ya-dummy-ai.json")))
+            using (StreamReader r = new StreamReader(Path.Combine(exeUnitDir, "ya-dummy-ai.json")))
             {
                 dummy_descriptors = r.ReadToEnd();
             }
@@ -77,13 +77,12 @@ namespace Golem.Tools
                 var descriptors = JArray.Parse(dummy_descriptors);
                 foreach (JObject descriptor in descriptors)
                 {
-                    var name = descriptor.GetValue("name");
-                    if (name!=null && "ai".Equals(name.ToString()))
+                    var name = descriptor.Value<string>("name");
+                    if (name != null && "ai".Equals(name))
                     {
                         var runtime_name = $"ya-runtime-ai{GolemRunnable.ExecutableFileExtension()}";
-                        var runtime_path = Path.Combine(exeUnitDir, runtime_name);
                         descriptor.Remove("supervisor-path");
-                        descriptor.Add("supervisor-path", runtime_path);
+                        descriptor.Add("supervisor-path", runtime_name);
                     }
                 }
                 File.WriteAllText(exeUnitDir + "/ya-dummy-ai.json", descriptors.ToString());
@@ -105,12 +104,13 @@ namespace Golem.Tools
             Directory.CreateDirectory(BinariesDir(dir));
             Directory.CreateDirectory(YagnaDataDir(dir));
 
-            await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
+            if (!File.Exists(Path.Combine(BinariesDir(dir), "yagna")))
+                await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
 
             return dir;
         }
 
-        static async Task DownloadExtractPackage(string dir, string artifact, string repo, string tag)
+        public static async Task DownloadExtractPackage(string dir, string artifact, string repo, string tag)
         {
             var downloaded_artifact = await DownloadArchiveArtifact(artifact, tag, repo);
 
@@ -132,10 +132,9 @@ namespace Golem.Tools
 
             CopyFilesRecursively(extract_dir_nested, dir);
 
-            SetPermissions(dir);
-
             Directory.Delete(extract_dir, true);
 
+            SetPermissions(dir);
         }
 
         public static void BuildDirectoryStructure(string gamerhash_dir)
@@ -268,15 +267,16 @@ namespace Golem.Tools
         // Based on: https://stackoverflow.com/a/52200001
         static void ExtractTGZ(string gzArchiveName, string destFolder)
         {
-            Stream inStream = File.OpenRead(gzArchiveName);
-            Stream gzipStream = new GZipInputStream(inStream);
-
-            TarArchive tarArchive = TarArchive.CreateInputTarArchive(gzipStream, Encoding.UTF8);
-            tarArchive.ExtractContents(destFolder);
-            tarArchive.Close();
-
-            gzipStream.Close();
-            inStream.Close();
+            using (Stream inStream = File.OpenRead(gzArchiveName))
+            {
+                using (Stream gzipStream = new GZipInputStream(inStream))
+                {
+                    using (TarArchive tarArchive = TarArchive.CreateInputTarArchive(gzipStream, Encoding.UTF8))
+                    {
+                        tarArchive.ExtractContents(destFolder);
+                    }
+                }
+            }
         }
 
         public static void SetFilePermissions(string fileName)
@@ -298,9 +298,23 @@ namespace Golem.Tools
 
         public static void SetPermissions(string directory)
         {
+            string[] exclude_dirs = { "golem-data" };
+            string[] exclude_files = { "ya-dummy-ai.json" };
+
+            foreach (var dir in Directory.EnumerateDirectories(directory))
+            {
+                if (!exclude_dirs.Contains(Path.GetFileName(dir)))
+                {
+                    SetPermissions(dir);
+                }
+            }
+
             foreach (var file in Directory.EnumerateFiles(directory))
             {
-                SetFilePermissions(file);
+                if (!exclude_files.Contains(Path.GetFileName(file)))
+                {
+                    SetFilePermissions(file);
+                }
             }
         }
 

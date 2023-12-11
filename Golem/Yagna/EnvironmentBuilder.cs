@@ -2,17 +2,17 @@ namespace Golem.Yagna
 {
     public class EnvironmentBuilder
     {
-        private readonly Dictionary<string, string> env = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> defaultEnv = new Dictionary<string, string>()
         {
             { "GSB_URL", "tcp://127.0.0.1:12501" },
             { "YAGNA_API_URL", "http://127.0.0.1:12502" },
             { "YA_PAYMENT_NETWORK_GROUP", "testnet" },
             { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
-            // { "EXE_UNIT_PATH", exeUnitPath },
-            // { "DATA_DIR", dataDir },
-            // { "YA_NET_RELAY_HOST", "10.0.2.2:7464" },
-            // { "YA_NET_RELAY_HOST", "127.0.0.1:7464" },
+            { "YA_NET_BROADCAST_SIZE", "20" },
+            { "YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477" },
         };
+
+        private readonly Dictionary<string, string> env = new Dictionary<string, string>();
 
         public EnvironmentBuilder WithGsbUrl(string s)
         {
@@ -88,6 +88,13 @@ namespace Golem.Yagna
 
         public Dictionary<string, string> Build()
         {
+            foreach (var kvp in defaultEnv)
+            {
+                if (!env.ContainsKey(kvp.Key) && Environment.GetEnvironmentVariable(kvp.Key) == null)
+                {
+                    env.Add(kvp.Key, kvp.Value);
+                }
+            }
             return env;
         }
     }

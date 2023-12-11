@@ -74,7 +74,6 @@ namespace Golem.Yagna
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<YagnaService>();
-            
             _yaExePath = Path.Combine(golemPath, ProcessFactory.BinName("yagna"));
             _dataDir = dataDir;
             if (!File.Exists(_yaExePath))
@@ -87,7 +86,7 @@ namespace Golem.Yagna
         {
             var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, Env.Build());
 
-            process.Start();            
+            process.Start();
             return process;
         }
 
@@ -202,13 +201,14 @@ namespace Golem.Yagna
             {
                 process
                     .WaitForExitAsync(cancellationToken)
-                    .ContinueWith(task => {
-                        if(task.Status == TaskStatus.RanToCompletion && process.HasExited)
+                    .ContinueWith(task =>
+                    {
+                        if (task.Status == TaskStatus.RanToCompletion && process.HasExited)
                         {
                             var exitCode = process.ExitCode;
                             _logger.LogDebug("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
                             exitHandler(exitCode);
-                        }                             
+                        }
                     });
                 YagnaProcess = process;
                 ChildProcessTracker.AddProcess(process);

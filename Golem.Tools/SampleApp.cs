@@ -22,7 +22,7 @@ namespace App
         {
             _env = env;
             var app_filename = ProcessFactory.BinName("app");
-            var app_src = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, app_filename);
+            var app_src = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", app_filename);
             var app_dst = Path.Combine(dir, "modules", "golem", app_filename);
             File.Copy(app_src, app_dst, true);
         }
@@ -79,18 +79,18 @@ namespace App
                 _logger.LogInformation("Starting Requestor daemon: " + Name);
                 Message = "Starting Daemon";
 
-                Requestor = await GolemRequestor.BuildRelative(WorkDir, _logger, false);
-                Requestor.Start();
+                Requestor = await Task.Run(async () => await GolemRequestor.BuildRelative(WorkDir, _logger, false));
+                await Task.Run(() => Requestor.Start());
 
                 Message = "Funding accounts";
                 _logger.LogInformation("Initializing payment accounts for: " + Name);
-                Requestor.InitPayment();
+                await Task.Run(() => Requestor.InitPayment());
 
                 _logger.LogInformation("Creating requestor application: " + Name);
                 Message = "Starting Application";
 
                 App = Requestor?.CreateSampleApp() ?? throw new Exception("Requestor '" + Name + "' not started yet");
-                App.Start();
+                await Task.Run(() => App.Start());
 
                 _logger.LogInformation("Application started: " + Name);
                 Message = "App running";
@@ -107,29 +107,72 @@ namespace App
 
         public async Task Stop()
         {
+            try
+            {
+                if (App != null)
+                {
+                    _logger.LogInformation("Stopping Example Application: " + Name);
+                    Message = "Stopping App";
+
+                    await App.Stop(StopMethod.SigInt);
+                    App = null;
+
+                    _logger.LogInformation("Stopped Example Application: " + Name);
+                    Message = "App Stopped";
+                }
+
+                if (Requestor != null)
+                {
+                    _logger.LogInformation("Stopping Example Requestor Daemon: " + Name);
+                    Message = "Stopping Daemon";
+
+                    await Requestor.Stop(StopMethod.SigInt);
+                    Requestor = null;
+
+                    _logger.LogInformation("Requestor Daemon stopped: " + Name);
+                    Message = "Daemon Stopped";
+                }
+
+                Message = "Example stopped";
+            }
+            catch (Exception e)
+            {
+                _logger.LogInformation("Error stopping app: " + Name + " Error: " + e.ToString());
+                Message = "Error";
+                throw;
+            }
+        }
+
+        public async Task Kill()
+        {
+            _logger.LogInformation("Requested hard kill of: " + Name);
+
             if (App != null)
             {
-                _logger.LogInformation("Stopping Example Application: " + Name);
-                Message = "Stopping App";
+                _logger.LogInformation("Killing Example Application: " + Name);
+                Message = "Killing App";
 
-                await App.Stop(StopMethod.SigInt);
+                await App.Stop(StopMethod.SigKill);
                 App = null;
-
-                Message = "App Stopped";
             }
 
             if (Requestor != null)
             {
-                _logger.LogInformation("Stopping Example Requestor: " + Name);
-                Message = "Stopping Daemon";
+                _logger.LogInformation("Killing Example Requestor Daemon: " + Name);
+                Message = "Killing Daemon";
 
-                await Requestor.Stop(StopMethod.SigInt);
+                await Requestor.Stop(StopMethod.SigKill);
                 Requestor = null;
-
-                Message = "Daemon Stopped";
             }
 
-            Message = "Example stopped";
+            _logger.LogInformation("Example killed");
+        }
+
+        public Task WaitForFinish()
+        {
+            if (App != null)
+                return App.WaitForFinish();
+            return Task.CompletedTask;
         }
 
         public async ValueTask DisposeAsync()

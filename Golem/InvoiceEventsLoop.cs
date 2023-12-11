@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
+
 using Golem.Tools;
 
 using GolemLib.Types;
@@ -43,13 +44,13 @@ class InvoiceEventsLoop
         try
         {
             const int timeout = 10;
-            
+
 
             while (!_token.IsCancellationRequested)
             {
                 var url = $"/payment-api/v1/invoiceEvents?timeout={timeout}&afterTimestamp={_since.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture)}";
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-            
+
                 requestMessage.Headers.Add("X-Requestor-Events", string.Join(',', _monitorEventTypes));
                 requestMessage.Headers.Add("X-Provider-Events", string.Join(',', _monitorEventTypes));
 
@@ -133,17 +134,17 @@ class InvoiceEventsLoop
         {
             var invoiceResponse = await _httpClient.GetAsync($"/payment-api/v1/invoices/{id}", _token);
 
-            if(invoiceResponse.IsSuccessStatusCode)
+            if (invoiceResponse.IsSuccessStatusCode)
             {
                 var result = await invoiceResponse.Content.ReadAsStringAsync();
-                if(result != null)
+                if (result != null)
                 {
                     invoice = JsonSerializer.Deserialize<Invoice>(result, _serializerOptions);
                     _logger.LogInformation("Invoice[{}]: {}", id, invoice);
                 }
             }
         }
-        catch {}
+        catch { }
 
         return invoice;
     }
@@ -155,17 +156,17 @@ class InvoiceEventsLoop
         {
             var paymentsResponse = await _httpClient.GetAsync($"/payment-api/v1/payments", _token);
 
-            if(paymentsResponse.IsSuccessStatusCode)
+            if (paymentsResponse.IsSuccessStatusCode)
             {
                 var result = await paymentsResponse.Content.ReadAsStringAsync();
-                if(result != null)
+                if (result != null)
                 {
                     payments = JsonSerializer.Deserialize<List<Payment>>(result, _serializerOptions);
-                    _logger.LogInformation("payments {}", payments!=null?payments.SelectMany(x => x.AgreementPayments.Select(y => y.AgreementId + ": " + y.Amount)).ToList():"(null)");
+                    _logger.LogDebug("payments {}", payments != null ? payments.SelectMany(x => x.AgreementPayments.Select(y => y.AgreementId + ": " + y.Amount)).ToList() : "(null)");
                 }
             }
         }
-        catch {}
+        catch { }
 
         return payments ?? new List<Payment>();
     }

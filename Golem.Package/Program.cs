@@ -1,31 +1,64 @@
-﻿using Golem.Tools;
+﻿using CommandLine;
 
-Console.WriteLine("Running Golem AI package builder!");
+using Golem.Tools;
 
-PackageBuilder.CURRENT_GOLEM_VERSION = "v0.13.2";
-PackageBuilder.CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc16";
 
-Console.WriteLine("Versions:");
-Console.WriteLine("Yagna: " + PackageBuilder.CURRENT_GOLEM_VERSION);
-Console.WriteLine("AI Runtime: " + PackageBuilder.CURRENT_RUNTIME_VERSION);
+await Parser.Default.ParseArguments<BuildArgs, DownloadArgs>(args)
+    .MapResult(
+        (BuildArgs options) => Build(options),
+        (DownloadArgs options) => Download(options),
+        errors => Task.FromResult(1)
+    );
 
-var current = Directory.GetCurrentDirectory();
-var root = await PackageBuilder.BuildTestDirectory("pack");
-var bins = PackageBuilder.BinariesDir(root);
-var build_dir = AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
-var package_dir = Path.Combine(current, "package");
 
-File.Copy(Path.Combine(build_dir, "Golem.dll"), Path.Combine(bins, "Golem.dll"));
-File.Copy(Path.Combine(build_dir, "GolemLib.dll"), Path.Combine(bins, "GolemLib.dll"));
-PackageBuilder.CopyFilesRecursively(PackageBuilder.ExeUnitsDir(root), bins);
-
-Directory.Delete(Path.Combine(bins, "plugins"), true);
-Directory.Delete(PackageBuilder.DataDir(root), true);
-Directory.Delete(PackageBuilder.ExeUnitsDir(root), true);
-File.Delete(Path.Combine(bins, "golemsp"));
-
-if (Directory.Exists(package_dir))
+static async Task Download(DownloadArgs args)
 {
-    Directory.Delete(package_dir, true);
+    Console.WriteLine("Running Golem AI package downloader!");
+
+    Console.WriteLine("Versions:");
+    Console.WriteLine("AI Facade: " + args.PackageVersion);
+
+    var current = Directory.GetCurrentDirectory();
+    var target = Path.Combine(current, args.Target);
+
+    Directory.CreateDirectory(target);
+    await PackageBuilder.DownloadExtractPackage(target, "gamerhash-ai-facade", "golemfactory/gamerhash-facade", args.PackageVersion);
 }
-Directory.Move(bins, package_dir);
+
+static async Task Build(BuildArgs args)
+{
+    Console.WriteLine("Running Golem AI package builder!");
+
+    PackageBuilder.CURRENT_GOLEM_VERSION = args.GolemVersion;
+    PackageBuilder.CURRENT_RUNTIME_VERSION = args.RuntimeVersion;
+
+    Console.WriteLine("Versions:");
+    Console.WriteLine("Yagna: " + PackageBuilder.CURRENT_GOLEM_VERSION);
+    Console.WriteLine("AI Runtime: " + PackageBuilder.CURRENT_RUNTIME_VERSION);
+
+    var current = Directory.GetCurrentDirectory();
+    var root = await PackageBuilder.BuildTestDirectory("pack");
+    var bins = PackageBuilder.BinariesDir(root);
+    var build_dir = AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
+    var package_dir = Path.Combine(current, args.Target);
+
+    File.Copy(Path.Combine(build_dir, "Golem.dll"), Path.Combine(bins, "Golem.dll"));
+    File.Copy(Path.Combine(build_dir, "GolemLib.dll"), Path.Combine(bins, "GolemLib.dll"));
+
+    Directory.Delete(Path.Combine(bins, "plugins"), true);
+    File.Delete(Path.Combine(bins, "golemsp"));
+    Directory.Delete(PackageBuilder.DataDir(root), true);
+
+    if (Directory.Exists(package_dir))
+    {
+        Directory.Delete(package_dir, true);
+    }
+    PackageBuilder.CopyFilesRecursively(Path.Combine(root, "modules"), package_dir);
+
+    if (Directory.Exists(root) && !args.DontClean)
+    {
+        Console.WriteLine($"Removing root dir: {root}");
+        Directory.Delete(root, true);
+    }
+}
+

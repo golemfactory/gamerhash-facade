@@ -32,12 +32,12 @@ namespace Golem.Tools
 
         private GolemRequestor(string dir, ILogger logger) : base(dir, logger)
         {
-            _env = new Dictionary<string, string>
-            {
-                { "YAGNA_DATADIR", Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")) },
-                { "YAGNA_API_URL", "http://127.0.0.1:7465" },
-                { "GSB_URL", "tcp://127.0.0.1:7464" },
-            };
+            var envBuilder = new EnvironmentBuilder();
+            envBuilder.WithYagnaDataDir(Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")));
+            envBuilder.WithYagnaApiUrl("http://127.0.0.1:7465");
+            envBuilder.WithGsbUrl("tcp://127.0.0.1:7464");
+            envBuilder.WithYaNetBindUrl("udp://0.0.0.0:11500");
+            _env = envBuilder.Build();
         }
 
         public async static Task<GolemRequestor> Build(string test_name, ILogger logger, bool cleanupData = true)
@@ -60,7 +60,7 @@ namespace Golem.Tools
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env["YAGNA_AUTOCONF_ID_SECRET"] = getRequestorAutoconfIdSecret();
             env["YAGNA_AUTOCONF_APPKEY"] = AppKey;
-            return StartProcess("yagna", working_dir, "service run", env);
+            return StartProcess("yagna", working_dir, "service run", env, false);
         }
 
         private string getRequestorAutoconfIdSecret()
@@ -70,7 +70,7 @@ namespace Golem.Tools
             {
                 return key;
             }
-            var keyPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase, "test_key.plain");
+            var keyPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", "test_key.plain");
             var keyReader = new StreamReader(keyPath);
             return keyReader.ReadLine() ?? throw new Exception($"Failed to read key from file {keyPath}");
         }
@@ -107,15 +107,15 @@ namespace Golem.Tools
 
         public void InitPayment(double minFundThreshold = 100.0)
         {
-            Thread.Sleep(3000);
+            Thread.Sleep(6000);
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env.Add("RUST_LOG", "none");
 
             var payment_status_process = WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment status --json", env));
             var payment_status_output_json = String.Join("\n", payment_status_process.GetOutputAndErrorLines());
             var payment_status_output_obj = JObject.Parse(payment_status_output_json);
-            var totalGlm = (float)payment_status_output_obj["amount"];
-            var reserved = (float)payment_status_output_obj["reserved"];
+            var totalGlm = payment_status_output_obj.Value<float>("amount");
+            var reserved = payment_status_output_obj.Value<float>("reserved");
 
             if (reserved > 0.0)
             {
