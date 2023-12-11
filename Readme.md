@@ -77,3 +77,34 @@ For this reason Payment Status won't be displayed, when the job is finished. To 
 > [!NOTE]  
 > Current imlementation of `List Jobs` displays only tasks computed during current session of `MockGUI` application.
 > This is temporary behavior which will be reimplemented according to specification later.
+
+## Troublshooting
+
+### Provider doesn't pick up tasks
+
+Sometimes after starting `ExampleRunner` script, it can last pretty long until Provider will pick up task.
+The reason for this could be Offers propagation in the network. In larger network Offers propagation lasts
+longer than in smaller network, since they are propagated only to closest neighborhood and repropagated by other Nodes.
+This doesn't cause problems in normal network conditions, when we have many Providers, but is problematic in
+test setup, when we want to match specific single Provider with specific Requestor.
+
+To workaround this problem you can use smaller network, by switching to `devnet` relay server:
+
+```
+dotnet run --project MockGUI --golem modules --use-dll --relay Devnet
+dotnet run --project ExampleRunner --golem modules --relay Devnet
+```
+
+> [!NOTE] `MockGUI` should be ran first, because it setups local server.
+
+If this is not enough you can use local relay setup, by running:
+
+```
+dotnet run --project MockGUI --golem modules --use-dll --relay Local
+dotnet run --project ExampleRunner --golem modules --relay Local
+```
+
+### Other Providers stealing your jobs
+
+If many people are testing facade at the same time, it can happen that other Providers will steal jobs from your `ExampleRunner`.
+If it interferes with your testing than switch to `--relay Local`.
