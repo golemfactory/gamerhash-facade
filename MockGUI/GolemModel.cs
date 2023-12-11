@@ -186,12 +186,15 @@ namespace MockGUI.ViewModels
             }
         }
 
-        async ValueTask IAsyncDisposable.DisposeAsync()
-        {
+        public async Task Shutdown() {
+            await StopRelay();
             await StopRequestor();
             await Golem.Stop();
-            await StopRelay();
+        }
 
+        async ValueTask IAsyncDisposable.DisposeAsync()
+        {
+            await Shutdown();
             // Suppress finalization.
             GC.SuppressFinalize(this);
         }

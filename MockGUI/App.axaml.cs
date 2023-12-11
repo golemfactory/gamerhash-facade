@@ -35,7 +35,7 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             Parser.Default.ParseArguments<AppArguments>(desktop.Args)
-               .WithParsed<AppArguments>(o =>
+               .WithParsed<AppArguments>(args =>
                {
                    desktop.MainWindow = new MainWindow
                    {
@@ -44,16 +44,38 @@ public partial class App : Application
 
                    new Task(async () =>
                    {
-                       GolemViewModel view = o.UseDll ? await GolemViewModel.Load(o.GolemPath ?? "", o.Relay) : await GolemViewModel.CreateStatic(o.GolemPath ?? "", o.Relay);
+                       GolemViewModel view = args.UseDll ? await GolemViewModel.Load(args.GolemPath ?? "", args.Relay) : await GolemViewModel.CreateStatic(args.GolemPath ?? "", args.Relay);
+
+                       desktop.MainWindow.Closing += new ShutdownHook(view).OnShutdown;
+
                        Dispatcher.UIThread.Post(() =>
-                                desktop.MainWindow.DataContext = view
-                               );
+                           desktop.MainWindow.DataContext = view
+                       );
                    }).Start();
+
                });
 
 
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+}
+
+class ShutdownHook
+{
+    private GolemViewModel view;
+
+    public ShutdownHook(GolemViewModel view)
+    {
+        this.view = view;
+    }
+
+    public void OnShutdown(object sender, System.ComponentModel.CancelEventArgs e)
+    {
+        new Task(async () =>
+        {
+            await view.Shutdown();
+        }).Start();
     }
 }
