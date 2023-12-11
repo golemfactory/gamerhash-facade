@@ -14,7 +14,7 @@ namespace Golem.Tools
 
     public class GolemRelay : GolemRunnable
     {
-        const string CURRENT_RELAY_VERSION = "pre-rel-v0.2.3-rc11";
+        const string CURRENT_RELAY_VERSION = "pre-rel-v0.3.1-windows_rc1";
 
         private GolemRelay(string dir, ILogger logger) : base(dir, logger)
         {
