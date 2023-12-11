@@ -11,7 +11,7 @@ public class AppArguments
 {
     [Option('g', "golem", Required = true, HelpText = "Path to a folder with golem executables (modules)")]
     public string? GolemPath { get; set; }
-    [Option('r', "relay", Default = RelayType.Devnet, Required = false, HelpText = "Change relay to devnet yacn2a")]
+    [Option('r', "relay", Default = RelayType.Public, Required = false, HelpText = "Change relay to devnet yacn2a or local")]
     public required RelayType Relay { get; set; }
 }
 
