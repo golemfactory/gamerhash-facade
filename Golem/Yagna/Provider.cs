@@ -285,11 +285,11 @@ namespace Golem.Yagna
 
         private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
         {
-            _logger.LogInformation($"{e.Data}");
+            Console.WriteLine($"Provider: {e.Data}");
         }
         private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
         {
-            _logger.LogError($"{e.Data}");
+            Console.WriteLine($"Provider Error: {e.Data}");
         }
     }
 }
