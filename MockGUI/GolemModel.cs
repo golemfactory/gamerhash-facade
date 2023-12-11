@@ -97,7 +97,14 @@ namespace MockGUI.ViewModels
             {
                 var logger = loggerFactory.CreateLogger(nameof(GolemRelay));
                 var relayDir = Path.Combine(modulesDir, "relay");
-                return await GolemRelay.Build(relayDir, logger);
+
+                var relay = await GolemRelay.Build(relayDir, logger);
+                if (relay.Start()) {
+                    return relay;
+                } else {
+                    logger.LogError("Failed to start local relay server");
+                    return null;
+                };
             }
             else
                 return null;
