@@ -42,7 +42,8 @@ namespace Golem.Tests
             var logfile = Path.Combine(PackageBuilder.TestDir(""), nameof(JobTests) + "-{Date}.log");
             var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
             _loggerFactory = LoggerFactory.Create(builder => builder
-                .AddSimpleConsole(options => options.SingleLine = true)
+                //// Console logger makes `dotnet test` hang on Windows
+                // .AddSimpleConsole(options => options.SingleLine = true)
                 .AddFile(logfile)
                 .AddProvider(loggerProvider)
             );
