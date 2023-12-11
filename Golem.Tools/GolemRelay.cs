@@ -2,6 +2,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Golem.Tools
 {
+    public enum RelayType
+    {
+        // yacn2.dev.golem.network:7477
+        Public,
+        // yacn2a.dev.golem.network:7477
+        Devnet,
+        // 127.0.0.1:16464
+        Local,
+    }
+
     public class GolemRelay : GolemRunnable
     {
         const string CURRENT_RELAY_VERSION = "pre-rel-v0.2.3-rc11";
@@ -25,8 +35,6 @@ namespace Golem.Tools
 
         protected static async Task<string> BuildRelayDir(string test_name)
         {
-            var old_dir = PackageBuilder.TestDir(test_name);
-
             var dir = PackageBuilder.InitTestDirectory($"{test_name}_relay");
 
             Directory.CreateDirectory(PackageBuilder.BinariesDir(dir));
@@ -42,6 +50,16 @@ namespace Golem.Tools
             PackageBuilder.SetFilePermissions(relay_server_bin);
 
             return dir;
+        }
+
+        public static void SetEnv(RelayType relay)
+        {
+            if (relay == RelayType.Devnet)
+                Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477");
+            else if (relay == RelayType.Public)
+                Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477");
+            else if (relay == RelayType.Local)
+                Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:16464");
         }
     }
 }

@@ -7,7 +7,11 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Avalonia.Threading;
 
+using Golem.Tools;
+
 namespace MockGUI;
+
+
 
 public class AppArguments
 {
@@ -15,8 +19,8 @@ public class AppArguments
     public string? GolemPath { get; set; }
     [Option('d', "use-dll", Required = false, HelpText = "Load Golem object from dll found in binaries directory. (Simulates how GamerHash will use it. Otherwise project dependency will be used.)")]
     public bool UseDll { get; set; }
-    [Option('r', "devnet-relay", Default = false, Required = false, HelpText = "Change relay to devnet yacn2a")]
-    public required bool DevnetRelay { get; set; }
+    [Option('r', "relay", Default = RelayType.Devnet, Required = false, HelpText = "Change relay to devnet yacn2a")]
+    public required RelayType Relay { get; set; }
 }
 
 public partial class App : Application
@@ -38,24 +42,13 @@ public partial class App : Application
                        DataContext = null
                    };
 
-                   if (o.DevnetRelay)
-                       System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477");
-
-
-                   if (o.UseDll)
+                   new Task(async () =>
                    {
-                       new Task(async () =>
-                       {
-                           var view = await GolemViewModel.Load(o.GolemPath ?? "");
-                           Dispatcher.UIThread.Post(() =>
+                       GolemViewModel view = o.UseDll ? await GolemViewModel.Load(o.GolemPath ?? "", o.Relay) : await GolemViewModel.CreateStatic(o.GolemPath ?? "", o.Relay);
+                       Dispatcher.UIThread.Post(() =>
                                 desktop.MainWindow.DataContext = view
                                );
-                       }).Start();
-                   }
-                   else
-                   {
-                       desktop.MainWindow.DataContext = GolemViewModel.CreateStatic(o.GolemPath ?? "");
-                   }
+                   }).Start();
                });
 
 
