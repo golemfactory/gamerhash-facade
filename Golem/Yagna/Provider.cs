@@ -240,11 +240,16 @@ namespace Golem.Yagna
 
             if (process.Start())
             {
+                if (!openConsole)
+                {
+                    BindOutputEventHandlers(process);
+                }
+
                 process
                     .WaitForExitAsync(cancellationToken)
                     .ContinueWith(task =>
                     {
-                        if(task.Status == TaskStatus.RanToCompletion && process.HasExited)
+                        if (task.Status == TaskStatus.RanToCompletion && process.HasExited)
                         {
                             var exitCode = process.ExitCode;
                             _logger.LogInformation("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
@@ -268,6 +273,23 @@ namespace Golem.Yagna
             ProviderProcess.Kill(true);
             await ProviderProcess.WaitForExitAsync();
             ProviderProcess = null;
+        }
+
+        private void BindOutputEventHandlers(Process proc)
+        {
+            proc.OutputDataReceived += OnOutputDataRecv;
+            proc.ErrorDataReceived += OnErrorDataRecv;
+            proc.BeginErrorReadLine();
+            proc.BeginOutputReadLine();
+        }
+
+        private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
+        {
+            _logger.LogInformation($"{e.Data}");
+        }
+        private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
+        {
+            _logger.LogError($"{e.Data}");
         }
     }
 }

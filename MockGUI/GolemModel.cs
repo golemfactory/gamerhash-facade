@@ -67,7 +67,8 @@ namespace MockGUI.ViewModels
         public static async Task<GolemViewModel> Load(string modulesDir, RelayType relayType)
         {
             var loggerFactory = LoggerFactory.Create(builder =>
-                builder.AddSimpleConsole()
+                builder.AddFile(Path.Combine(modulesDir, "golem.log"))
+                    .AddConsole()
             );
 
             var golem = await LoadLib("Golem.dll", modulesDir, loggerFactory);
@@ -78,13 +79,14 @@ namespace MockGUI.ViewModels
         public static async Task<GolemViewModel> CreateStatic(string modulesDir, RelayType relayType)
         {
             var loggerFactory = LoggerFactory.Create(builder =>
-                builder.AddSimpleConsole()
+                // builder.AddFile("golem.log")
+                builder.AddConsole()
             );
 
             var binaries = Path.Combine(modulesDir, "golem");
             var datadir = Path.Combine(modulesDir, "golem-data");
 
-            var golem = new Golem.Golem(binaries, datadir, loggerFactory);
+            var golem = new Golem.Golem(binaries, datadir, null);
             var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
             return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
         }
@@ -99,9 +101,12 @@ namespace MockGUI.ViewModels
                 var relayDir = Path.Combine(modulesDir, "relay");
 
                 var relay = await GolemRelay.Build(relayDir, logger);
-                if (relay.Start()) {
+                if (relay.Start())
+                {
                     return relay;
-                } else {
+                }
+                else
+                {
                     logger.LogError("Failed to start local relay server");
                     return null;
                 };
@@ -186,7 +191,8 @@ namespace MockGUI.ViewModels
             }
         }
 
-        public async Task Shutdown() {
+        public async Task Shutdown()
+        {
             await StopRelay();
             await StopRequestor();
             await Golem.Stop();
