@@ -19,7 +19,7 @@ public class AppArguments
     public string? GolemPath { get; set; }
     [Option('d', "use-dll", Required = false, HelpText = "Load Golem object from dll found in binaries directory. (Simulates how GamerHash will use it. Otherwise project dependency will be used.)")]
     public bool UseDll { get; set; }
-    [Option('r', "relay", Default = RelayType.Devnet, Required = false, HelpText = "Change relay to devnet yacn2a")]
+    [Option('r', "relay", Default = RelayType.Public, Required = false, HelpText = "Change relay to devnet yacn2a or setup local")]
     public required RelayType Relay { get; set; }
 }
 

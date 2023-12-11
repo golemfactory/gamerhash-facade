@@ -59,7 +59,10 @@ namespace Golem.Tools
             else if (relay == RelayType.Public)
                 Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477");
             else if (relay == RelayType.Local)
+            {
                 Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:16464");
+                Environment.SetEnvironmentVariable("MEAN_CYCLIC_BCAST_INTERVAL", "3s");
+            }
         }
     }
 }
