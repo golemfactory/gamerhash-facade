@@ -32,12 +32,12 @@ namespace Golem.Tools
 
         private GolemRequestor(string dir, ILogger logger) : base(dir, logger)
         {
-            _env = new Dictionary<string, string>
-            {
-                { "YAGNA_DATADIR", Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")) },
-                { "YAGNA_API_URL", "http://127.0.0.1:7465" },
-                { "GSB_URL", "tcp://127.0.0.1:7464" },
-            };
+            var envBuilder = new EnvironmentBuilder();
+            envBuilder.WithYagnaDataDir(Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")));
+            envBuilder.WithYagnaApiUrl("http://127.0.0.1:7465");
+            envBuilder.WithGsbUrl("tcp://127.0.0.1:7464");
+            envBuilder.WithYaNetBindUrl("udp://0.0.0.0:11500");
+            _env = envBuilder.Build();
         }
 
         public async static Task<GolemRequestor> Build(string test_name, ILogger logger, bool cleanupData = true)
