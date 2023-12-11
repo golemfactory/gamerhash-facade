@@ -244,11 +244,11 @@ namespace Golem.Yagna
 
         private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
         {
-            Console.WriteLine($"Yagna: {e.Data}");
+            _logger.LogInformation($"{e.Data}");
         }
         private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
         {
-            Console.WriteLine($"Yagna Error: {e.Data}");
+            _logger.LogInformation($"{e.Data}");
         }
     }
 
