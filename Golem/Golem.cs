@@ -136,7 +136,7 @@ namespace Golem
 
             await Task.Yield();
 
-            bool openConsole = true;
+            bool openConsole = false;
 
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
 
@@ -216,12 +216,6 @@ namespace Golem
         {
             var success = Yagna.Run(yagnaOptions, exitHandler, _tokenSource.Token);
 
-            if (!yagnaOptions.OpenConsole)
-            {
-                Yagna.BindErrorDataReceivedEvent(OnYagnaErrorDataRecv);
-                Yagna.BindOutputDataReceivedEvent(OnYagnaOutputDataRecv);
-            }
-
             if (!success)
                 return false;
 
@@ -294,15 +288,6 @@ namespace Golem
             return identity;
         }
 
-        void OnYagnaErrorDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            Console.WriteLine($"{e.Data}");
-        }
-        void OnYagnaOutputDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            Console.WriteLine($"[Data]: {e.Data}");
-        }
-
         private CancellationToken GetCancellationToken()
         {
             if (_tokenSource != null)
@@ -348,7 +333,6 @@ namespace Golem
 
         private void resetToken()
         {
-            //TODO lock access to token or use something else
             if (_tokenSource != null && !_tokenSource.IsCancellationRequested)
             {
                 try

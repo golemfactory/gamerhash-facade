@@ -10,6 +10,7 @@ using GolemLib;
 using App;
 using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Golem.Tools;
 
 
 namespace MockGUI.ViewModels
@@ -39,6 +40,8 @@ namespace MockGUI.ViewModels
                 }
             }
         }
+        private GolemRelay? Relay { get; set; }
+
         private string WorkDir { get; set; }
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
@@ -50,37 +53,67 @@ namespace MockGUI.ViewModels
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-        public GolemViewModel(string modulesDir, IGolem golem, ILoggerFactory? loggerFactory = null)
+        public GolemViewModel(string modulesDir, IGolem golem, GolemRelay? relay, ILoggerFactory? loggerFactory = null)
         {
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<GolemViewModel>();
 
             WorkDir = modulesDir;
             Golem = golem;
+            Relay = relay;
             _jobsHistory = new ObservableCollection<IJob>();
         }
 
-        public static async Task<GolemViewModel> Load(string modulesDir)
+        public static async Task<GolemViewModel> Load(string modulesDir, RelayType relayType)
         {
             var loggerFactory = LoggerFactory.Create(builder =>
-                builder.AddSimpleConsole()
+                builder.AddFile(Path.Combine(modulesDir, "golem.log"))
+                    .AddConsole()
             );
 
             var golem = await LoadLib("Golem.dll", modulesDir, loggerFactory);
-            return new GolemViewModel(modulesDir, golem, loggerFactory);
+            var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
+            return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
         }
 
-        public static GolemViewModel CreateStatic(string modulesDir)
+        public static async Task<GolemViewModel> CreateStatic(string modulesDir, RelayType relayType)
         {
             var loggerFactory = LoggerFactory.Create(builder =>
-                builder.AddSimpleConsole()
+                // builder.AddFile("golem.log")
+                builder.AddConsole()
             );
 
             var binaries = Path.Combine(modulesDir, "golem");
             var datadir = Path.Combine(modulesDir, "golem-data");
 
-            var golem = new Golem.Golem(binaries, datadir, loggerFactory);
-            return new GolemViewModel(modulesDir, golem, loggerFactory);
+            var golem = new Golem.Golem(binaries, datadir, null);
+            var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
+            return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
+        }
+
+        public static async Task<GolemRelay?> CreateRelay(string modulesDir, RelayType relayType, ILoggerFactory loggerFactory)
+        {
+            GolemRelay.SetEnv(relayType);
+
+            if (relayType == RelayType.Local)
+            {
+                var logger = loggerFactory.CreateLogger(nameof(GolemRelay));
+                var relayDir = Path.Combine(modulesDir, "relay");
+
+                var relay = await GolemRelay.Build(relayDir, logger);
+                if (relay.Start())
+                {
+                    return relay;
+                }
+                else
+                {
+                    logger.LogError("Failed to start local relay server");
+                    return null;
+                };
+            }
+            else
+                return null;
+
         }
 
         public static async Task<IGolem> LoadLib(string lib, string modulesDir, ILoggerFactory? loggerFactory)
@@ -149,11 +182,25 @@ namespace MockGUI.ViewModels
             }
         }
 
-        async ValueTask IAsyncDisposable.DisposeAsync()
+        protected async Task StopRelay()
         {
+            if (Relay != null)
+            {
+                await Relay.Stop(StopMethod.SigInt);
+                Relay = null;
+            }
+        }
+
+        public async Task Shutdown()
+        {
+            await StopRelay();
             await StopRequestor();
             await Golem.Stop();
+        }
 
+        async ValueTask IAsyncDisposable.DisposeAsync()
+        {
+            await Shutdown();
             // Suppress finalization.
             GC.SuppressFinalize(this);
         }

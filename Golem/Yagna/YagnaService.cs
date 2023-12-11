@@ -199,6 +199,11 @@ namespace Golem.Yagna
 
             if (process.Start())
             {
+                if (!options.OpenConsole)
+                {
+                    BindOutputEventHandlers(process);
+                }
+
                 process
                     .WaitForExitAsync(cancellationToken)
                     .ContinueWith(task =>
@@ -211,6 +216,7 @@ namespace Golem.Yagna
                         }
                     });
                 YagnaProcess = process;
+
                 ChildProcessTracker.AddProcess(process);
                 return !YagnaProcess.HasExited;
             }
@@ -228,22 +234,21 @@ namespace Golem.Yagna
             YagnaProcess = null;
         }
 
-        public void BindOutputDataReceivedEvent(DataReceivedEventHandler handler)
+        private void BindOutputEventHandlers(Process proc)
         {
-            if (YagnaProcess != null)
-            {
-                YagnaProcess.OutputDataReceived += handler;
-                YagnaProcess.BeginOutputReadLine();
-            }
+            proc.OutputDataReceived += OnOutputDataRecv;
+            proc.ErrorDataReceived += OnErrorDataRecv;
+            proc.BeginErrorReadLine();
+            proc.BeginOutputReadLine();
         }
 
-        public void BindErrorDataReceivedEvent(DataReceivedEventHandler handler)
+        private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
         {
-            if (YagnaProcess != null)
-            {
-                YagnaProcess.ErrorDataReceived += handler;
-                YagnaProcess.BeginErrorReadLine();
-            }
+            _logger.LogInformation($"{e.Data}");
+        }
+        private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
+        {
+            _logger.LogInformation($"{e.Data}");
         }
     }
 

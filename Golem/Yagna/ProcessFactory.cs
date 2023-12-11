@@ -71,7 +71,7 @@ namespace Golem.Yagna
             {
                 startInfo.RedirectStandardOutput = false;
                 startInfo.RedirectStandardError = false;
-                startInfo.CreateNoWindow = false;
+                startInfo.CreateNoWindow = true;
                 
             }
             else

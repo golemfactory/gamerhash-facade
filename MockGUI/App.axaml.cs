@@ -7,7 +7,11 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Avalonia.Threading;
 
+using Golem.Tools;
+
 namespace MockGUI;
+
+
 
 public class AppArguments
 {
@@ -15,8 +19,8 @@ public class AppArguments
     public string? GolemPath { get; set; }
     [Option('d', "use-dll", Required = false, HelpText = "Load Golem object from dll found in binaries directory. (Simulates how GamerHash will use it. Otherwise project dependency will be used.)")]
     public bool UseDll { get; set; }
-    [Option('r', "devnet-relay", Default = false, Required = false, HelpText = "Change relay to devnet yacn2a")]
-    public required bool DevnetRelay { get; set; }
+    [Option('r', "relay", Default = RelayType.Devnet, Required = false, HelpText = "Change relay to devnet yacn2a")]
+    public required RelayType Relay { get; set; }
 }
 
 public partial class App : Application
@@ -31,36 +35,47 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             Parser.Default.ParseArguments<AppArguments>(desktop.Args)
-               .WithParsed<AppArguments>(o =>
+               .WithParsed<AppArguments>(args =>
                {
                    desktop.MainWindow = new MainWindow
                    {
                        DataContext = null
                    };
 
-                   if (o.DevnetRelay)
-                       System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477");
-
-
-                   if (o.UseDll)
+                   new Task(async () =>
                    {
-                       new Task(async () =>
-                       {
-                           var view = await GolemViewModel.Load(o.GolemPath ?? "");
-                           Dispatcher.UIThread.Post(() =>
-                                desktop.MainWindow.DataContext = view
-                               );
-                       }).Start();
-                   }
-                   else
-                   {
-                       desktop.MainWindow.DataContext = GolemViewModel.CreateStatic(o.GolemPath ?? "");
-                   }
+                       GolemViewModel view = args.UseDll ? await GolemViewModel.Load(args.GolemPath ?? "", args.Relay) : await GolemViewModel.CreateStatic(args.GolemPath ?? "", args.Relay);
+
+                       desktop.MainWindow.Closing += new ShutdownHook(view).OnShutdown;
+
+                       Dispatcher.UIThread.Post(() =>
+                           desktop.MainWindow.DataContext = view
+                       );
+                   }).Start();
+
                });
 
 
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+}
+
+class ShutdownHook
+{
+    private GolemViewModel view;
+
+    public ShutdownHook(GolemViewModel view)
+    {
+        this.view = view;
+    }
+
+    public void OnShutdown(object sender, System.ComponentModel.CancelEventArgs e)
+    {
+        new Task(async () =>
+        {
+            await view.Shutdown();
+        }).Start();
     }
 }
