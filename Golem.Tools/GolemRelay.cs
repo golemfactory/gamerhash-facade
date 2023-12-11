@@ -20,9 +20,9 @@ namespace Golem.Tools
         {
         }
 
-        public async static Task<GolemRelay> Build(string test_name, ILogger logger)
+        public async static Task<GolemRelay> Build(string testDir, ILogger logger)
         {
-            var dir = await BuildRelayDir(test_name);
+            var dir = await BuildRelayDir(testDir);
             return new GolemRelay(dir, logger);
         }
 
@@ -33,9 +33,9 @@ namespace Golem.Tools
             return StartProcess("ya-relay-server", working_dir, "-a 127.0.0.1:16464", new Dictionary<string, string>());
         }
 
-        protected static async Task<string> BuildRelayDir(string test_name)
+        protected static async Task<string> BuildRelayDir(string test_dir)
         {
-            var dir = PackageBuilder.InitTestDirectory($"{test_name}_relay");
+            var dir = PackageBuilder.PrepareTestDirectory(test_dir, true);
 
             Directory.CreateDirectory(PackageBuilder.BinariesDir(dir));
 

@@ -51,7 +51,8 @@ namespace Golem.Tests
 
         public async Task InitializeAsync()
         {
-            _relay = await GolemRelay.Build(nameof(JobTests), _loggerFactory.CreateLogger("Relay"));
+            var testDir = PackageBuilder.TestDir($"{nameof(JobTests)}_relay");
+            _relay = await GolemRelay.Build(testDir, _loggerFactory.CreateLogger("Relay"));
             Assert.True(_relay.Start());
             System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:16464");
             System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");

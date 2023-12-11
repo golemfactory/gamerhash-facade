@@ -96,7 +96,8 @@ namespace MockGUI.ViewModels
             if (relayType == RelayType.Local)
             {
                 var logger = loggerFactory.CreateLogger(nameof(GolemRelay));
-                return await GolemRelay.Build("local_relay", logger);
+                var relayDir = Path.Combine(modulesDir, "relay");
+                return await GolemRelay.Build(relayDir, logger);
             }
             else
                 return null;
