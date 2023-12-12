@@ -144,9 +144,7 @@ class ActivityLoop
     {
         if (activityState.AgreementId == null || activityState.Id == null)
             return null;
-        var agrementAndState = await getAgreementAndState(activityState.AgreementId, activityState.Id);
-        var agreement = agrementAndState.Item1;
-        var state = agrementAndState.Item2;
+        var (agreement, state) = await getAgreementAndState(activityState.AgreementId, activityState.Id);
 
         if (agreement?.Demand?.RequestorId == null)
         {
@@ -161,7 +159,7 @@ class ActivityLoop
         if (usage != null)
             job.CurrentUsage = usage;
 
-        jobs.UpdateActivityState(jobId, activityState.State);
+        jobs.UpdateActivityState(jobId, state);
 
         if (job.Status == JobStatus.Finished)
             return null;
@@ -264,7 +262,7 @@ class ActivityLoop
         try
         {
             var response = await _httpClient.GetStringAsync($"/activity-api/v1/activity/{activityId}/state");
-            _logger.LogInformation("got activity sate {0}", response);
+            _logger.LogInformation("got activity state {0}", response);
             ActivityStatePair? activityStatePair = JsonSerializer.Deserialize<ActivityStatePair>(response, s_serializerOptions) ?? null;
             return activityStatePair;
         }

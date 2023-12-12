@@ -17,7 +17,7 @@ public interface IJobsUpdater
 {
     Job GetOrCreateJob(string jobId, YagnaAgreement agreement);
     void SetAllJobsFinished();
-    void UpdateActivityState(string jobId, StateType activityState);
+    void UpdateActivityState(string jobId, ActivityStatePair activityState);
 }
 
 class Jobs : IJobsUpdater
@@ -60,20 +60,13 @@ class Jobs : IJobsUpdater
         return job;
     }
 
-    public StateType? GetActivityState(string jobId)
-    {
-        return _jobs.ContainsKey(jobId) ? _jobs[jobId].State : null;
-    }
-
-    public void UpdateActivityState(string jobId, StateType activityState)
+    public void UpdateActivityState(string jobId, ActivityStatePair activityState)
     {
         var job = _jobs[jobId]?.Job ?? throw new Exception($"Unable to find job {jobId}");
-        var oldActivityState = GetActivityState(jobId);
-        if (oldActivityState != null)
-        {
-            job.Status = ResolveStatus(activityState, oldActivityState.Value);
-            _jobs[jobId].State = activityState;
-        }
+        var state = activityState.currentState();
+        var oldState = activityState.oldState();
+        job.Status = ResolveStatus(state, oldState);
+        _jobs[jobId].State = state;
     }
 
     public void SetAllJobsFinished()
