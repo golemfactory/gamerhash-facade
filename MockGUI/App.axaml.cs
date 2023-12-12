@@ -34,7 +34,7 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            Parser.Default.ParseArguments<AppArguments>(desktop.Args)
+            _ = Parser.Default.ParseArguments<AppArguments>(desktop.Args)
                .WithParsed<AppArguments>(args =>
                {
                    desktop.MainWindow = new MainWindow
@@ -71,7 +71,7 @@ class ShutdownHook
         this.view = view;
     }
 
-    public void OnShutdown(object sender, System.ComponentModel.CancelEventArgs e)
+    public void OnShutdown(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         new Task(async () =>
         {

@@ -66,11 +66,7 @@ namespace MockGUI.ViewModels
 
         public static async Task<GolemViewModel> Load(string modulesDir, RelayType relayType)
         {
-            var loggerFactory = LoggerFactory.Create(builder =>
-                builder.AddFile(Path.Combine(modulesDir, "golem.log"))
-                    .AddConsole()
-            );
-
+            var loggerFactory = createLoggerFactory(modulesDir);
             var golem = await LoadLib("Golem.dll", modulesDir, loggerFactory);
             var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
             return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
@@ -78,15 +74,11 @@ namespace MockGUI.ViewModels
 
         public static async Task<GolemViewModel> CreateStatic(string modulesDir, RelayType relayType)
         {
-            var loggerFactory = LoggerFactory.Create(builder =>
-                // builder.AddFile("golem.log")
-                builder.AddConsole()
-            );
-
+            var loggerFactory = createLoggerFactory(modulesDir);
             var binaries = Path.Combine(modulesDir, "golem");
             var datadir = Path.Combine(modulesDir, "golem-data");
 
-            var golem = new Golem.Golem(binaries, datadir, null);
+            var golem = new Golem.Golem(binaries, datadir, loggerFactory);
             var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
             return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
         }
@@ -129,6 +121,15 @@ namespace MockGUI.ViewModels
             var factory = obj as IFactory ?? throw new Exception("Cast to IFactory failed.");
 
             return await factory.Create(modulesDir, loggerFactory);
+        }
+
+        private static ILoggerFactory createLoggerFactory(string modulesDir)
+        {
+            var logFile = Path.Combine(modulesDir, "golem-data", "golem-{Date}.log");
+            return LoggerFactory.Create(builder =>
+                builder.AddFile(logFile)
+                    .AddConsole()
+            );
         }
 
         public Task OnStartCommand()

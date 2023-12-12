@@ -142,9 +142,10 @@ class ActivityLoop
         IJobsUpdater jobs
     )
     {
-        if (activityState.AgreementId == null)
+        if (activityState.AgreementId == null || activityState.Id == null)
             return null;
-        var agreement = await GetAgreement(activityState.AgreementId);
+        var (agreement, state) = await getAgreementAndState(activityState.AgreementId, activityState.Id);
+
         if (agreement?.Demand?.RequestorId == null)
         {
             _logger.LogDebug($"No agreement for activity: {activityState.Id} (agreement: {activityState.AgreementId})");
@@ -158,7 +159,7 @@ class ActivityLoop
         if (usage != null)
             job.CurrentUsage = usage;
 
-        jobs.UpdateActivityState(jobId, activityState.State);
+        jobs.UpdateActivityState(jobId, state);
 
         if (job.Status == JobStatus.Finished)
             return null;
@@ -230,18 +231,44 @@ class ActivityLoop
         yield break;
     }
 
-    public async Task<YagnaAgreement?> GetAgreement(string agreementID)
+    public async Task<(YagnaAgreement?, ActivityStatePair?)> getAgreementAndState(string agreementId, string activityId)
+    {
+        var getAgreementTask = GetAgreement(agreementId);
+        var getStateTask = GetState(activityId);
+        await Task.WhenAll(getAgreementTask, getStateTask);
+        var agreement = await getAgreementTask;
+        var state = await getStateTask;
+        return (agreement, state);
+    }
+
+    public async Task<YagnaAgreement?> GetAgreement(string agreementId)
     {
         try
         {
-            var response = await _httpClient.GetStringAsync($"/market-api/v1/agreements/{agreementID}");
+            var response = await _httpClient.GetStringAsync($"/market-api/v1/agreements/{agreementId}");
             _logger.LogInformation("got agreement {0}", response);
             YagnaAgreement? agreement = JsonSerializer.Deserialize<YagnaAgreement>(response, s_serializerOptions) ?? null;
             return agreement;
         }
         catch (Exception ex)
         {
-            _logger.LogError("Failed GetAgreementInfo: " + ex.Message);
+            _logger.LogError("Failed GetAgreement: " + ex.Message);
+            return null;
+        }
+    }
+
+    public async Task<ActivityStatePair?> GetState(string activityId)
+    {
+        try
+        {
+            var response = await _httpClient.GetStringAsync($"/activity-api/v1/activity/{activityId}/state");
+            _logger.LogInformation("got activity state {0}", response);
+            ActivityStatePair? activityStatePair = JsonSerializer.Deserialize<ActivityStatePair>(response, s_serializerOptions) ?? null;
+            return activityStatePair;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed GetState: " + ex.Message);
             return null;
         }
     }
