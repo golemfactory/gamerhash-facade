@@ -142,9 +142,12 @@ class ActivityLoop
         IJobsUpdater jobs
     )
     {
-        if (activityState.AgreementId == null)
+        if (activityState.AgreementId == null || activityState.Id == null)
             return null;
-        var agreement = await GetAgreement(activityState.AgreementId);
+        var agrementAndState = await getAgreementAndState(activityState.AgreementId, activityState.Id);
+        var agreement = agrementAndState.Item1;
+        var state = agrementAndState.Item2;
+
         if (agreement?.Demand?.RequestorId == null)
         {
             _logger.LogDebug($"No agreement for activity: {activityState.Id} (agreement: {activityState.AgreementId})");
@@ -230,11 +233,21 @@ class ActivityLoop
         yield break;
     }
 
-    public async Task<YagnaAgreement?> GetAgreement(string agreementID)
+    public async Task<(YagnaAgreement?, ActivityStatePair?)> getAgreementAndState(string agreementId, string activityId)
+    {
+        var getAgreementTask = GetAgreement(agreementId);
+        var getStateTask = GetState(activityId);
+        await Task.WhenAll(getAgreementTask, getStateTask);
+        var agreement = await getAgreementTask;
+        var state = await getStateTask;
+        return (agreement, state);
+    }
+
+    public async Task<YagnaAgreement?> GetAgreement(string agreementId)
     {
         try
         {
-            var response = await _httpClient.GetStringAsync($"/market-api/v1/agreements/{agreementID}");
+            var response = await _httpClient.GetStringAsync($"/market-api/v1/agreements/{agreementId}");
             _logger.LogInformation("got agreement {0}", response);
             YagnaAgreement? agreement = JsonSerializer.Deserialize<YagnaAgreement>(response, s_serializerOptions) ?? null;
             return agreement;
