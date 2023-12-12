@@ -10,6 +10,7 @@ namespace Golem.Yagna
             { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
             { "YA_NET_BROADCAST_SIZE", "12" },
             { "YA_NET_RELAY_HOST", "yacn2a.dev.golem.network:7477" },
+            { "BCAST_NODE_BAN_TIMEOUT", "5s" },
         };
 
         private readonly Dictionary<string, string> env = new Dictionary<string, string>();
