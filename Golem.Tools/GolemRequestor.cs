@@ -149,7 +149,7 @@ namespace Golem.Tools
             var dataDir = _env["YAGNA_DATADIR"];
             if (!Path.Exists(dataDir) || Directory.EnumerateFiles(dataDir).Count() == 0)
             {
-                return null;
+                throw new Exception("No data dir");
             }
 
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);

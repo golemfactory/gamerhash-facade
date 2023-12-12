@@ -146,7 +146,7 @@ namespace Golem.Yagna
             catch (IOException e)
             {
                 _logger?.LogError(e, "failed to execute {0}", arguments);
-                throw e;
+                throw;
             }
         }
         internal string ExecToText(List<string> arguments)
@@ -160,7 +160,7 @@ namespace Golem.Yagna
             catch (IOException e)
             {
                 _logger?.LogError(e, "failed to execute {0}", arguments);
-                throw e;
+                throw;
             }
         }
 

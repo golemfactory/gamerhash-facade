@@ -8,7 +8,7 @@ namespace Golem.Model
 {
     public class ActivityStatePair
     {
-        public List<ActivityState.StateType?> state { get; set; }
+        public required List<ActivityState.StateType?> state { get; set; }
 
         public String? reason { get; set; }
 
