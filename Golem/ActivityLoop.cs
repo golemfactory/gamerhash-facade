@@ -241,7 +241,23 @@ class ActivityLoop
         }
         catch (Exception ex)
         {
-            _logger.LogError("Failed GetAgreementInfo: " + ex.Message);
+            _logger.LogError("Failed GetAgreement: " + ex.Message);
+            return null;
+        }
+    }
+
+    public async Task<ActivityStatePair?> GetState(string activityId)
+    {
+        try
+        {
+            var response = await _httpClient.GetStringAsync($"/activity-api/v1/activity/{activityId}/state");
+            _logger.LogInformation("got activity sate {0}", response);
+            ActivityStatePair? activityStatePair = JsonSerializer.Deserialize<ActivityStatePair>(response, s_serializerOptions) ?? null;
+            return activityStatePair;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed GetState: " + ex.Message);
             return null;
         }
     }
