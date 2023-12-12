@@ -79,8 +79,8 @@ namespace MockGUI.ViewModels
         public static async Task<GolemViewModel> CreateStatic(string modulesDir, RelayType relayType)
         {
             var loggerFactory = LoggerFactory.Create(builder =>
-                // builder.AddFile("golem.log")
-                builder.AddConsole()
+                builder.AddFile(Path.Combine(modulesDir, "golem.log"))
+                    .AddConsole()
             );
 
             var binaries = Path.Combine(modulesDir, "golem");
