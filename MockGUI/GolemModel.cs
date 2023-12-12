@@ -86,7 +86,7 @@ namespace MockGUI.ViewModels
             var binaries = Path.Combine(modulesDir, "golem");
             var datadir = Path.Combine(modulesDir, "golem-data");
 
-            var golem = new Golem.Golem(binaries, datadir, null);
+            var golem = new Golem.Golem(binaries, datadir, loggerFactory);
             var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
             return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
         }
