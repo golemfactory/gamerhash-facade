@@ -28,7 +28,7 @@ class Jobs : IJobsUpdater
     /// <summary>
     /// Dictionary mapping AgreementId to aggregated `Job` with its `ActivityState`
     /// </summary>
-    private readonly Dictionary<string, JobAndState> _jobs = new();
+    private readonly Dictionary<string, Job> _jobs = new();
 
     private readonly ReaderWriterLock _jobsLock = new ReaderWriterLock();
 
@@ -42,9 +42,9 @@ class Jobs : IJobsUpdater
     {
         var requestorId = agreement.Demand?.RequestorId
                 ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
-        Job? job = null;
+        Job? job;
         if (_jobs.TryGetValue(jobId, out var j))
-            job = j.Job;
+            job = j;
         else
         {
             job = new Job
@@ -52,7 +52,7 @@ class Jobs : IJobsUpdater
                 Id = jobId,
                 RequestorId = requestorId,
             };
-            _jobs[jobId] = new JobAndState(job, StateType.New);
+            _jobs[jobId] = job;
         }
 
         var price = GetPriceFromAgreement(agreement);
@@ -62,18 +62,16 @@ class Jobs : IJobsUpdater
 
     public void UpdateActivityState(string jobId, ActivityStatePair activityState)
     {
-        var job = _jobs[jobId]?.Job ?? throw new Exception($"Unable to find job {jobId}");
+        var job = _jobs[jobId] ?? throw new Exception($"Unable to find job {jobId}");
         var currentState = activityState.currentState();
         var nextState = activityState.nextState();
         job.Status = ResolveStatus(currentState, nextState);
-        _jobs[jobId].State = currentState;
     }
 
     public void SetAllJobsFinished()
     {
-        foreach (var jobAndStatus in _jobs.Values)
+        foreach (var job in _jobs.Values)
         {
-            var job = jobAndStatus.Job;
             if (job.Status != JobStatus.Finished)
             {
                 job.Status = JobStatus.Finished;
@@ -84,9 +82,8 @@ class Jobs : IJobsUpdater
 
     public void UpdateUsage(string jobId, GolemUsage usage)
     {
-        if (_jobs.TryGetValue(jobId, out var jobAndState))
+        if (_jobs.TryGetValue(jobId, out var job))
         {
-            var job = jobAndState.Job;
             job.CurrentUsage = usage;
         }
         else
@@ -97,9 +94,8 @@ class Jobs : IJobsUpdater
 
     public void UpdatePaymentStatus(string id, GolemLib.Types.PaymentStatus paymentStatus)
     {
-        if (_jobs.TryGetValue(id, out var jobAndState))
+        if (_jobs.TryGetValue(id, out var job))
         {
-            var job = jobAndState.Job;
             _logger.LogInformation($"New payment status for job {job.Id}: {paymentStatus} requestor: {job.RequestorId}");
             job.PaymentStatus = paymentStatus;
         }
@@ -111,9 +107,8 @@ class Jobs : IJobsUpdater
 
     public void UpdatePaymentConfirmation(string jobId, List<Payment> payments)
     {
-        if (_jobs.TryGetValue(jobId, out var jobAndState))
+        if (_jobs.TryGetValue(jobId, out var job))
         {
-            var job = jobAndState.Job;
             _logger.LogInformation("Payments confirmation for job {0}:", job.Id);
 
             job.PaymentConfirmation = payments;
@@ -142,19 +137,7 @@ class Jobs : IJobsUpdater
 
     public Task<List<IJob>> List()
     {
-        return Task.FromResult(_jobs.Values.Select(j => j.Job as IJob).ToList());
-    }
-
-    class JobAndState
-    {
-        public Job Job { get; set; }
-        public StateType State { get; set; }
-
-        public JobAndState(Job job, StateType state)
-        {
-            Job = job;
-            State = state;
-        }
+        return Task.FromResult(_jobs.Values.Select(job => job as IJob).ToList());
     }
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
