@@ -63,10 +63,10 @@ class Jobs : IJobsUpdater
     public void UpdateActivityState(string jobId, ActivityStatePair activityState)
     {
         var job = _jobs[jobId]?.Job ?? throw new Exception($"Unable to find job {jobId}");
-        var state = activityState.currentState();
-        var oldState = activityState.oldState();
-        job.Status = ResolveStatus(state, oldState);
-        _jobs[jobId].State = state;
+        var currentState = activityState.currentState();
+        var nextState = activityState.nextState();
+        job.Status = ResolveStatus(currentState, nextState);
+        _jobs[jobId].State = currentState;
     }
 
     public void SetAllJobsFinished()
@@ -124,12 +124,12 @@ class Jobs : IJobsUpdater
         }
     }
 
-    private JobStatus ResolveStatus(StateType newState, StateType? oldState)
+    private JobStatus ResolveStatus(StateType currentState, StateType? nextState)
     {
-        switch (newState)
+        switch (currentState)
         {
             case StateType.Deployed:
-                if (oldState == StateType.Initialized)
+                if (nextState == StateType.Ready)
                     return JobStatus.DownloadingModel;
                 break;
             case StateType.Ready:

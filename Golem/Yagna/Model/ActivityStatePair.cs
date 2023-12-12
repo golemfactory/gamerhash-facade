@@ -24,7 +24,7 @@ namespace Golem.Model
             #pragma warning restore CS8629
         }
 
-        public ActivityState.StateType? oldState()
+        public ActivityState.StateType? nextState()
         {
             if (state.Count > 1) {
                 return state[1];
