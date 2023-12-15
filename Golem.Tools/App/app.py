@@ -127,6 +127,8 @@ CAPABILITIES = "golem.runtime.capabilities"
 
 @dataclass
 class AiPayload(Payload):
+    image_url: str = prop("golem.!exp.ai.v1.srv.comp.ai.model")
+    image_fmt: str = prop("golem.!exp.ai.v1.srv.comp.ai.model-format", default="safetensors")
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
     capabilities: str = constraint(CAPABILITIES, default="dummy")
@@ -135,10 +137,10 @@ class AiPayload(Payload):
 class AiRuntimeService(Service):
     @staticmethod
     async def get_payload():
-        return AiPayload()
+        return AiPayload(image_url="hash:sha3:9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
 
     async def start(self):
-        script = self._ctx.new_script()
+        script = self._ctx.new_script(timeout=None)
         script.deploy()
         script.start(
             "--model",
