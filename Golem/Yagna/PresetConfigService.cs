@@ -102,6 +102,16 @@ namespace Golem.Yagna
             }
         }
 
+        public IList<Preset> DefaultPresets
+        {
+            get
+            {
+                var defaultPresetNames = ExeUnits.Select(defaultPresetName);
+                var defaultPresets = AllPresets.FindAll((preset) => defaultPresetNames.Contains(preset.Name));
+                return defaultPresets;
+            }
+        }
+
         public List<Preset> AllPresets
         {
             get
@@ -119,7 +129,7 @@ namespace Golem.Yagna
         {
             get
             {
-                return _parent.Exec<List<ExeUnit>>("--json exe-unit list") ?? new List<ExeUnit>();
+                return _parent.Exec<List<ExeUnit>>("--json exe-unit list".Split()) ?? new List<ExeUnit>();
             }
         }
 
@@ -181,19 +191,24 @@ namespace Golem.Yagna
             info = _parent.ExecToText(args);
         }
 
-        public void UpdatePrices(string presetName, IDictionary<string, decimal> prices, out string info)
+        public void UpdatePrices(IDictionary<string, decimal> prices)
         {
-            List<string> args = "preset update --no-interactive --name".Split().ToList();
-            args.Add(presetName);
+            var defaultPresetNames = new HashSet<String>(ExeUnits.Select(defaultPresetName));
 
+            var priceArgs = new List<string>();
             foreach (KeyValuePair<string, decimal> priceKV in prices)
             {
                 var priceValue = priceKV.Value.ToString(CultureInfo.InvariantCulture);
-                args.Add("--price");
-                args.Add($"{priceKV.Key}={priceValue}");
+                priceArgs.Add("--price");
+                priceArgs.Add($"{priceKV.Key}={priceValue}");
             }
 
-            info = _parent.ExecToText(args);
+            foreach (String presetName in defaultPresetNames) {
+                var args = "preset update --no-interactive --name".Split().ToList();
+                args.Add(presetName); 
+                args.AddRange(priceArgs.ToArray());
+                var _result = _parent.ExecToText(args);
+            }
         }
     }
 }

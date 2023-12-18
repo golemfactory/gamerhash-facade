@@ -185,7 +185,7 @@ namespace Golem.Yagna
                     if (value.Account != null)
                     {
                         cmd.Add("--account");
-                        cmd.Append(value.Account);
+                        cmd.Add(value.Account);
                     }
                     ExecToText(cmd);
                 }

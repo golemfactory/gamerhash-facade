@@ -39,12 +39,15 @@ namespace Golem
             {
                 get
                 {
-                    var preset = _provider.PresetConfig.GetPreset(_provider.PresetConfig.DefaultPresetName);
-
-                    if (preset == null)
+                    var presets = _provider.PresetConfig.DefaultPresets;
+                    
+                    if(presets.Count == 0)
                         return new GolemPrice();
 
-                    if (!preset.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
+                    //TODO handle different values in multiple runtimes/presets
+                    var preset = presets[0];
+
+                    if(!preset.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
                         numRequests = 0;
                     if (!preset.UsageCoeffs.TryGetValue("golem.usage.duration_sec", out var duration))
                         duration = 0;
@@ -64,15 +67,13 @@ namespace Golem
 
                 set
                 {
-                    _provider.PresetConfig.UpdatePrices(_provider.PresetConfig.DefaultPresetName,
-                    new Dictionary<string, decimal>
+                    _provider.PresetConfig.UpdatePrices(new Dictionary<string, decimal>
                     {
                         { "ai-runtime.requests", value.NumRequests },
                         { "golem.usage.duration_sec", value.EnvPerHour },
                         { "golem.usage.gpu-sec", value.GpuPerHour },
                         { "Initial", value.StartPrice }
-                    },
-                    out string info);
+                    });
                 }
             }
 
