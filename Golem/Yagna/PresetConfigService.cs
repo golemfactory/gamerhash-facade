@@ -33,10 +33,25 @@ namespace Golem.Yagna
         public Dictionary<string, decimal> UsageCoeffs { get; set; }
     }
 
+    class ExeUnit
+    {
+        [JsonConstructor]
+        public ExeUnit(string name, string version)
+        {
+            Name = name;
+            Version = version;
+        }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        [JsonPropertyName("exeunit-name")]
+        public string Version { get; set; }
+    }
+    
     public class PresetConfigService
     {
         private readonly Provider _parent;
-        public string DefaultPresetName => "ai-dummy";
 
         internal PresetConfigService(Provider parent)
         {
@@ -46,8 +61,10 @@ namespace Golem.Yagna
         public void InitilizeDefaultPreset()
         {
             var presets = ActivePresetsNames;
-            if (!presets.Contains(DefaultPresetName))
-            {
+
+            foreach (ExeUnit exeUnit in ExeUnits) {
+                if (!presets.Contains(defaultPresetName(exeUnit)))
+                {
 
                 var coeffs = new Dictionary<string, decimal>
                 {
@@ -58,16 +75,19 @@ namespace Golem.Yagna
                 };
 
                 // name "ai" as defined in plugins/*.json
-                var preset = new Preset(DefaultPresetName, "ai", coeffs);
+                var preset = new Preset(defaultPresetName(exeUnit), exeUnit.Name, coeffs);
 
                 AddPreset(preset, out string info);
 
+                }
+                ActivatePreset(defaultPresetName(exeUnit));
             }
-            ActivatePreset(DefaultPresetName);
+
+            var defaultPresetNames = new HashSet<String>(ExeUnits.Select(defaultPresetName));
 
             foreach (string preset in presets)
             {
-                if (preset != DefaultPresetName)
+                if (!defaultPresetNames.Contains(preset))
                 {
                     DeactivatePreset(preset);
                 }
@@ -88,6 +108,18 @@ namespace Golem.Yagna
             {
                 var presets = _parent.Exec<List<Preset>>("preset --json list".Split()) ?? new List<Preset>();
                 return presets;
+            }
+        }
+
+        static String defaultPresetName(ExeUnit exeUnit) {
+            return $"{exeUnit.Name}";
+        }
+
+        List<ExeUnit> ExeUnits
+        {
+            get
+            {
+                return _parent.Exec<List<ExeUnit>>("--json exe-unit list") ?? new List<ExeUnit>();
             }
         }
 
