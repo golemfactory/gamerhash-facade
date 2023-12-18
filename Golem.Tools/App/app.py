@@ -137,7 +137,7 @@ class AiPayload(Payload):
 class AiRuntimeService(Service):
     @staticmethod
     async def get_payload():
-        return AiPayload(image_url="hash:sha3:9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
+        return AiPayload(image_url="hash:sha3:2c8a42ac5449099e70239ebd52ef987d498cc15c51471b608db02a18:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
 
     async def start(self):
         script = self._ctx.new_script(timeout=None)
@@ -146,8 +146,6 @@ class AiRuntimeService(Service):
             "--model",
             "dummy_model"
         )
-        await asyncio.sleep(3)
-
         yield script
 
     # async def run(self):
