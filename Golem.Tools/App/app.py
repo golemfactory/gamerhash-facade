@@ -137,7 +137,7 @@ class AiPayload(Payload):
 class AiRuntimeService(Service):
     @staticmethod
     async def get_payload():
-        return AiPayload(image_url="hash:sha3:2c8a42ac5449099e70239ebd52ef987d498cc15c51471b608db02a18:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
+        return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
 
     async def start(self):
         script = self._ctx.new_script(timeout=None)
@@ -154,7 +154,7 @@ class AiRuntimeService(Service):
 
 async def main(subnet_tag, driver=None, network=None):
     async with Golem(
-        budget=1.0,
+        budget=50.0,
         subnet_tag=subnet_tag,
         payment_driver=driver,
         payment_network=network,
