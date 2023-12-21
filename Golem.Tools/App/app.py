@@ -22,6 +22,7 @@ from yapapi import Golem, NoPaymentAccountError
 from yapapi import __version__ as yapapi_version
 from yapapi import windows_event_loop_fix
 from yapapi.log import enable_default_logger
+from yapapi.strategy import SCORE_TRUSTED, SCORE_REJECTED, MarketStrategy
 
 # Utils
 
@@ -120,6 +121,24 @@ def run_golem_example(example_main, log_file=None):
         except (asyncio.CancelledError, KeyboardInterrupt):
             pass
 
+
+class ProviderOnceStrategy(MarketStrategy):
+    """Hires provider only once.
+    """
+
+    def __init__(self):
+        self.history = set(())
+
+    async def score_offer(self, offer):
+        if offer.issuer not in self.history:
+            return SCORE_TRUSTED
+        else:
+            return SCORE_REJECTED
+
+
+    def remember(self, provider_id: str):
+        self.history.add(provider_id)
+
 # App
 
 RUNTIME_NAME = "ai"
@@ -127,6 +146,8 @@ CAPABILITIES = "golem.runtime.capabilities"
 
 @dataclass
 class AiPayload(Payload):
+    image_url: str = prop("golem.!exp.ai.v1.srv.comp.ai.model")
+    image_fmt: str = prop("golem.!exp.ai.v1.srv.comp.ai.model-format", default="safetensors")
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
     capabilities: str = constraint(CAPABILITIES, default="dummy")
@@ -135,32 +156,42 @@ class AiPayload(Payload):
 class AiRuntimeService(Service):
     @staticmethod
     async def get_payload():
-        return AiPayload()
-
+        ## TODO switched into using smaller model to avoid problems during tests. Resolve it when automatic runtime integrated
+        # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
+        return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
     async def start(self):
-        script = self._ctx.new_script()
+        self.strategy.remember(self._ctx.provider_id)
+
+        script = self._ctx.new_script(timeout=None)
         script.deploy()
         script.start(
             "--model",
             "dummy_model"
         )
-        await asyncio.sleep(3)
-
         yield script
 
     # async def run(self):
     #    # TODO run AI tasks here
 
+    def __init__(self, strategy: ProviderOnceStrategy):
+        super().__init__()
+        self.strategy = strategy
+
 
 async def main(subnet_tag, driver=None, network=None):
+    strategy = ProviderOnceStrategy()
     async with Golem(
-        budget=1.0,
+        budget=50.0,
         subnet_tag=subnet_tag,
+        strategy=strategy,
         payment_driver=driver,
         payment_network=network,
     ) as golem:
         cluster = await golem.run_service(
             AiRuntimeService,
+            instance_params=[
+                {"strategy": strategy}
+            ],
             num_instances=1,
         )
 
