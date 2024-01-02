@@ -1,5 +1,3 @@
-import asyncio
-
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -10,6 +8,7 @@ from yapapi.props.base import constraint, prop
 from yapapi.services import Service
 from yapapi.log import enable_default_logger
 
+import json
 import argparse
 import asyncio
 import tempfile
@@ -177,6 +176,19 @@ class AiRuntimeService(Service):
         self.strategy = strategy
 
 
+def progress_event_handler(event: "yapapi.events.CommandProgress"):
+    if event.message is not None:
+        progress = json.loads(event.message)
+        percent = 0.0
+        
+        if progress['size'] is None:
+            percent = "unknown"
+        else:
+            percent = 100.0 * progress['progress'] / progress['size']
+
+        print(f"Deploy progress: {percent}% ({progress['progress']} B / {progress['size']} B)")
+
+
 async def main(subnet_tag, driver=None, network=None):
     strategy = ProviderOnceStrategy()
     async with Golem(
@@ -193,6 +205,8 @@ async def main(subnet_tag, driver=None, network=None):
             ],
             num_instances=1,
         )
+
+        golem.add_event_consumer(progress_event_handler, ["CommandProgress"])
 
         def instances():
             return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
