@@ -123,10 +123,12 @@ class Jobs : IJobsUpdater
     {
         switch (currentState)
         {
-            case StateType.Deployed:
-                if (nextState == StateType.Ready)
+            case StateType.Initialized:
+                if (nextState == StateType.Deployed)
                     return JobStatus.DownloadingModel;
                 break;
+            case StateType.Deployed:
+                return JobStatus.Computing;
             case StateType.Ready:
                 return JobStatus.Computing;
             case StateType.Terminated:
