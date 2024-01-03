@@ -53,7 +53,7 @@ class ExampleRunner
         tasks[0] = Task.Run(() =>
         {
             logger.LogInformation("Captured Ctrl-C. Finishing example...");
-            var success = App.Stop().Wait(10000);
+            var success = App.Stop().Wait(30000);
             logger.LogInformation("Example application finished");
         });
 
