@@ -6,82 +6,73 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
+using Medallion.Shell;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Golem.Yagna
 {
+    public class OutputLogger : TextWriter
+    {
+        public OutputLogger(ILogger? logger, LogLevel lvl, string prefix)
+        {
+            _logger = logger ?? NullLogger.Instance;
+            _lvl = lvl;
+            _prefix = prefix;
+        }
+
+        private readonly ILogger _logger;
+        private readonly LogLevel _lvl;
+        private readonly string _prefix;
+
+        public override Encoding Encoding => Encoding.UTF8;
+
+        public override void WriteLine(string? value)
+        {
+            _logger.Log(_lvl, $"{_prefix}: {value}");
+        }
+    }
+
     public class ProcessFactory
     {
-        public static Process CreateProcess(string fileName, string args, bool openConsole, Dictionary<string, string> env)
+        public static Command CreateProcess<OUT_WRITER, ERR_WRITER>(string executable, string args, Dictionary<string, string> env, OUT_WRITER stdOut, ERR_WRITER errOut)
+        where OUT_WRITER : TextWriter
+        where ERR_WRITER: TextWriter
         {
-            var initStartInfo = () => CreateProcessStartInfo(fileName, args, openConsole);
-            return CreateProcess(fileName, initStartInfo, env);
+            var args_list = args.Split(null).ToList();
+            args_list.RemoveAll(string.IsNullOrEmpty);
+            return CreateProcess(executable, args_list, env, stdOut, errOut);
         }
 
-        public static Process CreateProcess(string fileName, List<string> args, bool openConsole, Dictionary<string, string> env)
+        public static Command CreateProcess<OUT_WRITER, ERR_WRITER>(string executable, IEnumerable<object>? args, Dictionary<string, string> env, OUT_WRITER stdOut, ERR_WRITER errOut) 
+        where OUT_WRITER : TextWriter
+        where ERR_WRITER: TextWriter
         {
-            var initStartInfo = () => CreateProcessStartInfo(fileName, args, openConsole);
-            return CreateProcess(fileName, initStartInfo, env);
+            var executablePath = Path.GetFullPath(executable);
+            var workDir = Directory.GetParent(executablePath)?.ToString();
+
+            return Command
+                .Run(executablePath, args, options => updateOptions(options, workDir, env))
+                .RedirectTo(stdOut)
+                .RedirectStandardErrorTo(errOut);
         }
 
-        private static Process CreateProcess(string fileName, Func<ProcessStartInfo> initStartInfo, Dictionary<string, string> env)
+        static Shell.Options updateOptions(Shell.Options options, string workDir, Dictionary<string, string> env)
         {
-            var startInfo = initStartInfo();
-
-            foreach (var (k, v) in env)
-            {
-                if(startInfo.EnvironmentVariables.ContainsKey(k))
-                    startInfo.EnvironmentVariables[k] = v;
-                else
-                    startInfo.EnvironmentVariables.Add(k, v);
-            }
-
-            var process = new Process
-            {
-                StartInfo = startInfo,
-                EnableRaisingEvents = true
-            };
-
-            return process;
-        }
-
-        private static ProcessStartInfo CreateProcessStartInfo(string fileName, string args, bool openConsole)
-        {
-            var startInfo = CreateProcessStartInfo(fileName, openConsole);
-            startInfo.Arguments = args;
-
-            return startInfo;
-        }
-
-        private static ProcessStartInfo CreateProcessStartInfo(string fileName, List<string> args, bool openConsole)
-        {
-            var startInfo = CreateProcessStartInfo(fileName, openConsole);
-            args.ForEach(startInfo.ArgumentList.Add);
-
-            return startInfo;
-        }
-
-        private static ProcessStartInfo CreateProcessStartInfo(string fileName, bool openConsole)
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = fileName,
-                UseShellExecute = false
-            };
-
-            if (openConsole)
-            {
-                startInfo.RedirectStandardOutput = false;
-                startInfo.RedirectStandardError = false;
-                startInfo.CreateNoWindow = true;
-                
-            }
-            else
-            {
-                startInfo.RedirectStandardOutput = true;
-                startInfo.RedirectStandardError = true;
-                startInfo.CreateNoWindow = true;
-            }
-
-            return startInfo;
+            options = options
+                .EnvironmentVariables(env)
+                .WorkingDirectory(workDir)
+                .ThrowOnError(true)
+                .DisposeOnExit(false)
+                .StartInfo(info =>
+                {
+                    // info.RedirectStandardOutput = true;
+                    // info.RedirectStandardError = true;
+                    info.CreateNoWindow = true;
+                    // info.UseShellExecute = false;
+                });
+            return options;
         }
 
         public static string BinName(string name)
@@ -94,6 +85,17 @@ namespace Golem.Yagna
             {
                 return Path.GetFileNameWithoutExtension(name);
             }
+        }
+        public static async Task<int> StopCmd(Command cmd) {
+            
+                if (!cmd.Process.HasExited) {
+                    if (!await cmd.TrySignalAsync(CommandSignal.ControlC))
+                    {
+                        cmd.Kill();
+                    }
+                    await cmd.Process.WaitForExitAsync();
+                }
+                return cmd.Process.ExitCode;
         }
     }
 }

@@ -136,9 +136,7 @@ namespace Golem
 
             await Task.Yield();
 
-            bool openConsole = false;
-
-            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(openConsole);
+            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions();
 
             var processExitHandler = (int exitCode) =>
             {
@@ -237,7 +235,7 @@ namespace Golem
         {
             Provider.PresetConfig.InitilizeDefaultPreset();
 
-            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, exitHandler, _tokenSource.Token, yagnaOptions.OpenConsole, true);
+            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, exitHandler, _tokenSource.Token, true);
         }
 
         async Task<string?> WaitForIdentityAsync(CancellationToken token)
