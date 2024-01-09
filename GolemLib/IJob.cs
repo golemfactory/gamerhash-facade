@@ -1,4 +1,5 @@
 using System.ComponentModel;
+
 using GolemLib.Types;
 
 namespace GolemLib;
@@ -32,7 +33,6 @@ public interface IJob : INotifyPropertyChanged
     /// TODO: We can have multiple `Payment` confirmation structs.
     /// </summary>
     /// <returns></returns>
-    // public Task<Payment> PaymentConfirmation();
     public List<Payment> PaymentConfirmation { get; }
     /// <summary>
     /// Get usage counters during task execution, what allows to estimate
