@@ -6,14 +6,11 @@ interface IValidatorDb
     /// Query from database all Payment confirmations for specified TransactionId.
     /// </summary>
     /// <param name="TransactionId">Filter by `TransactionId` field from `Payment` structure.</param>
-    /// <returns></returns>
     public Task<List<Payment>> QueryPayments(string TransactionId);
     /// <summary>
     /// Adds validated Payment confirmation to database. Next call to `QueryPayments`
     /// should return this Payment.
     /// </summary>
-    /// <param name="payment"></param>
-    /// <returns></returns>
     public Task InsertPayment(Payment payment);
 }
 
@@ -29,11 +26,15 @@ interface IPaymentValidator
     /// 
     /// For trusted Requestors only first 2 levels are necessary and they don't require history
     /// of Payment confirmations.
+    /// But we must keep in mind that limiting Requestors to choose only trusted ones will be
+    /// in reponsibility of Providers, so we can't be sure if they really do it.
     /// 
     /// Notes:
     /// - PaymentValidator will add all confirmations to database, unless first 2-levels of checks
     ///   will fail. 3rd level check failures should still be added to database.
     /// - Function doesn't validate signatures of Payments queried from db.
+    /// - If IValidatorDb won't return any confirmations (in case of for example mocked database)
+    ///   Validator will still work correctly, but won't protect against 3rd level frauds.
     /// </summary>
     /// <returns>Throws exception if validation will fail.</returns>
     public Task Validate(IValidatorDb db, List<Payment> confirmations);
