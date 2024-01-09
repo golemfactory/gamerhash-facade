@@ -1,5 +1,10 @@
 using GolemLib.Types;
 
+/// <summary>
+/// GamerHash server is expected to implement this interface and pass it
+/// to IPaymentValidator::Validate function together with incoming Payment
+/// confirmations from Providers.
+/// </summary>
 interface IValidatorDb
 {
     /// <summary>
@@ -14,6 +19,9 @@ interface IValidatorDb
     public Task InsertPayment(Payment payment);
 }
 
+/// <summary>
+/// Interface will be implemented in Golem.dll.
+/// </summary>
 interface IPaymentValidator
 {
     /// <summary>
