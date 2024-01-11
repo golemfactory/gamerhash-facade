@@ -19,7 +19,7 @@ namespace Golem.Yagna
         public bool Debug { get; set; }
 
         public string YagnaApiUrl { get; set; } = "";
-        public Network Network { get; set; } = Network.Goerli;
+        public Network Network { get; set; } = Network.Holesky;
     }
 
 
@@ -105,17 +105,17 @@ namespace Golem.Yagna
         internal string ExecToText(params string[] arguments)
         {
             var strWriter = new StringWriter();
-            var cmd = CreateCommandProcessAndStart(arguments, strWriter);
             try
             {
+                var cmd = CreateCommandProcessAndStart(arguments, strWriter);
                 cmd.Wait();
-                return strWriter.ToString();
             }
             catch (Exception e)
             {
                 _logger?.LogError(e, "Failed to run yagna");
                 throw;
             }
+            return strWriter.ToString();
         }
 
         internal async Task<string> ExecToTextAsync(params string[] arguments)
@@ -213,18 +213,12 @@ namespace Golem.Yagna
             var errLogger = new OutputLogger(_logger, LogLevel.Error, "Yagna");
             var cmd = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", environment.Build(), outLogger, errLogger);
 
-            Task.Run(() =>
+            cmd.Task.ContinueWith(result =>
             {
-                cmd.Wait();
-                return Task.CompletedTask;
-            })
-            .ContinueWith(task =>
-            {
-                var exitCode = cmd.Process.ExitCode;
                 if (YagnaProcess is not null)
                     YagnaProcess = null;
-                _logger.LogInformation("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
-                exitHandler(exitCode);
+                _logger.LogInformation("Yagna process finished, exit code {1}", result.Result.ExitCode);
+                exitHandler(result.Result.ExitCode);
             });
 
             cancellationToken.Register(async () => {
