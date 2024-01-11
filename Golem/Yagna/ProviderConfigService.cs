@@ -40,19 +40,19 @@ namespace Golem
                 get
                 {
                     var preset = _provider.PresetConfig.GetPreset(_provider.PresetConfig.DefaultPresetName);
-                    
-                    if(preset == null)
+
+                    if (preset == null)
                         return new GolemPrice();
 
-                    if(!preset.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
+                    if (!preset.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
                         numRequests = 0;
-                    if(!preset.UsageCoeffs.TryGetValue("golem.usage.duration_sec", out var duration))
+                    if (!preset.UsageCoeffs.TryGetValue("golem.usage.duration_sec", out var duration))
                         duration = 0;
-                    if(!preset.UsageCoeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
+                    if (!preset.UsageCoeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
                         gpuSec = 0;
 
                     var initPrice = preset.InitialPrice ?? 0m;
-                    
+
                     return new GolemPrice
                     {
                         EnvPerHour = duration,
@@ -64,13 +64,15 @@ namespace Golem
 
                 set
                 {
-                    _provider.PresetConfig.UpdatePrices(_provider.PresetConfig.DefaultPresetName, new Dictionary<string, decimal>
+                    _provider.PresetConfig.UpdatePrices(_provider.PresetConfig.DefaultPresetName,
+                    new Dictionary<string, decimal>
                     {
                         { "ai-runtime.requests", value.NumRequests },
                         { "golem.usage.duration_sec", value.EnvPerHour },
                         { "golem.usage.gpu-sec", value.GpuPerHour },
                         { "Initial", value.StartPrice }
-                    });
+                    },
+                    out string info);
                 }
             }
 

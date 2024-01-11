@@ -130,20 +130,20 @@ namespace Golem.Yagna
 
         }
 
-        internal T? Exec<T>(string arguments) where T : class
+        internal T? Exec<T>(IEnumerable<object>? args) where T : class
         {
-            var text = ExecToText(arguments);
+            var text = ExecToText(args);
             var options = new JsonSerializerOptionsBuilder()
                 .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
                 .Build();
             return JsonSerializer.Deserialize<T>(text, options);
         }
 
-        internal string ExecToText(string arguments)
+        internal string ExecToText(IEnumerable<object>? args)
         {
             var strWriter = new StringWriter();
-            var errLogger = new OutputLogger(_logger, LogLevel.Error, "Provider");
-            var cmd = ProcessFactory.CreateProcess(_yaProviderPath, arguments, Env, strWriter, errLogger);
+            var outLogger = new OutputLogger(_logger, "Provider");
+            var cmd = ProcessFactory.CreateProcess(_yaProviderPath, args, Env, strWriter, outLogger);
             try
             {
                 cmd.Wait();
@@ -151,61 +151,43 @@ namespace Golem.Yagna
             }
             catch (Exception e)
             {
-                _logger?.LogError(e, "failed to execute {0}", arguments);
-                throw;
-            }
-        }
-        internal string ExecToText(List<string> arguments)
-        {
-            _logger?.LogInformation($"Executing: provider {string.Join(", ", arguments)}");
-            var strWriter = new StringWriter();
-            var errLogger = new OutputLogger(_logger, LogLevel.Error, "Provider");
-            var cmd = ProcessFactory.CreateProcess(_yaProviderPath, arguments, Env, strWriter, errLogger);
-            try
-            {
-                cmd.Process.WaitForExit();
-                return strWriter.ToString();
-            }
-            catch (IOException e)
-            {
-                _logger?.LogError(e, "failed to execute {0}", arguments);
+                _logger?.LogError(e, "failed to execute {0}", args);
                 throw;
             }
         }
 
         public List<ExeUnitDesc> ExeUnitList()
         {
-            return Exec<List<ExeUnitDesc>>("--json exe-unit list") ?? new List<ExeUnitDesc>();
+            return Exec<List<ExeUnitDesc>>("--json exe-unit list".Split()) ?? new List<ExeUnitDesc>();
         }
 
         public Config? Config
         {
             get
             {
-                return Exec<Config>("config get --json");
+                return Exec<Config>("config get --json".Split());
             }
             set
             {
                 if (value != null)
                 {
-                    StringBuilder cmd = new StringBuilder("--json config set", 60);
+                    List<string> cmd = "--json config set".Split().ToList();
                     if (value.Subnet != null)
                     {
-                        cmd.Append(" --subnet \"");
-                        cmd.Append(value.Subnet);
-                        cmd.Append("\"");
+                        cmd.Add("--subnet");
+                        cmd.Add(value.Subnet);
                     }
                     if (value.NodeName != null)
                     {
-                        cmd.Append(" --node-name \"");
-                        cmd.Append(value.NodeName);
-                        cmd.Append("\"");
+                        cmd.Add("--node-name");
+                        cmd.Add(value.NodeName);
                     }
                     if (value.Account != null)
                     {
-                        cmd.Append(" --account \"").Append(value.Account).Append('"');
+                        cmd.Add("--account");
+                        cmd.Append(value.Account);
                     }
-                    ExecToText(cmd.ToString());
+                    ExecToText(cmd);
                 }
             }
         }
@@ -214,13 +196,13 @@ namespace Golem.Yagna
         {
             get
             {
-                var profiles = Exec<Dictionary<string, Profile>>("--json profile list");
+                var profiles = Exec<Dictionary<string, Profile>>($"--json profile list".Split());
                 return profiles?["default"];
             }
         }
         public void UpdateDefaultProfile(String param, String value)
         {
-            ExecToText("profile update " + param + " " + value + " default");
+            ExecToText($"profile update {param} {value} default".Split());
         }
 
         public bool Run(string appKey, Network network, string? yagnaApiUrl, Action<int> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
@@ -228,18 +210,17 @@ namespace Golem.Yagna
             string debugSwitch = "";
             if (enableDebugLogs)
             {
-                debugSwitch = "--debug ";
+                debugSwitch = "--debug";
             }
-            var arguments = $"run {debugSwitch}--payment-network {network.Id}";
+            var arguments = $"run {debugSwitch} --payment-network {network.Id}".Split();
 
             var env = new Dictionary<string, string>(Env);
             env["MIN_AGREEMENT_EXPIRATION"] = "30s";
             env["YAGNA_APPKEY"] = appKey;
 
-            var outLogger = new OutputLogger(_logger, LogLevel.Information, "Provider");
-            var errLogger = new OutputLogger(_logger, LogLevel.Error, "Provider");
+            var outLogger = new OutputLogger(_logger, "Provider");
 
-            var cmd = ProcessFactory.CreateProcess(_yaProviderPath, arguments, env, outLogger, errLogger);
+            var cmd = ProcessFactory.CreateProcess(_yaProviderPath, arguments, env, outLogger, outLogger);
 
             Task.Run(() =>
             {

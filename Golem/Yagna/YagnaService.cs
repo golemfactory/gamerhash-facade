@@ -73,7 +73,7 @@ namespace Golem.Yagna
             }
         }
 
-        public YagnaService(string golemPath, string? dataDir, ILoggerFactory? loggerFactory)
+        public YagnaService(string golemPath, string dataDir, ILoggerFactory? loggerFactory)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<YagnaService>();
@@ -88,17 +88,16 @@ namespace Golem.Yagna
         private Command CreateCommandProcessAndStart<T>(string[] arguments, T? output = null)
             where T : TextWriter
         {
-            var errLogger = new OutputLogger(_logger, LogLevel.Error, "Yagna");
+            var outLogger = new OutputLogger(_logger, "Yagna");
             var args = arguments.ToList();
             var env = Env.Build();
             if (output == null)
             {
-                var stdOutput = new OutputLogger(_logger, LogLevel.Information, "Yagna");
-                return ProcessFactory.CreateProcess(_yaExePath, args, env, stdOutput, errLogger);
+                return ProcessFactory.CreateProcess(_yaExePath, args, env, outLogger, outLogger);
             }
             else
             {
-                return ProcessFactory.CreateProcess(_yaExePath, args, env, output, errLogger);
+                return ProcessFactory.CreateProcess(_yaExePath, args, env, output, outLogger);
             }
         }
 
@@ -209,9 +208,9 @@ namespace Golem.Yagna
             environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
             environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
 
-            var outLogger = new OutputLogger(_logger, LogLevel.Information, "Yagna");
-            var errLogger = new OutputLogger(_logger, LogLevel.Error, "Yagna");
-            var cmd = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", environment.Build(), outLogger, errLogger);
+            var outLogger = new OutputLogger(_logger, "Yagna");
+            var args = $"service run {debugFlag}".Split();
+            var cmd = ProcessFactory.CreateProcess(_yaExePath, args, environment.Build(), outLogger, outLogger);
 
             cmd.Task.ContinueWith(result =>
             {
