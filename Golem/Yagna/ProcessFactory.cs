@@ -20,17 +20,35 @@ namespace Golem.Yagna
             _logger = logger ?? NullLogger.Instance;
             _lvl = lvl;
             _prefix = prefix;
+            _strBuilder = new StringBuilder();
         }
 
         private readonly ILogger _logger;
         private readonly LogLevel _lvl;
         private readonly string _prefix;
+        private StringBuilder _strBuilder;
 
         public override Encoding Encoding => Encoding.UTF8;
+
+        public override void Write(char value)
+        {
+            if (value == '\n') {
+                WriteLine();
+            } else {
+                _strBuilder.Append(value);
+            }
+        }
 
         public override void WriteLine(string? value)
         {
             _logger.Log(_lvl, $"{_prefix}: {value}");
+        }
+
+        public override void WriteLine()
+        {
+            var line = _strBuilder.ToString();
+            _strBuilder = new StringBuilder();
+            _logger.Log(_lvl, $"{_prefix}: {line}");
         }
     }
 
@@ -87,7 +105,6 @@ namespace Golem.Yagna
             }
         }
         public static async Task<int> StopCmd(Command cmd) {
-            
                 if (!cmd.Process.HasExited) {
                     if (!await cmd.TrySignalAsync(CommandSignal.ControlC))
                     {
