@@ -212,7 +212,7 @@ namespace Golem
 
         private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandler)
         {
-            var success = Yagna.Run(yagnaOptions, exitHandler, _tokenSource.Token);
+            var success = Yagna.Run(yagnaOptions, exitHandler);
 
             if (!success)
                 return false;
@@ -235,7 +235,7 @@ namespace Golem
         {
             Provider.PresetConfig.InitilizeDefaultPreset();
 
-            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, yagnaOptions.YagnaApiUrl, exitHandler, _tokenSource.Token, true);
+            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, true);
         }
 
         async Task<string?> WaitForIdentityAsync(CancellationToken token)
