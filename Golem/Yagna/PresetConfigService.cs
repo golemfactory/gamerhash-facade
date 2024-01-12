@@ -58,7 +58,7 @@ namespace Golem.Yagna
             _parent = parent;
         }
 
-        public void InitilizeDefaultPreset()
+        public void InitilizeDefaultPresets()
         {
             var presets = ActivePresetsNames;
 

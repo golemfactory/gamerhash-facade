@@ -233,7 +233,7 @@ namespace Golem
 
         public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler)
         {
-            Provider.PresetConfig.InitilizeDefaultPreset();
+            Provider.PresetConfig.InitilizeDefaultPresets();
 
             return Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, true);
         }

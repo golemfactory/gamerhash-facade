@@ -161,6 +161,7 @@ namespace Golem.Tests
             Console.WriteLine("Path: " + golemPath);
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
+            await golem.Start();
 
             decimal price = 0;
 
@@ -190,6 +191,8 @@ namespace Golem.Tests
             Assert.Equal(0.006m, golem.Price.GpuPerHour);
             Assert.Equal(0.007m, golem.Price.EnvPerHour);
             Assert.Equal(0.008m, golem.Price.NumRequests);
+
+            await golem.Stop();
         }
 
         public void Dispose()
