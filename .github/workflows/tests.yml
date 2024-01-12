@@ -40,3 +40,4 @@ jobs:
           Golem.Tests/tests/*/modules/golem-data/provider/exe-unit/work/logs/*.log
           Golem.Tests/tests/*/modules/golem-data/provider/exe-unit/work/*/agreement.json
           Golem.Tests/tests/*/modules/golem-data/provider/exe-unit/work/*/*/*.log
+          Golem.Tests/tests/*/*.log
