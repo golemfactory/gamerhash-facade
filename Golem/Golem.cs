@@ -138,21 +138,31 @@ namespace Golem
 
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions();
 
-            var processExitHandler = (int exitCode) =>
+            var providerCancellationTokenSource = new CancellationTokenSource();
+            var yagnaCancellationTokenSource = new CancellationTokenSource();
+
+            var yagnaProcessExitHandler = (int exitCode) =>
             {
+                yagnaCancellationTokenSource.Cancel();
+                Status = exitCode == 0 ? GolemStatus.Off : GolemStatus.Error;
+            };
+
+            var providerProcessExitHandler = (int exitCode) =>
+            {
+                providerCancellationTokenSource.Cancel();
                 Status = exitCode == 0 ? GolemStatus.Off : GolemStatus.Error;
             };
 
             resetToken();
 
-            var success = await StartupYagnaAsync(yagnaOptions, processExitHandler);
+            var success = await StartupYagnaAsync(yagnaOptions, yagnaProcessExitHandler, providerCancellationTokenSource.Token);
 
             if (success)
             {
                 var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
                 if (defaultKey is not null)
                 {
-                    Status = StartupProvider(yagnaOptions, processExitHandler) ? GolemStatus.Ready : GolemStatus.Error;
+                    Status = StartupProvider(yagnaOptions, providerProcessExitHandler, yagnaCancellationTokenSource.Token) ? GolemStatus.Ready : GolemStatus.Error;
                 }
             }
             else
@@ -210,9 +220,9 @@ namespace Golem
             }
         }
 
-        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandler)
+        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
         {
-            var success = Yagna.Run(yagnaOptions, exitHandler);
+            var success = Yagna.Run(yagnaOptions, exitHandler, cancellationToken);
 
             if (!success)
                 return false;
@@ -231,11 +241,11 @@ namespace Golem
             return success;
         }
 
-        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler)
+        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
         {
             Provider.PresetConfig.InitilizeDefaultPresets();
 
-            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, true);
+            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
         }
 
         async Task<string?> WaitForIdentityAsync(CancellationToken token)

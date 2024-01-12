@@ -205,7 +205,7 @@ namespace Golem.Yagna
             ExecToText($"profile update {param} {value} default".Split());
         }
 
-        public bool Run(string appKey, Network network, Action<int> exitHandler, bool enableDebugLogs = false)
+        public bool Run(string appKey, Network network, Action<int> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
             string debugSwitch = "";
             if (enableDebugLogs)
@@ -242,6 +242,11 @@ namespace Golem.Yagna
             ChildProcessTracker.AddProcess(cmd);
 
             ProviderProcess = cmd;
+
+            cancellationToken.Register(async () => {
+                _logger.LogInformation("Canceling Provider process");
+                await Stop();
+            });
 
             return !ProviderProcess.Process.HasExited;
         }

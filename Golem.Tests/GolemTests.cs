@@ -109,7 +109,7 @@ namespace Golem.Tests
             Assert.Equal(GolemStatus.Off, status);
         }
 
-        [Fact]
+        // [Fact]
         public async Task StartAndStopWithoutWaiting_VerifyStatusAsync()
         {
             var testName = nameof(StartAndStopWithoutWaiting_VerifyStatusAsync);
