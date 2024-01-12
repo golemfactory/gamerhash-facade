@@ -147,7 +147,7 @@ namespace Golem.Tests
 
             await golem.Start();
 
-            golem.WalletAddress = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa";
+            golem.WalletAddress = "0x1234567890123456789012345678901234567890";
 
             await golem.Stop();
 
