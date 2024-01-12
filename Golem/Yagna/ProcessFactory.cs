@@ -32,9 +32,12 @@ namespace Golem.Yagna
 
         public override void Write(char value)
         {
-            if (value == '\n') {
+            if (value == '\n')
+            {
                 WriteLine();
-            } else {
+            }
+            else
+            {
                 _strBuilder.Append(value);
             }
         }
@@ -54,9 +57,9 @@ namespace Golem.Yagna
 
     public class ProcessFactory
     {
-        public static Command CreateProcess<OUT_WRITER, ERR_WRITER>(string executable, IEnumerable<object>? args, Dictionary<string, string> env, OUT_WRITER stdOut, ERR_WRITER errOut) 
+        public static Command CreateProcess<OUT_WRITER, ERR_WRITER>(string executable, IEnumerable<object>? args, Dictionary<string, string> env, OUT_WRITER stdOut, ERR_WRITER errOut)
         where OUT_WRITER : TextWriter
-        where ERR_WRITER: TextWriter
+        where ERR_WRITER : TextWriter
         {
             var argList = args?.ToList();
             argList?.RemoveAll(s => string.IsNullOrWhiteSpace((string?)s));
@@ -94,15 +97,23 @@ namespace Golem.Yagna
                 return Path.GetFileNameWithoutExtension(name);
             }
         }
-        public static async Task<int> StopCmd(Command cmd) {
-                if (!cmd.Process.HasExited) {
-                    if (!await cmd.TrySignalAsync(CommandSignal.ControlC))
-                    {
-                        cmd.Kill();
-                    }
-                    await cmd.Process.WaitForExitAsync();
+
+        public static async Task<int> StopCmd(Command cmd, int stopTimeoutMs = 30_000)
+        {
+            if (!cmd.Process.HasExited)
+            {
+                if (!await cmd.TrySignalAsync(CommandSignal.ControlC))
+                {
+                    cmd.Kill();
                 }
-                return cmd.Process.ExitCode;
+
+                CancellationTokenSource stopTimeoutTokenSrc = new CancellationTokenSource();
+                var stopTimeoutToken = stopTimeoutTokenSrc.Token;
+                stopTimeoutTokenSrc.CancelAfter(stopTimeoutMs);
+
+                await cmd.Process.WaitForExitAsync(stopTimeoutToken);
+            }
+            return cmd.Process.ExitCode;
         }
     }
 }
