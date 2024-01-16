@@ -420,6 +420,11 @@ namespace Golem.Yagna
             _yagna.ExecToText("payment", "init", "--receiver", "--network", network.Id, "--driver", driver, "--account", account);
         }
 
+        public void Init(Network network, string account)
+        {
+            _yagna.ExecToText("payment", "init", "--receiver", "--network", network.Id, "--account", account);
+        }
+
         public async Task<PaymentStatus?> Status(Network network, string driver, string account)
         {
             return await _yagna.ExecAsync<PaymentStatus>("--json", "payment", "status", "--network", network.Id, "--driver", driver, "--account", account);
