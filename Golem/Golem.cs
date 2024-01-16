@@ -230,7 +230,7 @@ namespace Golem
 
             try
             {
-                Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20next.Id, account ?? "");
+                Yagna.PaymentService.Init(yagnaOptions.Network, account ?? "");
             }
             catch (Exception e)
             {
