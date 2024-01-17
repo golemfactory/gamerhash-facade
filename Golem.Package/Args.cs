@@ -5,7 +5,7 @@ public class BuildArgs
 {
     [Option('t', "target", Default = "package", Required = false, HelpText = "Directory where binaries will be generated relative to working dir")]
     public required string Target { get; set; }
-    [Option('y', "yagna-version", Default = "pre-rel-v0.14.1-rc6_ctrl_break", Required = false, HelpText = "Yagna version github tag")]
+    [Option('y', "yagna-version", Default = "pre-rel-v0.14.1-rc7_combined", Required = false, HelpText = "Yagna version github tag")]
     public required string GolemVersion { get; set; }
     [Option('r', "runtime-version", Default = "pre-rel-v0.1.0-rc23_ctrl_break_close", Required = false, HelpText = "Runtime version github tag")]
     public required string RuntimeVersion { get; set; }
