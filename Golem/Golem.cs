@@ -236,7 +236,15 @@ namespace Golem
             _activityLoop = StartActivityLoop(_tokenSource.Token);
             _invoiceEventsLoop = StartInvoiceEventsLoop(_tokenSource.Token);
 
-            Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20next.Id, account ?? "");
+            try
+            {
+                Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20next.Id, account ?? "");
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Payment init failed: {}", e);
+                return false;
+            }
 
             return success;
         }
