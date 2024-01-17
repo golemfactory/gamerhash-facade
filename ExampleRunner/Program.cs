@@ -47,7 +47,10 @@ class ExampleRunner
 
         logger.LogInformation("Press Ctrl+C To Terminate");
 
-        waitForCtrlC();
+        if (Environment.UserInteractive)
+        {
+            waitForCtrlC();
+        }
 
         Task[] tasks = new Task[2];
         tasks[0] = Task.Run(() =>

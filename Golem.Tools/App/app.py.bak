@@ -1,10 +1,4 @@
 import asyncio
-import base64
-import io
-import json
-import os
-from PIL import Image
-import requests
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,7 +9,6 @@ from yapapi.props import inf
 from yapapi.props.base import constraint, prop
 from yapapi.services import Service
 from yapapi.log import enable_default_logger
-from yapapi.config import ApiConfig
 
 import argparse
 import asyncio
@@ -30,9 +23,6 @@ from yapapi import __version__ as yapapi_version
 from yapapi import windows_event_loop_fix
 from yapapi.log import enable_default_logger
 from yapapi.strategy import SCORE_TRUSTED, SCORE_REJECTED, MarketStrategy
-from yapapi.rest import Activity
-
-from ya_activity import ApiClient, ApiException, RequestorControlApi, RequestorStateApi
 
 # Utils
 
@@ -151,8 +141,7 @@ class ProviderOnceStrategy(MarketStrategy):
 
 # App
 
-# RUNTIME_NAME = "automatic"
-RUNTIME_NAME = "dummy"
+RUNTIME_NAME = "ai"
 CAPABILITIES = "golem.runtime.capabilities"
 
 @dataclass
@@ -161,7 +150,6 @@ class AiPayload(Payload):
     image_fmt: str = prop("golem.!exp.ai.v1.srv.comp.ai.model-format", default="safetensors")
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
-    # capabilities: str = constraint(CAPABILITIES, default="automatic")
     capabilities: str = constraint(CAPABILITIES, default="dummy")
 
 
@@ -171,13 +159,15 @@ class AiRuntimeService(Service):
         ## TODO switched into using smaller model to avoid problems during tests. Resolve it when automatic runtime integrated
         # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
         return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
-        # return AiPayload(image_url="hash:sha3:6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)
 
         script = self._ctx.new_script(timeout=None)
         script.deploy()
-        script.start()
+        script.start(
+            "--model",
+            "dummy_model"
+        )
         yield script
 
     # async def run(self):
@@ -186,34 +176,6 @@ class AiRuntimeService(Service):
     def __init__(self, strategy: ProviderOnceStrategy):
         super().__init__()
         self.strategy = strategy
-
-async def trigger(activity: RequestorControlApi, token, prompt, output_file):
-
-    custom_url = "/sdapi/v1/txt2img"
-    url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
-    headers = {"Authorization": "Bearer "+token}
-
-    payload = {
-        'prompt': prompt,
-        'steps': 5
-    }
-
-    print('Sending request:')
-    print(f'curl -X POST -H \'Authorization: Bearer {token}\' -d "{payload}" {url}')
-    
-    response = requests.post(url, headers=headers, json=payload, stream=True)
-    if response.encoding is None:
-        response.encoding = 'utf-8'
-
-    print(response)
-
-    for line in response.iter_lines(decode_unicode=True):
-        if line:
-            # print(line)
-            response = json.loads(line)
-            image = Image.open(io.BytesIO(base64.b64decode(response['images'][0])))
-            print(f"Saving response to {os.path.abspath(output_file)}")
-            image.save(output_file)
 
 
 async def main(subnet_tag, driver=None, network=None):
@@ -233,30 +195,12 @@ async def main(subnet_tag, driver=None, network=None):
             num_instances=1,
         )
 
-        async def get_image(prompt, file_name):
-            for s in cluster.instances:
-                if s._ctx != None:
-                    for id in [s._ctx._activity.id ]:
-                        activity = await golem._engine._activity_api.use_activity(id)
-                        await trigger(
-                            activity,
-                            golem._engine._api_config.app_key,
-                            prompt,
-                            file_name
-                        )
+        def instances():
+            return [f"{s.provider_name}: {s.state.value} {s._ctx}" for s in cluster.instances]
 
-        print('Starting')
         while True:
-            print('Please type your prompt:')
-            prompt = input()
-            # prompt = 'An old tree on a small red apple'
-            # print(prompt)
             await asyncio.sleep(3)
-            await get_image(
-                prompt,
-                'output.png'
-            )
-            print('Done')
+            print(f"instances: {instances()}")
 
 if __name__ == "__main__":
     parser = build_parser("Run AI runtime task")
