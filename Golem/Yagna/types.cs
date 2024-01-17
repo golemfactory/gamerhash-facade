@@ -43,6 +43,7 @@ namespace Golem.Yagna.Types
         }
 
         public static readonly PaymentDriver ERC20 = new PaymentDriver("erc20");
+        public static readonly PaymentDriver ERC20next = new PaymentDriver("erc20next");
         public static readonly PaymentDriver ZkSync = new PaymentDriver("zksync");
     }
 
