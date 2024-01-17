@@ -78,7 +78,7 @@ namespace Golem.Tools
                 foreach (JObject descriptor in descriptors)
                 {
                     var name = descriptor.Value<string>("name");
-                    if (name != null && "ai".Equals(name))
+                    if (name != null && "dummy".Equals(name))
                     {
                         var runtime_name = $"ya-runtime-ai{GolemRunnable.ExecutableFileExtension()}";
                         descriptor.Remove("supervisor-path");
