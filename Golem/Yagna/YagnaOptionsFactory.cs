@@ -16,12 +16,11 @@ namespace Golem.Yagna
         public const string DefaultYagnaApiUrl = "http://127.0.0.1:12502";
         public static Network DefaultNetwork = Network.Goerli;
         public static string DefaultAppKey { get => _generatedAppKey.Value; }
-        public static YagnaStartupOptions CreateStartupOptions(bool openConsole)
+        public static YagnaStartupOptions CreateStartupOptions()
         {
             var yagnaOptions = new YagnaStartupOptions
             {
                 Debug = false,
-                OpenConsole = openConsole,
                 AppKey = DefaultAppKey,
                 YagnaApiUrl = DefaultYagnaApiUrl,
                 Network = DefaultNetwork

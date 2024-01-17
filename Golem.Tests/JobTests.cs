@@ -11,22 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Golem.Tests
 {
-
-    public class GolemFixture : IDisposable
-    {
-        public GolemFixture(IMessageSink sink)
-        {
-            Sink = sink;
-        }
-
-        public IMessageSink Sink { get; }
-
-        public void Dispose()
-        {
-        }
-    }
-
-    [Collection("Sequential")]
+    [Collection(nameof(SerialTestCollection))]
     public class JobTests : IDisposable, IAsyncLifetime, IClassFixture<GolemFixture>
     {
         private readonly ILoggerFactory _loggerFactory;

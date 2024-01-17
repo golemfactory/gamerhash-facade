@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
+using Medallion.Shell;
 
 namespace Golem.Yagna
 {
@@ -17,9 +18,8 @@ namespace Golem.Yagna
 
         public bool Debug { get; set; }
 
-        public bool OpenConsole { get; set; }
         public string YagnaApiUrl { get; set; } = "";
-        public Network Network { get; set; } = Network.Goerli;
+        public Network Network { get; set; } = Network.Holesky;
     }
 
 
@@ -58,55 +58,68 @@ namespace Golem.Yagna
     {
         private readonly string _yaExePath;
         private readonly string? _dataDir;
-        private static Process? YagnaProcess { get; set; }
+        private static Command? YagnaProcess { get; set; }
         private readonly ILogger _logger;
 
         private EnvironmentBuilder Env
         {
             get
             {
+                var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
                 var env = new EnvironmentBuilder();
+                env = File.Exists(certs) ? env.WithSslCertFile(certs) : env;
+                env = _dataDir != null ? env.WithYagnaDataDir(_dataDir) : env;
                 return env;
             }
         }
 
-        public YagnaService(string golemPath, string? dataDir, ILoggerFactory? loggerFactory)
+        public YagnaService(string golemPath, string dataDir, ILoggerFactory? loggerFactory)
         {
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<YagnaService>();
-            _yaExePath = Path.Combine(golemPath, ProcessFactory.BinName("yagna"));
-            _dataDir = dataDir;
+            _yaExePath = Path.GetFullPath(Path.Combine(golemPath, ProcessFactory.BinName("yagna")));
+            _dataDir = Path.GetFullPath(dataDir);
             if (!File.Exists(_yaExePath))
             {
                 throw new Exception($"File not found: {_yaExePath}");
             }
         }
 
-        private Process CreateCommandProcessAndStart(params string[] arguments)
+        private Command CreateCommandProcessAndStart<T>(string[] arguments, T? output = null)
+            where T : TextWriter
         {
-            var process = ProcessFactory.CreateProcess(_yaExePath, arguments.ToList(), false, Env.Build());
-
-            process.Start();
-            return process;
+            var outLogger = new OutputLogger(_logger, "Yagna");
+            var args = arguments.ToList();
+            var env = Env.Build();
+            if (output == null)
+            {
+                return ProcessFactory.CreateProcess(_yaExePath, args, env, outLogger, outLogger);
+            }
+            else
+            {
+                return ProcessFactory.CreateProcess(_yaExePath, args, env, output, outLogger);
+            }
         }
 
         internal string ExecToText(params string[] arguments)
         {
-            var process = CreateCommandProcessAndStart(arguments);
-            process.WaitForExit();
-            string output = process.StandardOutput.ReadToEnd();
-            var error = process.StandardError.ReadToEnd();
-            if (process.ExitCode != 0)
+            var strWriter = new StringWriter();
+            try
             {
-                throw new Exception("Yagna call failed. E: " + error);
+                var cmd = CreateCommandProcessAndStart(arguments, strWriter);
+                cmd.Wait();
             }
-            return output;
+            catch (Exception e)
+            {
+                _logger?.LogError(e, "Failed to run yagna");
+                throw;
+            }
+            return strWriter.ToString();
         }
 
         internal async Task<string> ExecToTextAsync(params string[] arguments)
         {
-            var process = CreateCommandProcessAndStart(arguments);
-            return await process.StandardOutput.ReadToEndAsync();
+            return await Task.Run(() => Task.FromResult(ExecToText(arguments)));
         }
 
         internal T? Exec<T>(params string[] arguments) where T : class
@@ -142,12 +155,17 @@ namespace Golem.Yagna
         {
             get
             {
+                if (YagnaProcess == null)
+                {
+                    return null;
+                }
                 try
                 {
                     return Exec<Result<IdInfo>>("--json", "id", "show")?.Ok;
                 }
-                catch (System.Exception)
+                catch (Exception e)
                 {
+                    _logger.LogError($"Failed to get Node Id. Err {e}");
                     return null;
                 }
 
@@ -170,7 +188,7 @@ namespace Golem.Yagna
             }
         }
 
-        public bool HasExited => YagnaProcess?.HasExited ?? true;
+        public bool HasExited => YagnaProcess?.Process.HasExited ?? true;
 
         public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
         {
@@ -185,52 +203,47 @@ namespace Golem.Yagna
                 debugFlag = "--debug";
             }
 
-            var certs = Path.Combine(Path.GetDirectoryName(_yaExePath) ?? "", "cacert.pem");
-
             EnvironmentBuilder environment = Env;
             environment = options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(options.YagnaApiUrl) : environment;
             environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
             environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
-            environment = File.Exists(certs) ? environment.WithSslCertFile(certs) : environment;
-            environment = _dataDir != null ? environment.WithYagnaDataDir(_dataDir) : environment;
 
+            var outLogger = new OutputLogger(_logger, "Yagna");
+            var args = $"service run {debugFlag}".Split();
+            var cmd = ProcessFactory.CreateProcess(_yaExePath, args, environment.Build(), outLogger, outLogger);
 
-            var process = ProcessFactory.CreateProcess(_yaExePath, $"service run {debugFlag}", options.OpenConsole, environment.Build());
-
-            if (process.Start())
+            cmd.Task.ContinueWith(result =>
             {
-                if (!options.OpenConsole)
-                {
-                    BindOutputEventHandlers(process);
-                }
+                if (YagnaProcess is not null)
+                    YagnaProcess = null;
+                _logger.LogInformation("Yagna process finished, exit code {1}", result.Result.ExitCode);
+                exitHandler(result.Result.ExitCode);
+            });
 
-                process
-                    .WaitForExitAsync(cancellationToken)
-                    .ContinueWith(task =>
-                    {
-                        if (task.Status == TaskStatus.RanToCompletion && process.HasExited)
-                        {
-                            var exitCode = process.ExitCode;
-                            _logger.LogDebug("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
-                            exitHandler(exitCode);
-                        }
-                    });
-                YagnaProcess = process;
+            ChildProcessTracker.AddProcess(cmd);
 
-                ChildProcessTracker.AddProcess(process);
-                return !YagnaProcess.HasExited;
-            }
-            YagnaProcess = null;
-            return false;
+            YagnaProcess = cmd;
+
+            cancellationToken.Register(async () => {
+                _logger.LogInformation("Canceling Yagna process");
+                await Stop();
+            });
+
+            return !YagnaProcess.Process.HasExited;
         }
 
         public async Task Stop()
         {
-            if (YagnaProcess == null || YagnaProcess.HasExited)
+            if (YagnaProcess == null)
                 return;
-
-            YagnaProcess.Kill(true);
-            await YagnaProcess.WaitForExitAsync();
+            if (YagnaProcess.Process.HasExited)
+            {
+                YagnaProcess = null;
+                return;
+            }
+            _logger.LogInformation("Stopping Yagna process");
+            var cmd = YagnaProcess;
+            await ProcessFactory.StopCmd(cmd);
             YagnaProcess = null;
         }
 

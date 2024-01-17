@@ -3,6 +3,7 @@
 ## Preparing directories
 
 There are 2 options:
+
 - Building package locally
 - Downloading public released package from github repository
 
@@ -10,6 +11,7 @@ There are 2 options:
 
 You can use `Golem.Package` builder tool to create directory structure for MockGUI app.
 Run followin command from top level project directory:
+
 ```sh
 dotnet run --project Golem.Package -- download --target modules
 ```
@@ -18,6 +20,7 @@ dotnet run --project Golem.Package -- download --target modules
 
 You can use `Golem.Package` builder tool to create directory structure for MockGUI app.
 Run followin command from top level project directory:
+
 ```sh
 dotnet run --project Golem.Package -- build --target modules
 ```
@@ -28,15 +31,16 @@ golem data directories.
 ### Selecting versions
 
 You can choose specific release to be downloaded:
+
 ```sh
 dotnet run --project Golem.Package -- download --target modules --version pre-rel-v0.1.0-rc5
 ```
 
 In case of building artifacts locally you can specify `yagna` and `runtimes` versions:
-```sh
-dotnet run --project Golem.Package -- build --target modules --yagna-version v0.14.0 --runtime-version pre-rel-v0.1.0-rc19
-```
 
+```sh
+dotnet run --project Golem.Package -- build --target modules --yagna-version pre-rel-v0.14.1-rc7_combined --runtime-version pre-rel-v0.1.0-rc24_automatic
+```
 
 ## Running
 
@@ -62,6 +66,7 @@ gamerhash-facade/
 ## Running from dynamic dlls
 
 Instead of using dlls referenced by the project, they can be downloaded from `modules` directory:
+
 ```sh
 dotnet run --golem modules --use-dll
 ```

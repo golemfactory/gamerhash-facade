@@ -122,7 +122,7 @@ namespace Golem.Tools
                 WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment release-allocations", _env));
             }
 
-            if (minFundThreshold < 100.0)
+            if (totalGlm < minFundThreshold)
             {
                 WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment fund", _env));
             }

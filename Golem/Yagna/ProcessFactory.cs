@@ -6,82 +6,84 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
+using Medallion.Shell;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Golem.Yagna
 {
-    public class ProcessFactory
+    public class OutputLogger : TextWriter
     {
-        public static Process CreateProcess(string fileName, string args, bool openConsole, Dictionary<string, string> env)
+        public OutputLogger(ILogger? logger, string prefix, LogLevel lvl = LogLevel.Information)
         {
-            var initStartInfo = () => CreateProcessStartInfo(fileName, args, openConsole);
-            return CreateProcess(fileName, initStartInfo, env);
+            _logger = logger ?? NullLogger.Instance;
+            _lvl = lvl;
+            _prefix = prefix;
+            _strBuilder = new StringBuilder();
         }
 
-        public static Process CreateProcess(string fileName, List<string> args, bool openConsole, Dictionary<string, string> env)
-        {
-            var initStartInfo = () => CreateProcessStartInfo(fileName, args, openConsole);
-            return CreateProcess(fileName, initStartInfo, env);
-        }
+        private readonly ILogger _logger;
+        private readonly LogLevel _lvl;
+        private readonly string _prefix;
+        private StringBuilder _strBuilder;
 
-        private static Process CreateProcess(string fileName, Func<ProcessStartInfo> initStartInfo, Dictionary<string, string> env)
-        {
-            var startInfo = initStartInfo();
+        public override Encoding Encoding => Encoding.UTF8;
 
-            foreach (var (k, v) in env)
+        public override void Write(char value)
+        {
+            if (value == '\n')
             {
-                if(startInfo.EnvironmentVariables.ContainsKey(k))
-                    startInfo.EnvironmentVariables[k] = v;
-                else
-                    startInfo.EnvironmentVariables.Add(k, v);
-            }
-
-            var process = new Process
-            {
-                StartInfo = startInfo,
-                EnableRaisingEvents = true
-            };
-
-            return process;
-        }
-
-        private static ProcessStartInfo CreateProcessStartInfo(string fileName, string args, bool openConsole)
-        {
-            var startInfo = CreateProcessStartInfo(fileName, openConsole);
-            startInfo.Arguments = args;
-
-            return startInfo;
-        }
-
-        private static ProcessStartInfo CreateProcessStartInfo(string fileName, List<string> args, bool openConsole)
-        {
-            var startInfo = CreateProcessStartInfo(fileName, openConsole);
-            args.ForEach(startInfo.ArgumentList.Add);
-
-            return startInfo;
-        }
-
-        private static ProcessStartInfo CreateProcessStartInfo(string fileName, bool openConsole)
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = fileName,
-                UseShellExecute = false
-            };
-
-            if (openConsole)
-            {
-                startInfo.RedirectStandardOutput = false;
-                startInfo.RedirectStandardError = false;
-                startInfo.CreateNoWindow = true;
-                
+                WriteLine();
             }
             else
             {
-                startInfo.RedirectStandardOutput = true;
-                startInfo.RedirectStandardError = true;
-                startInfo.CreateNoWindow = true;
+                _strBuilder.Append(value);
             }
+        }
 
-            return startInfo;
+        public override void WriteLine(string? value)
+        {
+            _logger.Log(_lvl, $"{_prefix}: {value}");
+        }
+
+        public override void WriteLine()
+        {
+            var line = _strBuilder.ToString();
+            _strBuilder = new StringBuilder();
+            _logger.Log(_lvl, $"{_prefix}: {line}");
+        }
+    }
+
+    public class ProcessFactory
+    {
+        public static Command CreateProcess<OUT_WRITER, ERR_WRITER>(string executable, IEnumerable<object>? args, Dictionary<string, string> env, OUT_WRITER stdOut, ERR_WRITER errOut)
+        where OUT_WRITER : TextWriter
+        where ERR_WRITER : TextWriter
+        {
+            var argList = args?.ToList();
+            argList?.RemoveAll(s => string.IsNullOrWhiteSpace((string?)s));
+            var executablePath = Path.GetFullPath(executable);
+            var workDir = Directory.GetParent(executablePath)?.ToString();
+
+            return Command
+                .Run(executablePath, argList, options => updateOptions(options, workDir, env))
+                .RedirectTo(stdOut)
+                .RedirectStandardErrorTo(errOut);
+        }
+
+        static Shell.Options updateOptions(Shell.Options options, string workDir, Dictionary<string, string> env)
+        {
+            options = options
+                .EnvironmentVariables(env)
+                .WorkingDirectory(workDir)
+                .ThrowOnError(true)
+                .DisposeOnExit(false)
+                .StartInfo(info =>
+                {
+                    info.CreateNoWindow = true;
+                });
+            return options;
         }
 
         public static string BinName(string name)
@@ -94,6 +96,24 @@ namespace Golem.Yagna
             {
                 return Path.GetFileNameWithoutExtension(name);
             }
+        }
+
+        public static async Task<int> StopCmd(Command cmd, int stopTimeoutMs = 30_000)
+        {
+            if (!cmd.Process.HasExited)
+            {
+                if (!await cmd.TrySignalAsync(CommandSignal.ControlC))
+                {
+                    cmd.Kill();
+                }
+
+                CancellationTokenSource stopTimeoutTokenSrc = new CancellationTokenSource();
+                var stopTimeoutToken = stopTimeoutTokenSrc.Token;
+                stopTimeoutTokenSrc.CancelAfter(stopTimeoutMs);
+
+                await cmd.Process.WaitForExitAsync(stopTimeoutToken);
+            }
+            return cmd.Process.ExitCode;
         }
     }
 }
