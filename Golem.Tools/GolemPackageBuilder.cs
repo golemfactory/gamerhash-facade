@@ -18,7 +18,7 @@ namespace Golem.Tools
     public class PackageBuilder
     {
         public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.14.1-rc7_combined";
-        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc23_ctrl_break_close";
+        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc24_automatic";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
