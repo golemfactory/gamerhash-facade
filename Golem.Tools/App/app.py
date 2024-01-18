@@ -1,10 +1,4 @@
 import asyncio
-import base64
-import io
-import json
-import os
-from PIL import Image
-import requests
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,7 +9,6 @@ from yapapi.props import inf
 from yapapi.props.base import constraint, prop
 from yapapi.services import Service
 from yapapi.log import enable_default_logger
-from yapapi.config import ApiConfig
 
 import argparse
 import asyncio
@@ -30,9 +23,6 @@ from yapapi import __version__ as yapapi_version
 from yapapi import windows_event_loop_fix
 from yapapi.log import enable_default_logger
 from yapapi.strategy import SCORE_TRUSTED, SCORE_REJECTED, MarketStrategy
-from yapapi.rest import Activity
-
-from ya_activity import ApiClient, ApiException, RequestorControlApi, RequestorStateApi
 
 # Utils
 
@@ -187,34 +177,6 @@ class AiRuntimeService(Service):
         super().__init__()
         self.strategy = strategy
 
-async def trigger(activity: RequestorControlApi, token, prompt, output_file):
-
-    custom_url = "/sdapi/v1/txt2img"
-    url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
-    headers = {"Authorization": "Bearer "+token}
-
-    payload = {
-        'prompt': prompt,
-        'steps': 5
-    }
-
-    print('Sending request:')
-    print(f'curl -X POST -H \'Authorization: Bearer {token}\' -d "{payload}" {url}')
-    
-    response = requests.post(url, headers=headers, json=payload, stream=True)
-    if response.encoding is None:
-        response.encoding = 'utf-8'
-
-    print(response)
-
-    for line in response.iter_lines(decode_unicode=True):
-        if line:
-            # print(line)
-            response = json.loads(line)
-            image = Image.open(io.BytesIO(base64.b64decode(response['images'][0])))
-            print(f"Saving response to {os.path.abspath(output_file)}")
-            image.save(output_file)
-
 
 async def main(subnet_tag, driver=None, network=None):
     strategy = ProviderOnceStrategy()
@@ -233,30 +195,53 @@ async def main(subnet_tag, driver=None, network=None):
             num_instances=1,
         )
 
-        async def get_image(prompt, file_name):
-            for s in cluster.instances:
-                if s._ctx != None:
-                    for id in [s._ctx._activity.id ]:
-                        activity = await golem._engine._activity_api.use_activity(id)
-                        await trigger(
-                            activity,
-                            golem._engine._api_config.app_key,
-                            prompt,
-                            file_name
-                        )
+        async def print_usage():
+            token = golem._engine._api_config.app_key
 
-        print('Starting')
+            activities = [
+                s._ctx._activity.id
+                for s in cluster.instances if s._ctx != None
+            ]
+
+            print(activities)
+            
+            for id in activities:
+                activity = await golem._engine._activity_api.use_activity(id)
+                custom_url = "/sdapi/v1/txt2img"
+                url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
+                payload = '{"prompt": "example prompt"}'.replace("\"", "\\\"")
+                headers = (
+                    f"-H \'Authorization: Bearer {token}\' "
+                     "-H \'Content-Type: application/json; charset=utf-8\' "
+                     "-H \'Accept: text/event-stream\' "
+                )
+                
+                print('Sending request:')
+                print(f'curl -X POST {headers} -d "{payload}" {url}')
+
+
+        def instances():
+            return [
+                {
+                    'name': s.provider_name,
+                    'state': s.state.value,
+                    'context': s._ctx
+                } for s in cluster.instances
+            ]
+
+
+        usage_printed = False
         while True:
-            print('Please type your prompt:')
-            prompt = input()
-            # prompt = 'An old tree on a small red apple'
-            # print(prompt)
             await asyncio.sleep(3)
-            await get_image(
-                prompt,
-                'output.png'
-            )
-            print('Done')
+
+            i = instances()
+
+            running = [r for r in i if not r['context'] == None]
+            if not usage_printed and len(running) > 0:
+                await print_usage()
+                usage_printed = True
+            
+            print(f"""instances: {[f"{r['name']}: {r['state']}" for r in i]}""")
 
 if __name__ == "__main__":
     parser = build_parser("Run AI runtime task")
