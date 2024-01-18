@@ -38,7 +38,6 @@
     <Exec Command=".\.venv\Scripts\activate | pip install -r requirements.txt" Condition="'$(OS)' == 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
     <Exec Command=".\.venv\Scripts\activate | pyinstaller --onefile app.py -y" Condition="'$(OS)' == 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
     <Exec Command=". .venv/bin/activate; pip install -r requirements.txt" Condition="'$(OS)' != 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
-    <Exec Command=". .venv/bin/activate; python -V" Condition="'$(OS)' != 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
     <Exec Command=". .venv/bin/activate; pyinstaller --onefile app.py -y" Condition="'$(OS)' != 'WINDOWS_NT'" WorkingDirectory="$(ProjectDir)\App" ConsoleToMsBuild="true" />
     <ItemGroup>
         <AppBinary Include="$(ProjectDir)\App\dist\app*"></AppBinary>
