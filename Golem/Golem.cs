@@ -251,9 +251,17 @@ namespace Golem
 
         public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
         {
-            Provider.PresetConfig.InitilizeDefaultPresets();
+            try
+            {
+                Provider.PresetConfig.InitilizeDefaultPresets();
 
-            return Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
+                return Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Failed to start provider: {}", e);
+                return false;
+            }
         }
 
         async Task<string?> WaitForIdentityAsync(CancellationToken token)
@@ -319,7 +327,7 @@ namespace Golem
             return new ActivityLoop(_httpClient, token, _logger).Start(
                 SetCurrentJob,
                 _jobs
-                );
+            );
         }
 
         private Task StartInvoiceEventsLoop(CancellationToken token)
