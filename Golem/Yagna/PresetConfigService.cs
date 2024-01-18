@@ -173,7 +173,7 @@ namespace Golem.Yagna
 
         public void UpdatePreset(Preset preset, out string info)
         {
-            List<string> args = "preset create --no-interactive".Split().ToList();
+            List<string> args = "preset update --no-interactive".Split().ToList();
 
             args.Add("--preset-name");
             args.Add(preset.Name);
