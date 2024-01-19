@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -215,9 +216,14 @@ async def main(subnet_tag, driver=None, network=None):
                      "-H \'Content-Type: application/json; charset=utf-8\' "
                      "-H \'Accept: text/event-stream\' "
                 )
+
+                if os.name == 'nt':
+                    pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && explorer output.png'
+                else:
+                    pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && xdg-open output.png'
                 
                 print('Sending request:')
-                print(f'curl -X POST {headers} -d "{payload}" {url}')
+                print(f'curl -X POST {headers} -d "{payload}" {url} {pipe_image_cmd}')
 
 
         def instances():
