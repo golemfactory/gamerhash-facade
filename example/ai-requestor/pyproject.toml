@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "ai-requestor"
+version = "0.1.0"
+description = ""
+authors = ["Staszek Krotki <16387248+staszek-krotki@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+yapapi = "^0.12.0"
+pillow = "^10.2.0"
+requests = "^2.31.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
