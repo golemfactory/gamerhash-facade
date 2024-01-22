@@ -33,7 +33,7 @@ namespace Golem.Yagna
         public Dictionary<string, decimal> UsageCoeffs { get; set; }
     }
 
-    class ExeUnit
+    public class ExeUnit
     {
         [JsonConstructor]
         public ExeUnit(string name, string version)
@@ -51,9 +51,9 @@ namespace Golem.Yagna
 
     public class PresetConfigService
     {
-        private readonly Provider _parent;
+        private readonly IProvider _parent;
 
-        internal PresetConfigService(Provider parent)
+        public PresetConfigService(IProvider parent)
         {
             _parent = parent;
         }
@@ -151,6 +151,7 @@ namespace Golem.Yagna
         {
             var args = "preset deactivate".Split().ToList();
             args.Add(presetName);
+            Console.WriteLine($"Deactivate {0}", presetName);
             _parent.ExecToText(args);
         }
 
