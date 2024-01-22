@@ -10,12 +10,12 @@ using Moq;
 namespace Golem.Tests
 {
     [Collection(nameof(SerialTestCollection))]
-    public class PresetsTests : IDisposable, IClassFixture<GolemFixture>
+    public class PresetConfigServicesTests : IDisposable, IClassFixture<GolemFixture>
     {
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
 
-        public PresetsTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
+        public PresetConfigServicesTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
         {
             XunitContext.Register(outputHelper);
             // Log file directly in `tests` directory (like `tests/Jobtests-20231231.log )
