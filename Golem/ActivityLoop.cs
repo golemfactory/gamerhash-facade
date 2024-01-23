@@ -62,7 +62,7 @@ class ActivityLoop
                     var stream = await _httpClient.GetStreamAsync("/activity-api/v1/_monitor");
                     using StreamReader reader = new StreamReader(stream);
 
-                    await foreach (string json in EnumerateMessages(reader).WithCancellation(_token))
+                    await foreach (string json in EnumerateMessages(reader, _token).WithCancellation(_token))
                     {
                         _logger.LogInformation("got json {0}", json);
                         var activityStates = parseActivityStates(json);
@@ -199,7 +199,7 @@ class ActivityLoop
         }
     }
 
-    private async IAsyncEnumerable<String> EnumerateMessages(StreamReader reader)
+    private async IAsyncEnumerable<String> EnumerateMessages(StreamReader reader, CancellationToken token)
     {
         StringBuilder messageBuilder = new StringBuilder();
         while (true)
@@ -207,7 +207,7 @@ class ActivityLoop
             try
             {
                 String? line;
-                while (!String.IsNullOrEmpty(line = await reader.ReadLineAsync()))
+                while (!String.IsNullOrEmpty(line = await reader.ReadLineAsync(token)))
                 {
                     if (line.StartsWith(_dataPrefix))
                     {

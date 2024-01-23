@@ -238,6 +238,7 @@ namespace Golem
 
             try
             {
+                _logger.LogInformation("Init Payment {} {} {}",yagnaOptions.Network, PaymentDriver.ERC20next.Id, account);
                 Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20next.Id, account ?? "");
             }
             catch (Exception e)
