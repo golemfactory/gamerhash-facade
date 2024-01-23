@@ -152,7 +152,10 @@ namespace Golem
             }
             else
             {
-                Status = GolemStatus.Error;
+                if (cancellationTokenSource.Token.IsCancellationRequested)
+                    Status = GolemStatus.Off;
+                else
+                    Status = GolemStatus.Error;
             }
 
             OnPropertyChanged("WalletAddress");
