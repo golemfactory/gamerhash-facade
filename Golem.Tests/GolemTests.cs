@@ -18,6 +18,8 @@ namespace Golem.Tests
     {
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;
+        private readonly ITestOutputHelper output;
+
 
         public GolemTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
         {
@@ -26,6 +28,7 @@ namespace Golem.Tests
             _golemLib = Path.Combine(dir, "Golem.dll");
 
             XunitContext.Register(outputHelper);
+            output = outputHelper;
             
             _loggerProvider = new TestLoggerProvider(golemFixture.Sink);
         }
@@ -57,7 +60,7 @@ namespace Golem.Tests
             var loggerFactory = CreateLoggerFactory(testName);
 
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-            Console.WriteLine("Path: " + golemPath);
+            output.WriteLine("Path: " + golemPath);
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
             GolemStatus status = GolemStatus.Off;
@@ -116,7 +119,7 @@ namespace Golem.Tests
             var loggerFactory = CreateLoggerFactory(testName);
 
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-            Console.WriteLine("Path: " + golemPath);
+            output.WriteLine("Path: " + golemPath);
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
             GolemStatus status = GolemStatus.Off;

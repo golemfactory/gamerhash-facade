@@ -213,6 +213,9 @@ namespace Golem.Yagna
 
         public bool Run(string appKey, Network network, Action<int> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
+            if(cancellationToken.IsCancellationRequested)
+                return false;
+
             string debugSwitch = "";
             if (enableDebugLogs)
             {

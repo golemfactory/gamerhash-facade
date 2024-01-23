@@ -34,8 +34,8 @@ class ActivityLoop
 
     public async Task Start(
         Action<Job?> setCurrentJob,
-        IJobsUpdater jobs
-    )
+        IJobsUpdater jobs,
+        CancellationToken token)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -43,7 +43,7 @@ class ActivityLoop
 
         try
         {
-            while (!_token.IsCancellationRequested)
+            while (!token.IsCancellationRequested)
             {
                 _logger.LogInformation("Monitoring activities");
                 var now = DateTime.Now;
@@ -52,9 +52,9 @@ class ActivityLoop
                     await Task.Delay(newReconnect - now);
                 }
                 newReconnect = now + s_reconnectDelay;
-                if (_token.IsCancellationRequested)
+                if (token.IsCancellationRequested)
                 {
-                    _token.ThrowIfCancellationRequested();
+                    token.ThrowIfCancellationRequested();
                 }
 
                 try
@@ -62,7 +62,7 @@ class ActivityLoop
                     var stream = await _httpClient.GetStreamAsync("/activity-api/v1/_monitor");
                     using StreamReader reader = new StreamReader(stream);
 
-                    await foreach (string json in EnumerateMessages(reader, _token).WithCancellation(_token))
+                    await foreach (string json in EnumerateMessages(reader, token).WithCancellation(token))
                     {
                         _logger.LogInformation("got json {0}", json);
                         var activityStates = parseActivityStates(json);
