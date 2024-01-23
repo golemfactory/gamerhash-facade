@@ -1,11 +1,6 @@
 using System.Reflection;
 
-using App;
-
-using Golem;
 using Golem.Tools;
-using Golem.Yagna.Types;
-
 using GolemLib;
 using GolemLib.Types;
 
@@ -83,34 +78,34 @@ namespace Golem.Tests
             Assert.Equal(GolemStatus.Off, status);
         }
 
-        // [Fact]
-        // public async Task LoadBinaryStartAndStop_VerifyStatusAsync()
-        // {
-        //     var testName = nameof(LoadBinaryStartAndStop_VerifyStatusAsync);
-        //     var loggerFactory = CreateLoggerFactory(testName);
+        [Fact]
+        public async Task LoadBinaryStartAndStop_VerifyStatusAsync()
+        {
+            var testName = nameof(LoadBinaryStartAndStop_VerifyStatusAsync);
+            var loggerFactory = CreateLoggerFactory(testName);
 
-        //     string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-        //     Console.WriteLine("Path: " + golemPath);
+            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            Console.WriteLine("Path: " + golemPath);
 
-        //     var golem = await LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
-        //     GolemStatus status = GolemStatus.Off;
+            var golem = await LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            GolemStatus status = GolemStatus.Off;
 
-        //     Action<GolemStatus> updateStatus = (v) =>
-        //     {
-        //         status = v;
-        //     };
+            Action<GolemStatus> updateStatus = (v) =>
+            {
+                status = v;
+            };
 
-        //     golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
 
-        //     var startTask = golem.Start();
-        //     Assert.Equal(GolemStatus.Starting, status);
-        //     await startTask;
+            var startTask = golem.Start();
+            Assert.Equal(GolemStatus.Starting, status);
+            await startTask;
             
-        //     Assert.Equal(GolemStatus.Ready, status);
-        //     await golem.Stop();
+            Assert.Equal(GolemStatus.Ready, status);
+            await golem.Stop();
 
-        //     Assert.Equal(GolemStatus.Off, status);
-        // }
+            Assert.Equal(GolemStatus.Off, status);
+        }
 
         [Fact]
         public async Task StartAndStopWithoutWaiting_VerifyStatusAsync()
@@ -137,88 +132,88 @@ namespace Golem.Tests
             Assert.Equal(GolemStatus.Off, status);
         }
 
-        // [Fact]
-        // public async Task TestDownloadArtifacts()
-        // {
-        //     var dir = await PackageBuilder.BuildTestDirectory("TestDownloadArtifacts");
+        [Fact]
+        public async Task TestDownloadArtifacts()
+        {
+            var dir = await PackageBuilder.BuildTestDirectory("TestDownloadArtifacts");
 
-        //     Assert.True(Directory.EnumerateFiles(dir, "modules/golem/yagna*").Any());
-        //     Assert.True(Directory.EnumerateFiles(dir, "modules/golem/ya-provider*").Any());
-        //     Assert.True(Directory.EnumerateFiles(dir, "modules/plugins/ya-runtime-ai*").Any());
-        //     Assert.True(Directory.EnumerateFiles(dir, "modules/plugins/dummy*").Any());
-        // }
+            Assert.True(Directory.EnumerateFiles(dir, "modules/golem/yagna*").Any());
+            Assert.True(Directory.EnumerateFiles(dir, "modules/golem/ya-provider*").Any());
+            Assert.True(Directory.EnumerateFiles(dir, "modules/plugins/ya-runtime-ai*").Any());
+            Assert.True(Directory.EnumerateFiles(dir, "modules/plugins/dummy*").Any());
+        }
 
-        // [Fact]
-        // public async Task Start_ChangeWallet_VerifyStatusAsync()
-        // {
-        //     var testName = nameof(Start_ChangeWallet_VerifyStatusAsync);
-        //     var loggerFactory = CreateLoggerFactory(testName);
+        [Fact]
+        public async Task Start_ChangeWallet_VerifyStatusAsync()
+        {
+            var testName = nameof(Start_ChangeWallet_VerifyStatusAsync);
+            var loggerFactory = CreateLoggerFactory(testName);
 
-        //     string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-        //     Console.WriteLine("Path: " + golemPath);
+            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            Console.WriteLine("Path: " + golemPath);
 
-        //     var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
-        //     GolemStatus status = GolemStatus.Off;
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
+            GolemStatus status = GolemStatus.Off;
 
-        //     Action<GolemStatus> updateStatus = (v) =>
-        //     {
-        //         status = v;
-        //     };
+            Action<GolemStatus> updateStatus = (v) =>
+            {
+                status = v;
+            };
 
-        //     golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
 
-        //     await golem.Start();
+            await golem.Start();
 
-        //     golem.WalletAddress = "0x1234567890123456789012345678901234567890";
+            golem.WalletAddress = "0x1234567890123456789012345678901234567890";
 
-        //     await golem.Stop();
+            await golem.Stop();
 
-        //     Assert.Equal(GolemStatus.Off, status);
-        // }
+            Assert.Equal(GolemStatus.Off, status);
+        }
 
-        // [Fact]
-        // public async Task Start_ChangePrices_VerifyPriceAsync()
-        // {
-        //     var testName = nameof(StartAndStopWithoutWaiting_VerifyStatusAsync);
-        //     var loggerFactory = CreateLoggerFactory(testName);
+        [Fact]
+        public async Task Start_ChangePrices_VerifyPriceAsync()
+        {
+            var testName = nameof(StartAndStopWithoutWaiting_VerifyStatusAsync);
+            var loggerFactory = CreateLoggerFactory(testName);
 
-        //     string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-        //     Console.WriteLine("Path: " + golemPath);
+            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            Console.WriteLine("Path: " + golemPath);
 
-        //     var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
-        //     await golem.Start();
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
+            await golem.Start();
 
-        //     decimal price = 0;
+            decimal price = 0;
 
-        //     Action<decimal> updatePrice = (v) => price = v;
+            Action<decimal> updatePrice = (v) => price = v;
 
-        //     golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.StartPrice), updatePrice, loggerFactory).Subscribe();
-        //     golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.GpuPerHour), updatePrice, loggerFactory).Subscribe();
-        //     golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.EnvPerHour), updatePrice, loggerFactory).Subscribe();
-        //     golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.NumRequests), updatePrice, loggerFactory).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.StartPrice), updatePrice, loggerFactory).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.GpuPerHour), updatePrice, loggerFactory).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.EnvPerHour), updatePrice, loggerFactory).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.NumRequests), updatePrice, loggerFactory).Subscribe();
 
 
-        //     //Assert property changes
-        //     golem.Price.StartPrice = 0.005m;
-        //     Assert.Equal(0.005m, price);
+            //Assert property changes
+            golem.Price.StartPrice = 0.005m;
+            Assert.Equal(0.005m, price);
 
-        //     golem.Price.GpuPerHour = 0.006m;
-        //     Assert.Equal(0.006m, price);
+            golem.Price.GpuPerHour = 0.006m;
+            Assert.Equal(0.006m, price);
 
-        //     golem.Price.EnvPerHour = 0.007m;
-        //     Assert.Equal(0.007m, price);
+            golem.Price.EnvPerHour = 0.007m;
+            Assert.Equal(0.007m, price);
 
-        //     golem.Price.NumRequests = 0.008m;
-        //     Assert.Equal(0.008m, price);
+            golem.Price.NumRequests = 0.008m;
+            Assert.Equal(0.008m, price);
 
-        //     //Assert property returns correct value
-        //     Assert.Equal(0.005m, golem.Price.StartPrice);
-        //     Assert.Equal(0.006m, golem.Price.GpuPerHour);
-        //     Assert.Equal(0.007m, golem.Price.EnvPerHour);
-        //     Assert.Equal(0.008m, golem.Price.NumRequests);
+            //Assert property returns correct value
+            Assert.Equal(0.005m, golem.Price.StartPrice);
+            Assert.Equal(0.006m, golem.Price.GpuPerHour);
+            Assert.Equal(0.007m, golem.Price.EnvPerHour);
+            Assert.Equal(0.008m, golem.Price.NumRequests);
 
-        //     await golem.Stop();
-        // }
+            await golem.Stop();
+        }
 
         public void Dispose()
         {
