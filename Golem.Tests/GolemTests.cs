@@ -50,35 +50,35 @@ namespace Golem.Tests
             return await factory.Create(modulesDir, loggerFactory);
         }
 
-        // [Fact]
-        // public async Task StartStop_VerifyStatusAsync()
-        // {
-        //     var testName = nameof(StartStop_VerifyStatusAsync);
-        //     var loggerFactory = CreateLoggerFactory(testName);
+        [Fact]
+        public async Task StartStop_VerifyStatusAsync()
+        {
+            var testName = nameof(StartStop_VerifyStatusAsync);
+            var loggerFactory = CreateLoggerFactory(testName);
 
-        //     string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-        //     Console.WriteLine("Path: " + golemPath);
+            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            Console.WriteLine("Path: " + golemPath);
 
-        //     var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
-        //     GolemStatus status = GolemStatus.Off;
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
+            GolemStatus status = GolemStatus.Off;
 
-        //     Action<GolemStatus> updateStatus = (v) =>
-        //     {
-        //         status = v;
-        //     };
+            Action<GolemStatus> updateStatus = (v) =>
+            {
+                status = v;
+            };
 
-        //     golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
+            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
 
-        //     var startTask = golem.Start();
-        //     Assert.Equal(GolemStatus.Starting, status);
-        //     await startTask;
-        //     Assert.Equal(GolemStatus.Ready, status);
+            var startTask = golem.Start();
+            Assert.Equal(GolemStatus.Starting, status);
+            await startTask;
+            Assert.Equal(GolemStatus.Ready, status);
 
 
-        //     await golem.Stop();
+            await golem.Stop();
 
-        //     Assert.Equal(GolemStatus.Off, status);
-        // }
+            Assert.Equal(GolemStatus.Off, status);
+        }
 
         // [Fact]
         // public async Task LoadBinaryStartAndStop_VerifyStatusAsync()
