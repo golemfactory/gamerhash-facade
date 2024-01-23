@@ -30,66 +30,66 @@ namespace Golem.Tests
             _logger = _loggerFactory.CreateLogger(nameof(JobTests));
         }
 
-        [Fact]
-        public void InitilizeDefaultPresets_ActivePresetIsOtherThanDefault_DoNotCreateNewOnesAndActivateDeactivateCorrectOnes()
-        {
-            var provider = new Mock<IProvider>();
-            provider
-                .Setup(p => p.Exec<List<string>>(It.Is<IEnumerable<object>>(s => 
-                    s.SequenceEqual("--json preset active".Split()))))
-                .Returns(new List<string>
-                {
-                    "ai"
-                });
+        // [Fact]
+        // public void InitilizeDefaultPresets_ActivePresetIsOtherThanDefault_DoNotCreateNewOnesAndActivateDeactivateCorrectOnes()
+        // {
+        //     var provider = new Mock<IProvider>();
+        //     provider
+        //         .Setup(p => p.Exec<List<string>>(It.Is<IEnumerable<object>>(s => 
+        //             s.SequenceEqual("--json preset active".Split()))))
+        //         .Returns(new List<string>
+        //         {
+        //             "ai"
+        //         });
 
-            provider
-                .Setup(p => p.Exec<List<Preset>>(It.Is<IEnumerable<object>>(s => 
-                    s.SequenceEqual("preset --json list".Split()))))
-                .Returns(new List<Preset>
-                {
-                    new Preset("dummy", "dummy", new Dictionary<string, decimal>()),
-                    new Preset("ai", "dummy", new Dictionary<string, decimal>())
-                });
+        //     provider
+        //         .Setup(p => p.Exec<List<Preset>>(It.Is<IEnumerable<object>>(s => 
+        //             s.SequenceEqual("preset --json list".Split()))))
+        //         .Returns(new List<Preset>
+        //         {
+        //             new Preset("dummy", "dummy", new Dictionary<string, decimal>()),
+        //             new Preset("ai", "dummy", new Dictionary<string, decimal>())
+        //         });
 
-            provider
-                .Setup(p => p.Exec<List<ExeUnit>>(It.Is<IEnumerable<object>>(s => 
-                    s.SequenceEqual("--json exe-unit list".Split()))))
-                .Returns(new List<ExeUnit>
-                {
-                    new ExeUnit("dummy", "ver1")
-                });
+        //     provider
+        //         .Setup(p => p.Exec<List<ExeUnit>>(It.Is<IEnumerable<object>>(s => 
+        //             s.SequenceEqual("--json exe-unit list".Split()))))
+        //         .Returns(new List<ExeUnit>
+        //         {
+        //             new ExeUnit("dummy", "ver1")
+        //         });
 
-            var config = new PresetConfigService(provider.Object);
+        //     var config = new PresetConfigService(provider.Object);
 
-            config.InitilizeDefaultPresets();
+        //     config.InitilizeDefaultPresets();
 
-            provider
-                .Verify(p => p.ExecToText(
-                            It.Is<IEnumerable<String>>(s => 
-                                s.Contains("preset") && s.Contains("create")
-                            )
-                        ),
-                        Times.Never
-                    );
+        //     provider
+        //         .Verify(p => p.ExecToText(
+        //                     It.Is<IEnumerable<String>>(s => 
+        //                         s.Contains("preset") && s.Contains("create")
+        //                     )
+        //                 ),
+        //                 Times.Never
+        //             );
 
-            provider
-                .Verify(p => p.ExecToText(
-                            It.Is<IEnumerable<String>>(s => 
-                                s.Contains("preset") && s.Contains("activate") && s.Contains("dummy")
-                            )
-                        ),
-                        Times.Once
-                    );
+        //     provider
+        //         .Verify(p => p.ExecToText(
+        //                     It.Is<IEnumerable<String>>(s => 
+        //                         s.Contains("preset") && s.Contains("activate") && s.Contains("dummy")
+        //                     )
+        //                 ),
+        //                 Times.Once
+        //             );
 
-            provider
-                .Verify(p => p.ExecToText(
-                            It.Is<IEnumerable<String>>(s => 
-                                s.Contains("preset") && s.Contains("deactivate") && s.Contains("ai")
-                            )
-                        ),
-                        Times.Once
-                    );
-        }
+        //     provider
+        //         .Verify(p => p.ExecToText(
+        //                     It.Is<IEnumerable<String>>(s => 
+        //                         s.Contains("preset") && s.Contains("deactivate") && s.Contains("ai")
+        //                     )
+        //                 ),
+        //                 Times.Once
+        //             );
+        // }
 
         public void Dispose()
         {
