@@ -39,7 +39,7 @@ dotnet run --project Golem.Package -- download --target modules --version pre-re
 In case of building artifacts locally you can specify `yagna` and `runtimes` versions:
 
 ```sh
-dotnet run --project Golem.Package -- build --target modules --yagna-version pre-rel-v0.14.1-rc7_combined --runtime-version pre-rel-v0.1.0-rc24_automatic
+dotnet run --project Golem.Package -- build --target modules --yagna-version pre-rel-v0.14.1-rc7_combined --runtime-version pre-rel-v0.1.0-rc25_waiting_for_api
 ```
 
 ## Running
