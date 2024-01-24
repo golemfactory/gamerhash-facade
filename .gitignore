@@ -20,6 +20,7 @@ Mock/obj/
 /Golem.Tools/bin/
 /Golem.Tools/obj/
 /Golem.Tools/App/.venv
+/Golem.Tools/App/*.log
 /Golem.Tools/App/build
 /Golem.Tools/App/dist
 /Golem.Tools/App/app.spec
@@ -37,3 +38,6 @@ Mock/obj/
 /modules/
 /package/
 /releases/
+
+/example/ai-requestor/*.log
+/example/ai-requestor/.venv/
