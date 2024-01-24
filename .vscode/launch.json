@@ -59,6 +59,19 @@
             }
         },
         {
+            "name": "Package builder download",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Golem.Package/bin/Debug/net7.0/Golem.Package.dll",
+            "args": ["download", "--target", "modules"],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "env": {
+            }
+        },
+        {
             "name": "Package builder",
             "type": "coreclr",
             "request": "launch",

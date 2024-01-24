@@ -26,7 +26,8 @@ namespace Golem.Yagna
         private readonly ILogger _logger;
         private readonly LogLevel _lvl;
         private readonly string _prefix;
-        private StringBuilder _strBuilder;
+        private StringBuilder _strBuilder;        
+        private readonly object _strBuilderLock = new object();
 
         public override Encoding Encoding => Encoding.UTF8;
 
@@ -38,19 +39,21 @@ namespace Golem.Yagna
             }
             else
             {
-                _strBuilder.Append(value);
+                lock(_strBuilderLock)
+                {
+                    _strBuilder.Append(value);
+                }
             }
-        }
-
-        public override void WriteLine(string? value)
-        {
-            _logger.Log(_lvl, $"{_prefix}: {value}");
         }
 
         public override void WriteLine()
         {
-            var line = _strBuilder.ToString();
-            _strBuilder = new StringBuilder();
+            string line;
+            lock(_strBuilderLock)
+            {
+                line = _strBuilder.ToString();
+                _strBuilder = new StringBuilder();
+            }
             _logger.Log(_lvl, $"{_prefix}: {line}");
         }
     }

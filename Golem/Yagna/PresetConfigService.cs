@@ -33,7 +33,7 @@ namespace Golem.Yagna
         public Dictionary<string, decimal> UsageCoeffs { get; set; }
     }
 
-    class ExeUnit
+    public class ExeUnit
     {
         [JsonConstructor]
         public ExeUnit(string name, string version)
@@ -48,44 +48,51 @@ namespace Golem.Yagna
         [JsonPropertyName("exeunit-name")]
         public string Version { get; set; }
     }
-    
+
     public class PresetConfigService
     {
-        private readonly Provider _parent;
+        private readonly IProvider _parent;
 
-        internal PresetConfigService(Provider parent)
+        public PresetConfigService(IProvider parent)
         {
             _parent = parent;
         }
 
         public void InitilizeDefaultPresets()
         {
-            var presets = ActivePresetsNames;
+            var activePresetNames = ActivePresetsNames;
 
-            foreach (ExeUnit exeUnit in ExeUnits) {
-                if (!presets.Contains(defaultPresetName(exeUnit)))
+            var presets = AllPresets.ToDictionary(preset => preset.Name, preset => preset);
+
+            var exeUnits = ExeUnits;
+
+            foreach (ExeUnit exeUnit in exeUnits)
+            {
+                var presetName = defaultPresetName(exeUnit);
+                if (!presets.ContainsKey(presetName))
                 {
+                    var coeffs = new Dictionary<string, decimal>
+                    {
+                        { "ai-runtime.requests", 0 },
+                        { "golem.usage.duration_sec", 0 },
+                        { "golem.usage.gpu-sec", 0 },
+                        { "Initial", 0 }
+                    };
 
-                var coeffs = new Dictionary<string, decimal>
-                {
-                    { "ai-runtime.requests", 0 },
-                    { "golem.usage.duration_sec", 0 },
-                    { "golem.usage.gpu-sec", 0 },
-                    { "Initial", 0 }
-                };
+                    var preset = new Preset(presetName, exeUnit.Name, coeffs);
 
-                // name "ai" as defined in plugins/*.json
-                var preset = new Preset(defaultPresetName(exeUnit), exeUnit.Name, coeffs);
-
-                AddPreset(preset, out string info);
-
+                    AddPreset(preset, out string info);
                 }
-                ActivatePreset(defaultPresetName(exeUnit));
+                if (!activePresetNames.Contains(presetName))
+                {
+                    ActivatePreset(presetName);
+                    activePresetNames.Add(presetName);
+                }
             }
 
-            var defaultPresetNames = new HashSet<String>(ExeUnits.Select(defaultPresetName));
+            var defaultPresetNames = exeUnits.Select(exeUnit => defaultPresetName(exeUnit));
 
-            foreach (string preset in presets)
+            foreach (string preset in activePresetNames)
             {
                 if (!defaultPresetNames.Contains(preset))
                 {
@@ -121,7 +128,8 @@ namespace Golem.Yagna
             }
         }
 
-        static String defaultPresetName(ExeUnit exeUnit) {
+        static String defaultPresetName(ExeUnit exeUnit)
+        {
             return $"{exeUnit.Name}";
         }
 
@@ -143,6 +151,7 @@ namespace Golem.Yagna
         {
             var args = "preset deactivate".Split().ToList();
             args.Add(presetName);
+            Console.WriteLine($"Deactivate {0}", presetName);
             _parent.ExecToText(args);
         }
 
@@ -173,7 +182,7 @@ namespace Golem.Yagna
 
         public void UpdatePreset(Preset preset, out string info)
         {
-            List<string> args = "preset create --no-interactive".Split().ToList();
+            List<string> args = "preset update --no-interactive".Split().ToList();
 
             args.Add("--preset-name");
             args.Add(preset.Name);
@@ -203,9 +212,10 @@ namespace Golem.Yagna
                 priceArgs.Add($"{priceKV.Key}={priceValue}");
             }
 
-            foreach (String presetName in defaultPresetNames) {
+            foreach (String presetName in defaultPresetNames)
+            {
                 var args = "preset update --no-interactive --name".Split().ToList();
-                args.Add(presetName); 
+                args.Add(presetName);
                 args.AddRange(priceArgs.ToArray());
                 var _result = _parent.ExecToText(args);
             }
