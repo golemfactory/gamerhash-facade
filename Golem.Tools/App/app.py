@@ -211,20 +211,29 @@ async def main(subnet_tag, driver=None, network=None):
                 custom_url = "/sdapi/v1/txt2img"
                 url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
                 payload = '{"prompt": "example prompt"}'.replace("\"", "\\\"")
-                headers = (
-                    f"-H \'Authorization: Bearer {token}\' "
-                     "-H \'Content-Type: application/json; charset=utf-8\' "
-                     "-H \'Accept: text/event-stream\' "
-                )
 
+                print('Request example:')
                 if os.name == 'nt':
-                    pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && explorer output.png'
+                    headers = (
+                        f"\"Authorization\" = \"Bearer {token}\"; "
+                        "\"Content-Type\" = \"application/json; charset=utf-8\"; "
+                        "\"Accept\" = \"text/event-stream\""
+                    )
+                    powershell_cmd = (
+                        f"$images = Invoke-WebRequest -Method POST -Headers @{{ {headers} }} -Body (@{{ {payload} }}|ConvertTo-Json) -Uri {url} | ConvertFrom-Json | Select images | Select-Object -Index 0\n"
+                        "$bytes = [Convert]::FromBase64String($images.images)\n"
+                        "$filename = \"D:\\Code\\tmp\\out.png\"\n"
+                        "[IO.File]::WriteAllBytes($filename, $bytes)"
+                    )
+                    print(powershell_cmd)
                 else:
+                    headers = (
+                        f"-H \'Authorization: Bearer {token}\' "
+                        "-H \'Content-Type: application/json; charset=utf-8\' "
+                        "-H \'Accept: text/event-stream\' "
+                    )
                     pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && xdg-open output.png'
-                
-                print('Sending request:')
-                print(f'curl -X POST {headers} -d "{payload}" {url} {pipe_image_cmd}')
-
+                    print(f'curl -X POST {headers} -d "{payload}" {url} {pipe_image_cmd}')
 
         def instances():
             return [
