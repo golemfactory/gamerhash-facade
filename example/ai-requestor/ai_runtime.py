@@ -151,8 +151,8 @@ class ProviderOnceStrategy(MarketStrategy):
 
 # App
 
-# RUNTIME_NAME = "automatic" 
-RUNTIME_NAME = "dummy"
+RUNTIME_NAME = "automatic" 
+# RUNTIME_NAME = "dummy"
 CAPABILITIES = "golem.runtime.capabilities"
 
 @dataclass
@@ -161,8 +161,8 @@ class AiPayload(Payload):
     image_fmt: str = prop("golem.!exp.ai.v1.srv.comp.ai.model-format", default="safetensors")
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
-    # capabilities: str = constraint(CAPABILITIES, default="automatic")
-    capabilities: str = constraint(CAPABILITIES, default="dummy")
+    capabilities: str = constraint(CAPABILITIES, default="automatic")
+    # capabilities: str = constraint(CAPABILITIES, default="dummy")
 
 
 class AiRuntimeService(Service):
@@ -170,8 +170,8 @@ class AiRuntimeService(Service):
     async def get_payload():
         ## TODO switched into using smaller model to avoid problems during tests. Resolve it when automatic runtime integrated
         # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
-        return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
-        # return AiPayload(image_url="hash:sha3:6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
+        # return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
+        return AiPayload(image_url="hash:sha3:6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)
 
@@ -195,7 +195,7 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
 
     payload = {
         'prompt': prompt,
-        'steps': 5
+        'steps': 10
     }
 
     print('Sending request:')
@@ -217,7 +217,7 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
 async def main(subnet_tag, driver=None, network=None):
     strategy = ProviderOnceStrategy()
     async with Golem(
-        budget=50.0,
+        budget=1.0,
         subnet_tag=subnet_tag,
         strategy=strategy,
         payment_driver=driver,
@@ -231,6 +231,45 @@ async def main(subnet_tag, driver=None, network=None):
             num_instances=1,
         )
 
+        def instances():
+            return [
+                {
+                    'name': s.provider_name,
+                    'state': s.state.value,
+                    'context': s._ctx
+                } for s in cluster.instances
+            ]
+
+        async def print_usage():
+            token = golem._engine._api_config.app_key
+
+            activities = [
+                s._ctx._activity.id
+                for s in cluster.instances if s._ctx != None
+            ]
+
+            print(activities)
+            
+            for id in activities:
+                activity = await golem._engine._activity_api.use_activity(id)
+                custom_url = "/sdapi/v1/txt2img"
+                url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
+                payload = '{"prompt": "example prompt"}'.replace("\"", "\\\"")
+                headers = (
+                    f"-H \'Authorization: Bearer {token}\' "
+                     "-H \'Content-Type: application/json; charset=utf-8\' "
+                     "-H \'Accept: text/event-stream\' "
+                )
+
+                if os.name == 'nt':
+                    pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && explorer output.png'
+                else:
+                    pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && xdg-open output.png'
+                
+                print('Sending request:')
+                print(f'curl -X POST {headers} -d "{payload}" {url} {pipe_image_cmd}')
+
+        
         async def get_image(prompt, file_name):
             
             for s in cluster.instances:
@@ -255,17 +294,36 @@ async def main(subnet_tag, driver=None, network=None):
                 else:
                     print(f'...gave up')
 
-        print('Starting')
-        
-        print('Please type your prompt:')
-        prompt = input()
-        print('Got it')
-        await get_image(
-            prompt,
-            'output.png'
-        )
-        print('Done')
+        # Begin
+        while True:
 
+            i = instances()
+
+            running = [r for r in i if r['state'] == 'running']
+            
+            print(f"""instances: {[f"{r['name']}: {r['state']}" for r in i]}""")
+
+            if len(running) > 0:
+                print('Starting')
+                
+                print('Please type your prompt:')
+                prompt = input()
+                print('Got it')
+                await get_image(
+                    prompt,
+                    'output.png'
+                )
+                print('Done')
+
+                # Broken
+                # await print_usage()
+
+                # Closing
+                break
+            
+            await asyncio.sleep(3)
+        # End 
+        
 if __name__ == "__main__":
     parser = build_parser("Run AI runtime task")
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
