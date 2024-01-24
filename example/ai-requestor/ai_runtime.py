@@ -240,36 +240,6 @@ async def main(subnet_tag, driver=None, network=None):
                 } for s in cluster.instances
             ]
 
-        async def print_usage():
-            token = golem._engine._api_config.app_key
-
-            activities = [
-                s._ctx._activity.id
-                for s in cluster.instances if s._ctx != None
-            ]
-
-            print(activities)
-            
-            for id in activities:
-                activity = await golem._engine._activity_api.use_activity(id)
-                custom_url = "/sdapi/v1/txt2img"
-                url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
-                payload = '{"prompt": "example prompt"}'.replace("\"", "\\\"")
-                headers = (
-                    f"-H \'Authorization: Bearer {token}\' "
-                     "-H \'Content-Type: application/json; charset=utf-8\' "
-                     "-H \'Accept: text/event-stream\' "
-                )
-
-                if os.name == 'nt':
-                    pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && explorer output.png'
-                else:
-                    pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && xdg-open output.png'
-                
-                print('Sending request:')
-                print(f'curl -X POST {headers} -d "{payload}" {url} {pipe_image_cmd}')
-
-        
         async def get_image(prompt, file_name):
             
             for s in cluster.instances:
@@ -296,7 +266,6 @@ async def main(subnet_tag, driver=None, network=None):
 
         # Begin
         while True:
-
             i = instances()
 
             running = [r for r in i if r['state'] == 'running']
@@ -314,9 +283,6 @@ async def main(subnet_tag, driver=None, network=None):
                     'output.png'
                 )
                 print('Done')
-
-                # Broken
-                # await print_usage()
 
                 # Closing
                 break
