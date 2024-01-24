@@ -174,7 +174,7 @@ namespace Golem.Tests
         [Fact]
         public async Task Start_ChangePrices_VerifyPriceAsync()
         {
-            var testName = nameof(StartAndStopWithoutWaiting_VerifyStatusAsync);
+            var testName = nameof(Start_ChangePrices_VerifyPriceAsync);
             var loggerFactory = CreateLoggerFactory(testName);
 
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
