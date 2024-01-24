@@ -72,7 +72,13 @@ namespace Golem.Yagna
 
     // public class TW
 
-    public class Provider
+    public interface IProvider
+    {
+        T? Exec<T>(IEnumerable<object>? args) where T : class;
+        string ExecToText(IEnumerable<object>? args);
+    }
+
+    public class Provider: IProvider
     {
         public PresetConfigService PresetConfig { get; set; }
 
@@ -130,7 +136,7 @@ namespace Golem.Yagna
 
         }
 
-        internal T? Exec<T>(IEnumerable<object>? args) where T : class
+        public T? Exec<T>(IEnumerable<object>? args) where T : class
         {
             var text = ExecToText(args);
             var options = new JsonSerializerOptionsBuilder()
@@ -139,7 +145,7 @@ namespace Golem.Yagna
             return JsonSerializer.Deserialize<T>(text, options);
         }
 
-        internal string ExecToText(IEnumerable<object>? args)
+        public string ExecToText(IEnumerable<object>? args)
         {
             var strWriter = new StringWriter();
             var outLogger = new OutputLogger(_logger, "Provider");
@@ -207,6 +213,9 @@ namespace Golem.Yagna
 
         public bool Run(string appKey, Network network, Action<int> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
+            if(cancellationToken.IsCancellationRequested)
+                return false;
+
             string debugSwitch = "";
             if (enableDebugLogs)
             {

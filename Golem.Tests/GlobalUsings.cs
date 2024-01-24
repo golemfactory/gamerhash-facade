@@ -2,7 +2,7 @@ global using Xunit;
 [assembly: CollectionBehavior(
     CollectionBehavior.CollectionPerClass,
     DisableTestParallelization = true,
-    MaxParallelThreads = 0
+    MaxParallelThreads = 1
 )]
 
 [CollectionDefinition(nameof(SerialTestCollection), DisableParallelization = true)]

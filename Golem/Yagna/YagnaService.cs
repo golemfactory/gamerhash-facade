@@ -192,7 +192,7 @@ namespace Golem.Yagna
 
         public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
         {
-            if (YagnaProcess != null)
+            if (YagnaProcess != null || cancellationToken.IsCancellationRequested)
             {
                 return false;
             }
