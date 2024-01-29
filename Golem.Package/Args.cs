@@ -7,7 +7,7 @@ public class BuildArgs
     public required string Target { get; set; }
     [Option('y', "yagna-version", Default = "pre-rel-v0.14.1-rc8_shutdown", Required = false, HelpText = "Yagna version github tag")]
     public required string GolemVersion { get; set; }
-    [Option('r', "runtime-version", Default = "pre-rel-v0.1.0-rc25_waiting_for_api", Required = false, HelpText = "Runtime version github tag")]
+    [Option('r', "runtime-version", Default = "pre-rel-v0.1.0-rc26_automatic_shutdown", Required = false, HelpText = "Runtime version github tag")]
     public required string RuntimeVersion { get; set; }
     [Option('c', "dont-clean", Default = false, Required = false, HelpText = "Remove temporary directories")]
     public required bool DontClean { get; set; }
