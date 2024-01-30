@@ -210,7 +210,7 @@ async def main(subnet_tag, driver=None, network=None):
                 activity = await golem._engine._activity_api.use_activity(id)
                 custom_url = "/sdapi/v1/txt2img"
                 url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
-                payload = '{"prompt": "example prompt"}'.replace("\"", "\\\"")
+                payload = '{"prompt": "example prompt"}'
 
                 print('Request example:')
                 if os.name == 'nt':
@@ -227,6 +227,7 @@ async def main(subnet_tag, driver=None, network=None):
                     )
                     print(powershell_cmd)
                 else:
+                    payload = payload.replace("\"", "\\\"")
                     headers = (
                         f"-H \'Authorization: Bearer {token}\' "
                         "-H \'Content-Type: application/json; charset=utf-8\' "
