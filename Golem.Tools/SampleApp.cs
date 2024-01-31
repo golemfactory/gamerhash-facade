@@ -32,7 +32,7 @@ namespace App
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "app");
             Directory.CreateDirectory(working_dir);
-            return StartProcess("app", working_dir, $"--network {Network.Goerli.Id} --driver {PaymentDriver.ERC20next.Id} --subnet-tag public", _env, true);
+            return StartProcess("app", working_dir, $"--network {Network.Goerli.Id} --driver {PaymentDriver.ERC20.Id} --subnet-tag public", _env, true);
         }
     }
 
