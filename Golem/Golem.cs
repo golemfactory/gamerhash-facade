@@ -390,22 +390,5 @@ namespace Golem
             _providerCancellationtokenSource = new CancellationTokenSource();
             return (_yagnaCancellationtokenSource, _providerCancellationtokenSource);
         }
-
-        // private CancellationTokenSource resetTokens()
-        // {
-        //     if (_tokenSource != null && !_tokenSource.IsCancellationRequested)
-        //     {
-        //         try
-        //         {
-        //             _tokenSource?.Cancel();
-        //         }
-        //         catch (Exception e)
-        //         {
-        //             _logger.LogWarning(e, "Failed to cancel token.");
-        //         }
-        //     }
-        //     _tokenSource = new CancellationTokenSource();
-        //     return _tokenSource;
-        // }
     }
 }
