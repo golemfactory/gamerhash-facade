@@ -7,6 +7,10 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
+using Golem.Yagna;
+
+using Medallion.Shell;
+
 namespace Golem.Tools
 {
     public static class ChildProcessTracker
@@ -15,8 +19,8 @@ namespace Golem.Tools
         /// Add the process to be tracked. If our current process is killed, the child processes
         /// that we are tracking will be automatically killed, too. If the child process terminates
         /// first, that's fine, too.</summary>
-        /// <param name="process"></param>
-        public static void AddProcess(Process process)
+        /// <param name="cmd"></param>
+        public static void AddProcess(Command cmd)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -24,7 +28,10 @@ namespace Golem.Tools
                 // but works OK in most cases when a process is killed by SIGTERM or SIGINT
                 // it should be possible to add code that would handle this case from inside the child process, if needed,
                 // with something like prctl(PR_SET_PDEATHSIG, SIGTERM)  (send SIGTERM when parent dies)
-                AppDomain.CurrentDomain.ProcessExit += (s, e) => process.Kill(true);
+                AppDomain.CurrentDomain.ProcessExit += async (s, e) =>
+                {
+                    await ProcessFactory.StopCmd(cmd);
+                };
             }
             else
             {
@@ -33,14 +40,14 @@ namespace Golem.Tools
                     bool success = true;
                     try
                     {
-                        success = AssignProcessToJobObject(s_jobHandle, process.Handle);
+                        success = AssignProcessToJobObject(s_jobHandle, cmd.Process.Handle);
                     }
                     catch
                     {
                         success = false;
                     }
-                    if (!success && !process.HasExited)
-                        Console.WriteLine("Failed to track process {0}. Error: {1}", process.Id, new Win32Exception().Message);                
+                    if (!success && !cmd.Process.HasExited)
+                        Console.WriteLine("Failed to track process {0}. Error: {1}", cmd.Process.Id, new Win32Exception().Message);                
                 }
             }
         }

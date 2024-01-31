@@ -58,7 +58,10 @@ static async Task Build(BuildArgs args)
     if (Directory.Exists(root) && !args.DontClean)
     {
         Console.WriteLine($"Removing root dir: {root}");
-        Directory.Delete(root, true);
+        try {
+            Directory.Delete(root, true);
+        } catch (Exception err) {
+            Console.WriteLine($"Cannot delete {root}. Err {err}");
+        }
     }
 }
-

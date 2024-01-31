@@ -88,7 +88,7 @@ class Jobs : IJobsUpdater
         }
         else
         {
-            _logger.LogError("Job not found: {}", jobId);
+            _logger.LogWarning($"Failed to update usage. Job not found: {jobId}");
         }
     }
 
@@ -101,7 +101,7 @@ class Jobs : IJobsUpdater
         }
         else
         {
-            _logger.LogError("Job not found: {}", id);
+            _logger.LogWarning($"Failed to update payment status. Job not found: {id}");
         }
     }
 
@@ -115,7 +115,7 @@ class Jobs : IJobsUpdater
         }
         else
         {
-            _logger.LogError("Job not found: {0}", jobId);
+            _logger.LogWarning($"Failed to update payment confirmation. Job not found: {jobId}");
         }
     }
 

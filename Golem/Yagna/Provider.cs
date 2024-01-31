@@ -8,6 +8,7 @@ using Golem.Tools;
 using System.Text.Json;
 using System.Linq;
 using Microsoft.Extensions.Logging.Abstractions;
+using Medallion.Shell;
 
 namespace Golem.Yagna
 {
@@ -69,7 +70,15 @@ namespace Golem.Yagna
         public double StorageGib { get; set; }
     }
 
-    public class Provider
+    // public class TW
+
+    public interface IProvider
+    {
+        T? Exec<T>(IEnumerable<object>? args) where T : class;
+        string ExecToText(IEnumerable<object>? args);
+    }
+
+    public class Provider: IProvider
     {
         public PresetConfigService PresetConfig { get; set; }
 
@@ -89,7 +98,7 @@ namespace Golem.Yagna
                                         .WithExeUnitPath(_exeUnitsPath);
 
                     if (_dataDir != null)
-                        builder = builder.WithDataDir(_dataDir);
+                        builder = builder.WithDataDir(Path.GetFullPath(_dataDir));
 
                     _env = builder.Build();
                 }
@@ -100,14 +109,16 @@ namespace Golem.Yagna
         private readonly ILogger _logger;
 
 
-        private static Process? ProviderProcess { get; set; }
+        private static Command? ProviderProcess { get; set; }
 
         public Provider(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
+            golemPath = Path.GetFullPath(golemPath);
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<Provider>();
             _yaProviderPath = Path.Combine(golemPath, ProcessFactory.BinName("ya-provider"));
             _pluginsPath = Path.Combine(golemPath, "..", "plugins");
+            _pluginsPath = Path.GetFullPath(_pluginsPath);
             _exeUnitsPath = Path.Combine(_pluginsPath, @"ya-*.json");
             _dataDir = dataDir;
             _env = new Dictionary<string, string>();
@@ -125,87 +136,64 @@ namespace Golem.Yagna
 
         }
 
-        internal T? Exec<T>(string arguments) where T : class
+        public T? Exec<T>(IEnumerable<object>? args) where T : class
         {
-            var text = this.ExecToText(arguments);
+            var text = ExecToText(args);
             var options = new JsonSerializerOptionsBuilder()
                 .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
                 .Build();
             return JsonSerializer.Deserialize<T>(text, options);
         }
 
-        internal string ExecToText(string arguments)
+        public string ExecToText(IEnumerable<object>? args)
         {
-            _logger?.LogInformation("Executing: provider {0}", arguments);
-
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, Env);
+            var strWriter = new StringWriter();
+            var outLogger = new OutputLogger(_logger, "Provider");
+            var cmd = ProcessFactory.CreateProcess(_yaProviderPath, args, Env, strWriter, outLogger);
             try
             {
-                return ExecToText(process);
+                cmd.Wait();
+                return strWriter.ToString();
             }
-            catch (IOException e)
+            catch (Exception e)
             {
-                _logger?.LogError(e, "failed to execute {0}", arguments);
+                _logger?.LogError(e, "failed to execute {0}", args);
                 throw;
             }
-        }
-        internal string ExecToText(List<string> arguments)
-        {
-            _logger?.LogInformation($"Executing: provider {string.Join(", ", arguments)}");
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, false, Env);
-            try
-            {
-                return ExecToText(process);
-            }
-            catch (IOException e)
-            {
-                _logger?.LogError(e, "failed to execute {0}", arguments);
-                throw;
-            }
-        }
-
-        private string ExecToText(Process process)
-        {
-            process.Start();
-            var err = process.StandardError.ReadToEnd();
-            var result = process.StandardOutput.ReadToEnd();
-            _logger?.LogInformation("Execution result:\nstdout: {0}\nstderr: {1}", result, err);
-            return result;
         }
 
         public List<ExeUnitDesc> ExeUnitList()
         {
-            return this.Exec<List<ExeUnitDesc>>("--json exe-unit list") ?? new List<ExeUnitDesc>();
+            return Exec<List<ExeUnitDesc>>("--json exe-unit list".Split()) ?? new List<ExeUnitDesc>();
         }
 
         public Config? Config
         {
             get
             {
-                return this.Exec<Config>("config get --json");
+                return Exec<Config>("config get --json".Split());
             }
             set
             {
                 if (value != null)
                 {
-                    StringBuilder cmd = new StringBuilder("--json config set", 60);
+                    List<string> cmd = "--json config set".Split().ToList();
                     if (value.Subnet != null)
                     {
-                        cmd.Append(" --subnet \"");
-                        cmd.Append(value.Subnet);
-                        cmd.Append("\"");
+                        cmd.Add("--subnet");
+                        cmd.Add(value.Subnet);
                     }
                     if (value.NodeName != null)
                     {
-                        cmd.Append(" --node-name \"");
-                        cmd.Append(value.NodeName);
-                        cmd.Append("\"");
+                        cmd.Add("--node-name");
+                        cmd.Add(value.NodeName);
                     }
                     if (value.Account != null)
                     {
-                        cmd.Append(" --account \"").Append(value.Account).Append('"');
+                        cmd.Add("--account");
+                        cmd.Add(value.Account);
                     }
-                    var _none = this.ExecToText(cmd.ToString());
+                    ExecToText(cmd);
                 }
             }
         }
@@ -214,64 +202,76 @@ namespace Golem.Yagna
         {
             get
             {
-                var profiles = Exec<Dictionary<string, Profile>>("--json profile list");
+                var profiles = Exec<Dictionary<string, Profile>>($"--json profile list".Split());
                 return profiles?["default"];
             }
         }
         public void UpdateDefaultProfile(String param, String value)
         {
-            this.ExecToText("profile update " + param + " " + value + " default");
+            ExecToText($"profile update {param} {value} default".Split());
         }
 
-        public bool Run(string appKey, Network network, string? yagnaApiUrl, Action<int> exitHandler, CancellationToken cancellationToken, bool openConsole = false, bool enableDebugLogs = false)
+        public bool Run(string appKey, Network network, Action<int> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
+            if(cancellationToken.IsCancellationRequested)
+                return false;
+
             string debugSwitch = "";
             if (enableDebugLogs)
             {
-                debugSwitch = "--debug ";
+                debugSwitch = "--debug";
             }
-            var arguments = $"run {debugSwitch}--payment-network {network.Id}";
+            var arguments = $"run {debugSwitch} --payment-network {network.Id}".Split();
 
-            var process = ProcessFactory.CreateProcess(_yaProviderPath, arguments, openConsole, Env);
+            var env = new Dictionary<string, string>(Env);
+            env["MIN_AGREEMENT_EXPIRATION"] = "30s";
+            env["YAGNA_APPKEY"] = appKey;
 
-            process.StartInfo.EnvironmentVariables["MIN_AGREEMENT_EXPIRATION"] = "30s";
+            var outLogger = new OutputLogger(_logger, "Provider");
 
-            process.StartInfo.EnvironmentVariables["YAGNA_APPKEY"] = appKey;
+            var cmd = ProcessFactory.CreateProcess(_yaProviderPath, arguments, env, outLogger, outLogger);
 
-            if (process.Start())
+            Task.Run(() =>
             {
-                if (!openConsole)
+                cmd.Wait();
+                return Task.CompletedTask;
+            })
+            .ContinueWith(task =>
+            {
+                if (task.Status == TaskStatus.RanToCompletion && cmd.Process.HasExited)
                 {
-                    BindOutputEventHandlers(process);
+                    var exitCode = cmd.Process.ExitCode;
+                    if (ProviderProcess is not null)
+                        ProviderProcess = null;
+                    _logger.LogInformation("Provider process finished: {0}, exit code {1}", task.Status, exitCode);
+                    exitHandler(exitCode);
                 }
+            });
 
-                process
-                    .WaitForExitAsync(cancellationToken)
-                    .ContinueWith(task =>
-                    {
-                        if (task.Status == TaskStatus.RanToCompletion && process.HasExited)
-                        {
-                            var exitCode = process.ExitCode;
-                            _logger.LogInformation("Yagna process finished: {0}, exit code {1}", task.Status, exitCode);
-                            exitHandler(exitCode);
-                        }
-                    });
+            ChildProcessTracker.AddProcess(cmd);
 
-                ChildProcessTracker.AddProcess(process);
-                ProviderProcess = process;
-                return !ProviderProcess.HasExited;
-            }
-            ProviderProcess = null;
-            return false;
+            ProviderProcess = cmd;
+
+            cancellationToken.Register(async () => {
+                _logger.LogInformation("Canceling Provider process");
+                await Stop();
+            });
+
+            return !ProviderProcess.Process.HasExited;
         }
 
         public async Task Stop()
         {
-            if (ProviderProcess == null || ProviderProcess.HasExited)
+            if (ProviderProcess == null)
                 return;
-
-            ProviderProcess.Kill(true);
-            await ProviderProcess.WaitForExitAsync();
+            if (ProviderProcess.Process.HasExited)
+            {
+                ProviderProcess = null;
+                return;
+            }
+            _logger.LogInformation("Stopping Provider process");
+            var cmd = ProviderProcess;
+            await ProcessFactory.StopCmd(cmd);
             ProviderProcess = null;
         }
 

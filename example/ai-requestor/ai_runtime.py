@@ -1,5 +1,10 @@
 import asyncio
+import base64
+import io
+import json
 import os
+from PIL import Image
+import requests
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -10,8 +15,8 @@ from yapapi.props import inf
 from yapapi.props.base import constraint, prop
 from yapapi.services import Service
 from yapapi.log import enable_default_logger
+from yapapi.config import ApiConfig
 
-import json
 import argparse
 import asyncio
 import tempfile
@@ -25,6 +30,9 @@ from yapapi import __version__ as yapapi_version
 from yapapi import windows_event_loop_fix
 from yapapi.log import enable_default_logger
 from yapapi.strategy import SCORE_TRUSTED, SCORE_REJECTED, MarketStrategy
+from yapapi.rest import Activity
+
+from ya_activity import ApiClient, ApiException, RequestorControlApi, RequestorStateApi
 
 # Utils
 
@@ -47,7 +55,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
-        "--payment-driver", "--driver", help="Payment driver name, for example `erc20`"
+        "--payment-driver", "--driver", help="Payment driver name, for example `erc20next`"
     )
     parser.add_argument(
         "--payment-network", "--network", help="Payment network name, for example `goerli`"
@@ -143,8 +151,8 @@ class ProviderOnceStrategy(MarketStrategy):
 
 # App
 
-# RUNTIME_NAME = "automatic"
-RUNTIME_NAME = "dummy"
+RUNTIME_NAME = "automatic" 
+# RUNTIME_NAME = "dummy"
 CAPABILITIES = "golem.runtime.capabilities"
 
 @dataclass
@@ -153,8 +161,8 @@ class AiPayload(Payload):
     image_fmt: str = prop("golem.!exp.ai.v1.srv.comp.ai.model-format", default="safetensors")
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
-    # capabilities: str = constraint(CAPABILITIES, default="automatic")
-    capabilities: str = constraint(CAPABILITIES, default="dummy")
+    capabilities: str = constraint(CAPABILITIES, default="automatic")
+    # capabilities: str = constraint(CAPABILITIES, default="dummy")
 
 
 class AiRuntimeService(Service):
@@ -162,8 +170,8 @@ class AiRuntimeService(Service):
     async def get_payload():
         ## TODO switched into using smaller model to avoid problems during tests. Resolve it when automatic runtime integrated
         # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
-        return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
-        # return AiPayload(image_url="hash:sha3:6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
+        # return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
+        return AiPayload(image_url="hash:sha3:6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)
 
@@ -179,18 +187,31 @@ class AiRuntimeService(Service):
         super().__init__()
         self.strategy = strategy
 
+async def trigger(activity: RequestorControlApi, token, prompt, output_file):
 
-def progress_event_handler(event: "yapapi.events.CommandProgress"):
-    if event.message is not None:
-        progress = json.loads(event.message)
-        percent = 0.0
-        
-        if progress['size'] is None:
-            percent = "unknown"
-        else:
-            percent = 100.0 * progress['progress'] / progress['size']
+    custom_url = "/sdapi/v1/txt2img"
+    url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
+    headers = {"Authorization": "Bearer "+token}
 
-        print(f"Deploy progress: {percent}% ({progress['progress']} B / {progress['size']} B)")
+    payload = {
+        'prompt': prompt,
+        'steps': 10
+    }
+
+    print('Sending request:')
+    payload_str = str(payload).replace("'", "\\\"")
+    print(f'curl -X POST -H \'Authorization: Bearer {token}\' -H "Content-Type: application/json; charset=utf-8"  -H "Accept: text/event-stream" -d "{payload_str}" {url}')
+    
+    response = requests.post(url, headers=headers, json=payload, stream=True)
+    if response.encoding is None:
+        response.encoding = 'utf-8'
+
+    for line in response.iter_lines(decode_unicode=True):
+        if line:
+            response = json.loads(line)
+            image = Image.open(io.BytesIO(base64.b64decode(response['images'][0])))
+            print(f"Saving response to {os.path.abspath(output_file)}")
+            image.save(output_file)
 
 
 async def main(subnet_tag, driver=None, network=None):
@@ -210,41 +231,6 @@ async def main(subnet_tag, driver=None, network=None):
             num_instances=1,
         )
 
-        golem.add_event_consumer(progress_event_handler, ["CommandProgress"])
-
-        def instances():
-            return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
-            
-        async def print_usage():
-            token = golem._engine._api_config.app_key
-
-            activities = [
-                s._ctx._activity.id
-                for s in cluster.instances if s._ctx != None
-            ]
-
-            print(activities)
-            
-            for id in activities:
-                activity = await golem._engine._activity_api.use_activity(id)
-                custom_url = "/sdapi/v1/txt2img"
-                url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
-                payload = '{"prompt": "example prompt"}'.replace("\"", "\\\"")
-                headers = (
-                    f"-H \'Authorization: Bearer {token}\' "
-                     "-H \'Content-Type: application/json; charset=utf-8\' "
-                     "-H \'Accept: text/event-stream\' "
-                )
-
-                if os.name == 'nt':
-                    pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && explorer output.png'
-                else:
-                    pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && xdg-open output.png'
-                
-                print('Sending request:')
-                print(f'curl -X POST {headers} -d "{payload}" {url} {pipe_image_cmd}')
-
-
         def instances():
             return [
                 {
@@ -254,20 +240,56 @@ async def main(subnet_tag, driver=None, network=None):
                 } for s in cluster.instances
             ]
 
+        async def get_image(prompt, file_name):
+            
+            for s in cluster.instances:
 
-        usage_printed = False
+                for _ in range(0, 10):
+                    if s._ctx == None:
+                        print(f'Context is {s._ctx} for: {s.provider_name} {s.state.value}... waiting')
+                        await asyncio.sleep(1)
+                    else:
+                        break
+
+                if s._ctx != None:
+                    for id in [s._ctx._activity.id ]:
+                        print(f'trigger activity {id}')
+                        activity = await golem._engine._activity_api.use_activity(id)
+                        await trigger(
+                            activity,
+                            golem._engine._api_config.app_key,
+                            prompt,
+                            file_name
+                        )
+                else:
+                    print(f'...gave up')
+
+        # Begin
         while True:
-            await asyncio.sleep(3)
-
             i = instances()
 
-            running = [r for r in i if not r['context'] == None]
-            if not usage_printed and len(running) > 0:
-                await print_usage()
-                usage_printed = True
+            running = [r for r in i if r['state'] == 'running']
             
             print(f"""instances: {[f"{r['name']}: {r['state']}" for r in i]}""")
 
+            if len(running) > 0:
+                print('Starting')
+                
+                print('Please type your prompt:')
+                prompt = input()
+                print('Got it')
+                await get_image(
+                    prompt,
+                    'output.png'
+                )
+                print('Done')
+
+                # Closing
+                break
+            
+            await asyncio.sleep(3)
+        # End 
+        
 if __name__ == "__main__":
     parser = build_parser("Run AI runtime task")
     now = datetime.now().strftime("%Y-%m-%d_%H.%M.%S")

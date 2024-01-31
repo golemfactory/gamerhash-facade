@@ -17,8 +17,8 @@ namespace Golem.Tools
 {
     public class PackageBuilder
     {
-        public static string CURRENT_GOLEM_VERSION = "v0.14.0";
-        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc19";
+        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.14.1-rc8_shutdown";
+        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc26_automatic_shutdown";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
@@ -61,7 +61,7 @@ namespace Golem.Tools
             var system = System();
             BuildDirectoryStructure(dir);
 
-            await DownloadExtractPackage(BinariesDir(dir), "golem-provider", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
+            await DownloadExtractPackage(BinariesDir(dir), "golem-provider", "pwalski/yagna", CURRENT_GOLEM_VERSION);
 
             var exeUnitDir = ExeUnitsDir(dir);
             await DownloadExtractPackage(exeUnitDir, "runtime", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION);
@@ -78,7 +78,7 @@ namespace Golem.Tools
                 foreach (JObject descriptor in descriptors)
                 {
                     var name = descriptor.Value<string>("name");
-                    if (name != null && "ai".Equals(name))
+                    if (name != null && "dummy".Equals(name))
                     {
                         var runtime_name = $"ya-runtime-ai{GolemRunnable.ExecutableFileExtension()}";
                         descriptor.Remove("supervisor-path");
@@ -105,7 +105,7 @@ namespace Golem.Tools
             Directory.CreateDirectory(YagnaDataDir(dir));
 
             if (!File.Exists(Path.Combine(BinariesDir(dir), "yagna")))
-                await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
+                await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "pwalski/yagna", CURRENT_GOLEM_VERSION);
 
             return dir;
         }
