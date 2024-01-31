@@ -1,4 +1,5 @@
 
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -199,7 +200,7 @@ class ActivityLoop
         }
     }
 
-    private async IAsyncEnumerable<String> EnumerateMessages(StreamReader reader, CancellationToken token)
+    private async IAsyncEnumerable<String> EnumerateMessages(StreamReader reader, [EnumeratorCancellation] CancellationToken token)
     {
         StringBuilder messageBuilder = new StringBuilder();
         while (true)

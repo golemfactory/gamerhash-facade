@@ -132,22 +132,41 @@ namespace Golem
 
             var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions();
 
-            var exitHandler = (int exitCode) =>
+            var providerCancellationTokenSource = new CancellationTokenSource();
+            var yagnaCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token);
+
+            void yagnaProcessExitHandler(int exitCode)
             {
-                cancellationTokenSource.Cancel();
+                yagnaCancellationTokenSource.Cancel();
+                providerCancellationTokenSource.Cancel();
                 Status = exitCode == 0 ? GolemStatus.Off : GolemStatus.Error;
-            };
+            }
+
+            Action<int> providerProcessExitHandler()
+            {
+                Action<int> exitHandler = (int exitCode) => { throw new Exception("Uninitialized exit handler"); };
+                exitHandler = (int exitCode) => {
+                    if (!providerCancellationTokenSource.IsCancellationRequested)
+                    {
+                        HandleStartupProvider(yagnaOptions, providerCancellationTokenSource, exitHandler);
+                    }
+                    else
+                    {
+                        Status = exitCode == 0 ? GolemStatus.Off : GolemStatus.Error;
+                    }
+                };
+                return exitHandler;
+            }
 
             _logger.LogInformation("Starting Golem's Yagna");
-            var success = await StartupYagnaAsync(yagnaOptions, exitHandler, cancellationTokenSource.Token);
+            var success = await StartupYagnaAsync(yagnaOptions, yagnaProcessExitHandler, yagnaCancellationTokenSource.Token);
 
             if (success)
             {
                 var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
                 if (defaultKey is not null)
                 {
-                    _logger.LogInformation("Starting Golem's Provider");
-                    Status = StartupProvider(yagnaOptions, exitHandler, cancellationTokenSource.Token) ? GolemStatus.Ready : GolemStatus.Error;
+                    HandleStartupProvider(yagnaOptions, providerCancellationTokenSource, providerProcessExitHandler());
                 }
             }
             else
@@ -160,6 +179,16 @@ namespace Golem
 
             OnPropertyChanged("WalletAddress");
             OnPropertyChanged("NodeId");
+        }
+
+        void HandleStartupProvider(YagnaStartupOptions yagnaOptions, CancellationTokenSource providerCancellationTokenSource, Action<int> exitHandler)
+        {
+            _logger.LogInformation("Starting Golem's Provider");
+            Status = StartupProvider(yagnaOptions, exitHandler, providerCancellationTokenSource.Token)
+                ? GolemStatus.Ready
+                : providerCancellationTokenSource.Token.IsCancellationRequested
+                    ? GolemStatus.Off
+                    : GolemStatus.Error;
         }
 
         public async Task Stop()
@@ -181,8 +210,8 @@ namespace Golem
 
         public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
-            var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : null;
-            var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : null;
+            var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : "./provider";
+            var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : "./yagna";
             loggerFactory ??= NullLoggerFactory.Instance;
 
             _logger = loggerFactory.CreateLogger<Golem>();
