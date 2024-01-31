@@ -1,4 +1,5 @@
 
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -207,8 +208,8 @@ class ActivityLoop
         {
             try
             {
-                String? line;
-                while (!String.IsNullOrEmpty(line = await reader.ReadLineAsync(token)))
+                string? line;
+                while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(token)))
                 {
                     if (line.StartsWith(_dataPrefix))
                     {
@@ -223,7 +224,8 @@ class ActivityLoop
             }
             catch (Exception error)
             {
-                _logger.LogError("Failed to read message: {}", error);
+                if(!token.IsCancellationRequested)
+                    _logger.LogError("Failed to read message: {}", error);
                 break;
             }
             yield return messageBuilder.ToString();

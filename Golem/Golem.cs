@@ -170,6 +170,7 @@ namespace Golem
         {
             return (int exitCode) =>
             {
+                _logger.LogInformation("Handling Yagna process exit");
                 yagnaCancellationTokenSource.Cancel();
                 providerCancellationTokenSource.Cancel();
                 Status = exitCode == 0 ? GolemStatus.Off : GolemStatus.Error;
@@ -180,6 +181,7 @@ namespace Golem
         {
             Action<int> exitHandler = (int exitCode) => { throw new Exception("Uninitialized exit handler"); };
             exitHandler = (int exitCode) => {
+                _logger.LogInformation("Handling Provider process exit");
                 if (!providerCancellationToken.IsCancellationRequested)
                 {
                     HandleStartupProvider(yagnaOptions, exitHandler, providerCancellationToken);
