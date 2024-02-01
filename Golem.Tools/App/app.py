@@ -214,10 +214,10 @@ async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
                 activity = await golem._engine._activity_api.use_activity(id)
                 custom_url = "/sdapi/v1/txt2img"
                 url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
-                payload = '"prompt"="happy golem"'
 
                 print('Request example:\n')
                 if os.name == 'nt':
+                    payload = '"prompt"="happy golem"'
                     headers = (
                         f"\"Authorization\" = \"Bearer {token}\"; "
                         "\"Content-Type\" = \"application/json; charset=utf-8\"; "
@@ -232,7 +232,7 @@ async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
                     )
                     print(powershell_cmd)
                 else:
-                    payload = payload.replace("\"", "\\\"")
+                    payload = '{ \\"prompt\\": \\"happy golem\\" }'
                     headers = (
                         f"-H \'Authorization: Bearer {token}\' "
                         "-H \'Content-Type: application/json; charset=utf-8\' "
