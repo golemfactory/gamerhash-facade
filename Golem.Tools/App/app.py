@@ -143,15 +143,12 @@ class ProviderOnceStrategy(MarketStrategy):
 
 # App
 
-CAPABILITIES = "golem.runtime.capabilities"
-
 @dataclass
 class AiPayload(Payload):
     image_url: str = prop("golem.!exp.ai.v1.srv.comp.ai.model")
     image_fmt: str = prop("golem.!exp.ai.v1.srv.comp.ai.model-format", default="safetensors")
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default="dummy")
-    capabilities: str = constraint(CAPABILITIES, default="dummy")
 
 
 class AiRuntimeService(Service):
@@ -163,13 +160,11 @@ class AiRuntimeService(Service):
         if AiRuntimeService.runtime == "dummy":
             return AiPayload(
                 image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
-                runtime="dummy",
-                capabilities="dummy"
+                runtime="dummy"
             )
         return AiPayload(
             image_url="hash:sha3:6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true",
-            runtime="automatic",
-            capabilities="automatic"
+            runtime="automatic"
         )
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)

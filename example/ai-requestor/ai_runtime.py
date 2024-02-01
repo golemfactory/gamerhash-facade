@@ -153,7 +153,6 @@ class ProviderOnceStrategy(MarketStrategy):
 
 RUNTIME_NAME = "automatic" 
 # RUNTIME_NAME = "dummy"
-CAPABILITIES = "golem.runtime.capabilities"
 
 @dataclass
 class AiPayload(Payload):
@@ -161,8 +160,6 @@ class AiPayload(Payload):
     image_fmt: str = prop("golem.!exp.ai.v1.srv.comp.ai.model-format", default="safetensors")
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
-    capabilities: str = constraint(CAPABILITIES, default="automatic")
-    # capabilities: str = constraint(CAPABILITIES, default="dummy")
 
 
 class AiRuntimeService(Service):
