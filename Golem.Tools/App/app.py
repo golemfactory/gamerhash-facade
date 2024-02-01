@@ -214,9 +214,9 @@ async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
                 activity = await golem._engine._activity_api.use_activity(id)
                 custom_url = "/sdapi/v1/txt2img"
                 url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
-                payload = '{"prompt": "example prompt"}'
+                payload = '"prompt"="happy golem"'
 
-                print('Request example:')
+                print('Request example:\n')
                 if os.name == 'nt':
                     headers = (
                         f"\"Authorization\" = \"Bearer {token}\"; "
@@ -226,8 +226,9 @@ async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
                     powershell_cmd = (
                         f"$images = Invoke-WebRequest -Method POST -Headers @{{ {headers} }} -Body (@{{ {payload} }}|ConvertTo-Json) -Uri {url} | ConvertFrom-Json | Select images | Select-Object -Index 0\n"
                         "$bytes = [Convert]::FromBase64String($images.images)\n"
-                        "$filename = \"D:\\Code\\tmp\\out.png\"\n"
-                        "[IO.File]::WriteAllBytes($filename, $bytes)"
+                        "$filename = \"C:\\Windows\\Temp\\output.png\"\n"
+                        "[IO.File]::WriteAllBytes($filename, $bytes)\n"
+                        "explorer C:\\Windows\\Temp\\output.png\n"
                     )
                     print(powershell_cmd)
                 else:
