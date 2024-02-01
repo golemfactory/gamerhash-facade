@@ -51,7 +51,8 @@ namespace Golem.Tools
             var dir = Path.GetFullPath(_dir);
             var runnable_path = Path.Combine(dir, "modules", "golem", file_name_w_ext);
 
-            var args_list = args.Split(null);
+            _logger.LogInformation($"Running cmd: {runnable_path} { args } \n cwd: {working_dir}");
+            var args_list = args.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
             var cmd = Command.Run(runnable_path, args_list, options => options
                 .EnvironmentVariables(env)

@@ -86,7 +86,7 @@ namespace Golem.Tools
             return Convert.ToBase64String(data);
         }
 
-        public SampleApp CreateSampleApp()
+        public SampleApp CreateSampleApp(string? extraArgs = null)
         {
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env["YAGNA_APPKEY"] = AppKey ?? throw new Exception("Unable to create app process. No YAGNA_APPKEY.");
@@ -102,7 +102,7 @@ namespace Golem.Tools
                 pathEnvVar = $"{pathEnvVar}:{binariesDir}";
             }
             env["PATH"] = pathEnvVar;
-            return new SampleApp(_dir, env, _logger);
+            return new SampleApp(_dir, env, _logger, extraArgs);
         }
 
         public void InitPayment(double minFundThreshold = 100.0)
