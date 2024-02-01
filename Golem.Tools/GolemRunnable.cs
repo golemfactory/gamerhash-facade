@@ -53,17 +53,22 @@ namespace Golem.Tools
 
             var args_list = args.Split(null);
 
-            return Command.Run(runnable_path, args_list, options => options
+            var cmd = Command.Run(runnable_path, args_list, options => options
                 .EnvironmentVariables(env)
                 .WorkingDirectory(working_dir)
                 .ThrowOnError(true)
                 .DisposeOnExit(false)
                 .StartInfo(info =>
                 {
-                    info.RedirectStandardError = !console_output;
-                    info.RedirectStandardOutput = !console_output;
                     info.UseShellExecute = false;
                 }));
+            if (console_output)
+            {
+                cmd = cmd
+                    .RedirectTo(Console.Out)
+                    .RedirectStandardErrorTo(Console.Error);
+            }
+            return cmd;
         }
 
         public async Task Stop(StopMethod stopMethod = StopMethod.SigKill)
