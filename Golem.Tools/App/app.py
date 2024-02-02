@@ -60,6 +60,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         default=str(default_log_path),
         help="Log file for YAPAPI; default: %(default)s",
     )
+    parser.add_argument("--runtime", default="dummy", help="Runtime name, for example `automatic`")
     return parser
 
 
@@ -145,27 +146,29 @@ class ProviderOnceStrategy(MarketStrategy):
 
 # App
 
-# RUNTIME_NAME = "automatic"
-RUNTIME_NAME = "dummy"
-CAPABILITIES = "golem.runtime.capabilities"
-
 @dataclass
 class AiPayload(Payload):
     image_url: str = prop("golem.!exp.ai.v1.srv.comp.ai.model")
     image_fmt: str = prop("golem.!exp.ai.v1.srv.comp.ai.model-format", default="safetensors")
 
-    runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
-    # capabilities: str = constraint(CAPABILITIES, default="automatic")
-    capabilities: str = constraint(CAPABILITIES, default="dummy")
+    runtime: str = constraint(inf.INF_RUNTIME_NAME, default="dummy")
 
 
 class AiRuntimeService(Service):
+    runtime: str
+
     @staticmethod
     async def get_payload():
-        ## TODO switched into using smaller model to avoid problems during tests. Resolve it when automatic runtime integrated
-        return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
-        # return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
-        # return AiPayload(image_url="hash:sha3:6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
+        # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
+        if AiRuntimeService.runtime == "dummy":
+            return AiPayload(
+                image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
+                runtime="dummy"
+            )
+        return AiPayload(
+            image_url="hash:sha3:6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true",
+            runtime="automatic"
+        )
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)
 
@@ -195,7 +198,7 @@ def progress_event_handler(event: "yapapi.events.CommandProgress"):
         print(f"Deploy progress: {percent}% ({progress[0]} B / {progress[1]} B)")
 
 
-async def main(subnet_tag, driver=None, network=None):
+async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
     strategy = ProviderOnceStrategy()
     async with Golem(
         budget=1.0,
@@ -205,6 +208,7 @@ async def main(subnet_tag, driver=None, network=None):
         payment_network=network,
         stream_output=True,
     ) as golem:       
+        AiRuntimeService.runtime = runtime
         cluster = await golem.run_service(
             AiRuntimeService,
             instance_params=[
@@ -232,21 +236,32 @@ async def main(subnet_tag, driver=None, network=None):
                 activity = await golem._engine._activity_api.use_activity(id)
                 custom_url = "/sdapi/v1/txt2img"
                 url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
-                payload = '{"prompt": "example prompt"}'.replace("\"", "\\\"")
-                headers = (
-                    f"-H \'Authorization: Bearer {token}\' "
-                     "-H \'Content-Type: application/json; charset=utf-8\' "
-                     "-H \'Accept: text/event-stream\' "
-                )
 
+                print('Request example:\n')
                 if os.name == 'nt':
-                    pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && explorer output.png'
+                    payload = '"prompt"="happy golem"'
+                    headers = (
+                        f"\"Authorization\" = \"Bearer {token}\"; "
+                        "\"Content-Type\" = \"application/json; charset=utf-8\"; "
+                        "\"Accept\" = \"text/event-stream\""
+                    )
+                    powershell_cmd = (
+                        f"$images = Invoke-WebRequest -Method POST -Headers @{{ {headers} }} -Body (@{{ {payload} }}|ConvertTo-Json) -Uri {url} | ConvertFrom-Json | Select images | Select-Object -Index 0\n"
+                        "$bytes = [Convert]::FromBase64String($images.images)\n"
+                        "$filename = \"C:\\Windows\\Temp\\output.png\"\n"
+                        "[IO.File]::WriteAllBytes($filename, $bytes)\n"
+                        "explorer C:\\Windows\\Temp\\output.png\n"
+                    )
+                    print(powershell_cmd)
                 else:
+                    payload = '{ \\"prompt\\": \\"happy golem\\" }'
+                    headers = (
+                        f"-H \'Authorization: Bearer {token}\' "
+                        "-H \'Content-Type: application/json; charset=utf-8\' "
+                        "-H \'Accept: text/event-stream\' "
+                    )
                     pipe_image_cmd = '| jq -r ".images[0]" | base64 --decode > output.png && xdg-open output.png'
-                
-                print('Sending request:')
-                print(f'curl -X POST {headers} -d "{payload}" {url} {pipe_image_cmd}')
-
+                    print(f'curl -X POST {headers} -d "{payload}" {url} {pipe_image_cmd}')
 
         def instances():
             return [
@@ -282,6 +297,7 @@ if __name__ == "__main__":
             subnet_tag=args.subnet_tag,
             driver=args.payment_driver,
             network=args.payment_network,
+            runtime=args.runtime
         ),
         log_file=args.log_file,
     )

@@ -67,7 +67,7 @@ namespace Golem.Yagna
             var argList = args?.ToList();
             argList?.RemoveAll(s => string.IsNullOrWhiteSpace((string?)s));
             var executablePath = Path.GetFullPath(executable);
-            var workDir = Directory.GetParent(executablePath)?.ToString();
+            var workDir = Directory.GetParent(executablePath)?.ToString() ?? "";
 
             return Command
                 .Run(executablePath, argList, options => updateOptions(options, workDir, env))
