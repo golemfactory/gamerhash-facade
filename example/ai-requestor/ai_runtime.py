@@ -10,6 +10,7 @@ from alive_progress import alive_bar
 from dataclasses import dataclass
 from datetime import datetime
 
+import yapapi.script.command
 from yapapi import Golem
 from yapapi.payload import Payload
 from yapapi.props import inf
