@@ -17,7 +17,7 @@ namespace Golem.Tools
 {
     public class PackageBuilder
     {
-        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.15.0-rc15_gsb_proxy";
+        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.15.0-rc16_gsb_proxy";
         public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc29";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
