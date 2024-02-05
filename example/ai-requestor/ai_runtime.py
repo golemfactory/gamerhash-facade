@@ -6,9 +6,11 @@ import os
 from PIL import Image
 import requests
 
+from alive_progress import alive_bar
 from dataclasses import dataclass
 from datetime import datetime
 
+import yapapi.script.command
 from yapapi import Golem
 from yapapi.payload import Payload
 from yapapi.props import inf
@@ -16,6 +18,7 @@ from yapapi.props.base import constraint, prop
 from yapapi.services import Service
 from yapapi.log import enable_default_logger
 from yapapi.config import ApiConfig
+from yapapi.script import ProgressArgs
 
 import argparse
 import asyncio
@@ -85,6 +88,69 @@ def print_env_info(golem: Golem):
     )
 
 
+def command_key(event: "yapapi.events.CommandProgress") -> str:
+    return f"{event.script_id}#{event.command._index}"
+
+
+class ProgressDisplayer:
+    def __init__(self):
+        self._transfers_bars = {}
+        self._transfers_ctx = {}
+
+    def exit(self):
+        for key, bar in self._transfers_ctx:
+            bar.__exit__(None, None, None)
+
+    def progress_bar(self, event: "yapapi.events.CommandProgress"):
+        if event.message is not None:
+            print(f"{event.message}")
+
+        if event.progress is not None and event.progress[1] is not None:
+            progress = event.progress
+            key = command_key(event)
+
+            if self._transfers_ctx.get(key) is None:
+                self.create_progress_bar(event)
+
+            bar = self._transfers_ctx.get(key)
+            bar(progress[0] / progress[1])
+
+    def create_progress_bar(self, event: "yapapi.events.CommandProgress"):
+        key = command_key(event)
+        bar = alive_bar(
+            total=event.progress[1],
+            manual=True,
+            title="Progress",
+            unit=event.unit,
+            scale=True,
+            dual_line=True,
+        )
+        bar_ctx = bar.__enter__()
+
+        command = event.command
+        if isinstance(command, yapapi.script.command.Deploy):
+            bar_ctx.text = "Deploying image"
+        elif isinstance(command, yapapi.script.command._SendContent):
+            bar_ctx.text = f"Uploading file: {command._src.download_url} -> {command._dst_path}"
+        elif isinstance(command, yapapi.script.command._ReceiveContent):
+            bar_ctx.text = f"Downloading file: {command._src_path} -> {command._dst_path}"
+
+        self._transfers_bars[key] = bar
+        self._transfers_ctx[key] = bar_ctx
+
+    def executed(self, event: "yapapi.events.CommandExecuted"):
+        key = command_key(event)
+        if self._transfers_ctx.get(key) is not None:
+            bar_obj = self._transfers_bars.get(key)
+            bar = self._transfers_ctx.get(key)
+
+            bar(1.0)
+            bar_obj.__exit__(None, None, None)
+
+            self._transfers_bars.pop(key)
+            self._transfers_ctx.pop(key)
+
+
 def run_golem_example(example_main, log_file=None):
     # This is only required when running on Windows with Python prior to 3.8:
     windows_event_loop_fix()
@@ -152,7 +218,7 @@ class ProviderOnceStrategy(MarketStrategy):
 # App
 
 RUNTIME_NAME = "automatic" 
-# RUNTIME_NAME = "dummy"
+#RUNTIME_NAME = "dummy"
 
 @dataclass
 class AiPayload(Payload):
@@ -168,12 +234,14 @@ class AiRuntimeService(Service):
         ## TODO switched into using smaller model to avoid problems during tests. Resolve it when automatic runtime integrated
         # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
         # return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
-        return AiPayload(image_url="hash:sha3:6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
+        return AiPayload(image_url="hash:sha3:b2da48d618beddab1887739d75b50a3041c810bc73805a416761185998359b24:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
+    
+    
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)
 
         script = self._ctx.new_script(timeout=None)
-        script.deploy()
+        script.deploy(progress_args=ProgressArgs(updateInterval="500ms"))
         script.start()
         yield script
 
@@ -183,6 +251,7 @@ class AiRuntimeService(Service):
     def __init__(self, strategy: ProviderOnceStrategy):
         super().__init__()
         self.strategy = strategy
+
 
 async def trigger(activity: RequestorControlApi, token, prompt, output_file):
 
@@ -219,6 +288,7 @@ async def main(subnet_tag, driver=None, network=None):
         strategy=strategy,
         payment_driver=driver,
         payment_network=network,
+        stream_output=True,
     ) as golem:
         cluster = await golem.run_service(
             AiRuntimeService,
@@ -227,6 +297,21 @@ async def main(subnet_tag, driver=None, network=None):
             ],
             num_instances=1,
         )
+
+        bar = ProgressDisplayer()
+        def progress_event_handler(event: "yapapi.events.CommandProgress"):
+            bar.progress_bar(event)
+
+        def on_shutdown(_event: "yapapi.events.ServiceFinished"):
+            bar.exit()
+
+        def on_command_executed(event: "yapapi.events.CommandExecuted"):
+            bar.executed(event)
+
+        golem.add_event_consumer(progress_event_handler, ["CommandProgress"])
+        golem.add_event_consumer(on_shutdown, ["ServiceFinished"])
+        golem.add_event_consumer(on_command_executed, ["CommandExecuted"])
+
 
         def instances():
             return [

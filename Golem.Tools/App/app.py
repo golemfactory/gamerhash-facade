@@ -1,6 +1,7 @@
 import asyncio
 import os
 
+from alive_progress import alive_bar
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -8,9 +9,11 @@ from yapapi import Golem
 from yapapi.payload import Payload
 from yapapi.props import inf
 from yapapi.props.base import constraint, prop
+from yapapi.script import ProgressArgs
 from yapapi.services import Service
 from yapapi.log import enable_default_logger
 
+import json
 import argparse
 import asyncio
 import tempfile
@@ -170,7 +173,7 @@ class AiRuntimeService(Service):
         self.strategy.remember(self._ctx.provider_id)
 
         script = self._ctx.new_script(timeout=None)
-        script.deploy()
+        script.deploy(progress_args=ProgressArgs(updateInterval="500ms"))
         script.start()
         yield script
 
@@ -182,6 +185,19 @@ class AiRuntimeService(Service):
         self.strategy = strategy
 
 
+def progress_event_handler(event: "yapapi.events.CommandProgress"):
+    if event.progress is not None and event.progress[1] is not None:
+        progress = event.progress
+        percent = 0.0
+        
+        if progress[1] is None:
+            percent = "unknown"
+        else:
+            percent = 100.0 * progress[0] / progress[1]
+
+        print(f"Deploy progress: {percent}% ({progress[0]} B / {progress[1]} B)")
+
+
 async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
     strategy = ProviderOnceStrategy()
     async with Golem(
@@ -190,7 +206,8 @@ async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
         strategy=strategy,
         payment_driver=driver,
         payment_network=network,
-    ) as golem:
+        stream_output=True,
+    ) as golem:       
         AiRuntimeService.runtime = runtime
         cluster = await golem.run_service(
             AiRuntimeService,
@@ -200,6 +217,11 @@ async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
             num_instances=1,
         )
 
+        golem.add_event_consumer(progress_event_handler, ["CommandProgress"])
+
+        def instances():
+            return [f"{s.provider_name}: {s.state.value}" for s in cluster.instances]
+            
         async def print_usage():
             token = golem._engine._api_config.app_key
 
