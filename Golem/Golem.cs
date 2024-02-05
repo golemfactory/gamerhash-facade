@@ -184,7 +184,7 @@ namespace Golem
                 _logger.LogInformation("Handling Provider process exit");
                 if (!providerCancellationToken.IsCancellationRequested)
                 {
-                    HandleStartupProvider(yagnaOptions, exitHandler, providerCancellationToken);
+                    Status = GolemStatus.Error;
                 }
                 else
                 {
