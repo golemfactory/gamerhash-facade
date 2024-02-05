@@ -243,7 +243,7 @@ namespace Golem.Yagna
             }
             _logger.LogInformation("Stopping Yagna process");
             var cmd = YagnaProcess;
-            await ProcessFactory.StopCmd(cmd);
+            await ProcessFactory.StopCmd(cmd, logger: _logger);
             YagnaProcess = null;
         }
 

@@ -271,7 +271,7 @@ namespace Golem.Yagna
             }
             _logger.LogInformation("Stopping Provider process");
             var cmd = ProviderProcess;
-            await ProcessFactory.StopCmd(cmd);
+            await ProcessFactory.StopCmd(cmd, logger: _logger);
             ProviderProcess = null;
         }
 
