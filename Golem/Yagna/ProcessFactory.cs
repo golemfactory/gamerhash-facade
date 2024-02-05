@@ -114,7 +114,14 @@ namespace Golem.Yagna
                 var stopTimeoutToken = stopTimeoutTokenSrc.Token;
                 stopTimeoutTokenSrc.CancelAfter(stopTimeoutMs);
 
-                await cmd.Process.WaitForExitAsync(stopTimeoutToken);
+                try
+                {
+                    await cmd.Process.WaitForExitAsync(stopTimeoutToken);
+                }
+                catch(TaskCanceledException)
+                {
+                    cmd.Kill();
+                }
             }
             return cmd.Process.ExitCode;
         }
