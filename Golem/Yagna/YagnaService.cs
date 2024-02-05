@@ -216,6 +216,13 @@ namespace Golem.Yagna
             {
                 if (YagnaProcess is not null)
                     YagnaProcess = null;
+                if (result.IsFaulted)
+                {
+                    var res = result.Result;
+                    _logger.LogInformation("Yagna process cmd has failed.");
+                    exitHandler(1);
+                    return;
+                }
                 _logger.LogInformation("Yagna process finished, exit code {1}", result.Result.ExitCode);
                 exitHandler(result.Result.ExitCode);
             });
@@ -243,7 +250,7 @@ namespace Golem.Yagna
             }
             _logger.LogInformation("Stopping Yagna process");
             var cmd = YagnaProcess;
-            await ProcessFactory.StopCmd(cmd);
+            await ProcessFactory.StopCmd(cmd, logger: _logger);
             YagnaProcess = null;
         }
 

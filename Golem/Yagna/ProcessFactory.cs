@@ -26,7 +26,7 @@ namespace Golem.Yagna
         private readonly ILogger _logger;
         private readonly LogLevel _lvl;
         private readonly string _prefix;
-        private StringBuilder _strBuilder;        
+        private StringBuilder _strBuilder;
         private readonly object _strBuilderLock = new object();
 
         public override Encoding Encoding => Encoding.UTF8;
@@ -39,7 +39,7 @@ namespace Golem.Yagna
             }
             else
             {
-                lock(_strBuilderLock)
+                lock (_strBuilderLock)
                 {
                     _strBuilder.Append(value);
                 }
@@ -49,7 +49,7 @@ namespace Golem.Yagna
         public override void WriteLine()
         {
             string line;
-            lock(_strBuilderLock)
+            lock (_strBuilderLock)
             {
                 line = _strBuilder.ToString();
                 _strBuilder = new StringBuilder();
@@ -101,7 +101,8 @@ namespace Golem.Yagna
             }
         }
 
-        public static async Task<int> StopCmd(Command cmd, int stopTimeoutMs = 30_000)
+        // TODO instead of passing logger as param and keeping `cmd` as variable, keep ProcessFactory (with `cmd` and `logger`) as a variable.
+        public static async Task<int> StopCmd(Command cmd, int stopTimeoutMs = 30_000, ILogger? logger = null)
         {
             if (!cmd.Process.HasExited)
             {
@@ -113,13 +114,13 @@ namespace Golem.Yagna
                 CancellationTokenSource stopTimeoutTokenSrc = new CancellationTokenSource();
                 var stopTimeoutToken = stopTimeoutTokenSrc.Token;
                 stopTimeoutTokenSrc.CancelAfter(stopTimeoutMs);
-
                 try
                 {
                     await cmd.Process.WaitForExitAsync(stopTimeoutToken);
                 }
-                catch(TaskCanceledException)
+                catch (TaskCanceledException err)
                 {
+                    logger?.LogWarning($"Failed to stop process. Killing it. Err: {err.Message}");
                     cmd.Kill();
                 }
             }

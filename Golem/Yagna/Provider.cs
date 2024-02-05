@@ -231,21 +231,19 @@ namespace Golem.Yagna
 
             var cmd = ProcessFactory.CreateProcess(_yaProviderPath, arguments, env, outLogger, outLogger);
 
-            Task.Run(() =>
+            cmd.Task.ContinueWith(result =>
             {
-                cmd.Wait();
-                return Task.CompletedTask;
-            })
-            .ContinueWith(task =>
-            {
-                if (task.Status == TaskStatus.RanToCompletion && cmd.Process.HasExited)
+                if (ProviderProcess is not null)
+                    ProviderProcess = null;
+                if (result.IsFaulted)
                 {
-                    var exitCode = cmd.Process.ExitCode;
-                    if (ProviderProcess is not null)
-                        ProviderProcess = null;
-                    _logger.LogInformation("Provider process finished: {0}, exit code {1}", task.Status, exitCode);
-                    exitHandler(exitCode);
+                    var res = result.Result;
+                    _logger.LogInformation("Provider process cmd has failed.");
+                    exitHandler(1);
+                    return;
                 }
+                _logger.LogInformation("Provider process finished: exit code {1}", result.Result.ExitCode);
+                exitHandler(result.Result.ExitCode);
             });
 
             ChildProcessTracker.AddProcess(cmd);
@@ -271,7 +269,7 @@ namespace Golem.Yagna
             }
             _logger.LogInformation("Stopping Provider process");
             var cmd = ProviderProcess;
-            await ProcessFactory.StopCmd(cmd);
+            await ProcessFactory.StopCmd(cmd, logger: _logger);
             ProviderProcess = null;
         }
 
