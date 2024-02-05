@@ -33,7 +33,7 @@ golem data directories.
 You can choose specific release to be downloaded:
 
 ```sh
-dotnet run --project Golem.Package -- download --target modules --version pre-rel-v0.1.0-rc5
+dotnet run --project Golem.Package -- download --target modules --version v0.1.4
 ```
 
 In case of building artifacts locally you can specify `yagna` and `runtimes` versions:
