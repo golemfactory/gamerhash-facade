@@ -42,3 +42,4 @@ Mock/obj/
 
 /example/ai-requestor/*.log
 /example/ai-requestor/.venv/
+/example/ai-requestor/dist
