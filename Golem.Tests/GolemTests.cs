@@ -198,9 +198,9 @@ namespace Golem.Tests
         }
 
         [Fact]
-        public async Task DoNotStart_ChangePrices_VerifyPrice()
+        public async Task DoNotStart_ChangePrices_VerifyPriceAsync()
         {
-            var testName = nameof(DoNotStart_ChangePrices_VerifyPrice);
+            var testName = nameof(DoNotStart_ChangePrices_VerifyPriceAsync);
             var loggerFactory = CreateLoggerFactory(testName);
 
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);

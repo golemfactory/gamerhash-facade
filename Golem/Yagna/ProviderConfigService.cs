@@ -67,6 +67,9 @@ namespace Golem
 
                 set
                 {
+                    if (!_provider.UpdateStatus()) {
+                        _provider.PresetConfig.InitilizeDefaultPresets();
+                    }
                     _provider.PresetConfig.UpdatePrices(new Dictionary<string, decimal>
                     {
                         { "ai-runtime.requests", value.NumRequests },

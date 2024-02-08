@@ -233,8 +233,7 @@ namespace Golem.Yagna
 
             cmd.Task.ContinueWith(result =>
             {
-                if (ProviderProcess is not null)
-                    ProviderProcess = null;
+                UpdateStatus();
                 if (result.IsFaulted)
                 {
                     var res = result.Result;
@@ -256,22 +255,34 @@ namespace Golem.Yagna
                 await Stop();
             });
 
-            return !ProviderProcess.Process.HasExited;
+            return UpdateStatus();
         }
 
         public async Task Stop()
         {
-            if (ProviderProcess == null)
-                return;
-            if (ProviderProcess.Process.HasExited)
-            {
-                ProviderProcess = null;
+            if (!UpdateStatus()) {
                 return;
             }
             _logger.LogInformation("Stopping Provider process");
             var cmd = ProviderProcess;
             await ProcessFactory.StopCmd(cmd, logger: _logger);
-            ProviderProcess = null;
+            UpdateStatus();
+        }
+
+        /// <summary>
+        /// Check and update Provider process status.
+        /// </summary>
+        /// <returns>`True` if Proider is alive. `False` if it is not.</returns>
+        public bool UpdateStatus()
+        {
+            if (ProviderProcess == null)
+                return false;
+            if (ProviderProcess.Process.HasExited)
+            {
+                ProviderProcess = null;
+                return false;
+            }
+            return true;
         }
 
         private void BindOutputEventHandlers(Process proc)
