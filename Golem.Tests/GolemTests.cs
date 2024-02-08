@@ -14,10 +14,12 @@ namespace Golem.Tests
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;
         private readonly ITestOutputHelper output;
+        // private UnhandledExceptionEventArgs? _unhandledException = null;
 
 
         public GolemTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
         {
+
             var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
 
             _golemLib = Path.Combine(dir, "Golem.dll");
@@ -26,7 +28,14 @@ namespace Golem.Tests
             output = outputHelper;
             
             _loggerProvider = new TestLoggerProvider(golemFixture.Sink);
+            
+            // AppDomain.CurrentDomain.UnhandledException += SetUnhandledException;
         }
+
+        // public void SetUnhandledException(object sender, UnhandledExceptionEventArgs exception)
+        // {
+        //     _unhandledException = exception;
+        // }
 
         ILoggerFactory CreateLoggerFactory(string testName) {
             var logfile = Path.Combine(PackageBuilder.TestDir(testName), testName + "-{Date}.log");
@@ -183,6 +192,28 @@ namespace Golem.Tests
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
             await golem.Start();
 
+            ChangePrices_VerifyPrice(golem, loggerFactory);
+
+            await golem.Stop();
+        }
+
+        [Fact]
+        public async Task ChangePrices_VerifyPrice_Before_Start()
+        {
+            var testName = nameof(ChangePrices_VerifyPrice_Before_Start);
+            var loggerFactory = CreateLoggerFactory(testName);
+
+            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            Console.WriteLine("Path: " + golemPath);
+
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
+            ChangePrices_VerifyPrice(golem, loggerFactory);
+
+            // Assert.Null(_unhandledException);
+        }
+
+        void ChangePrices_VerifyPrice(Golem golem, ILoggerFactory loggerFactory)
+        {
             decimal price = 0;
 
             Action<decimal> updatePrice = (v) => price = v;
@@ -192,6 +223,10 @@ namespace Golem.Tests
             golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.EnvPerHour), updatePrice, loggerFactory).Subscribe();
             golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.NumRequests), updatePrice, loggerFactory).Subscribe();
 
+            // GolemPrice? prices = null;
+            // Action<GolemPrice> updatePrices = (v) => prices = v;
+
+            // golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemPrice>(nameof(Golem.Price), updatePrices, loggerFactory).Subscribe();
 
             //Assert property changes
             golem.Price.StartPrice = 0.005m;
@@ -206,13 +241,13 @@ namespace Golem.Tests
             golem.Price.NumRequests = 0.008m;
             Assert.Equal(0.008m, price);
 
+            // Assert.NotNull(prices);
+
             //Assert property returns correct value
             Assert.Equal(0.005m, golem.Price.StartPrice);
             Assert.Equal(0.006m, golem.Price.GpuPerHour);
             Assert.Equal(0.007m, golem.Price.EnvPerHour);
             Assert.Equal(0.008m, golem.Price.NumRequests);
-
-            await golem.Stop();
         }
 
         public void Dispose()
