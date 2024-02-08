@@ -39,6 +39,10 @@ namespace Golem
             {
                 get
                 {
+                    if (!_provider.UpdateStatus()) {
+                        _provider.PresetConfig.InitilizeDefaultPresets();
+                    }
+
                     var presets = _provider.PresetConfig.DefaultPresets;
                     
                     if(presets.Count == 0)
