@@ -112,7 +112,7 @@ namespace Golem.Yagna
             catch (Exception e)
             {
                 _logger?.LogError(e, "Failed to run yagna");
-                throw;
+                throw new GolemProcessException(string.Format("Failed to execute Yagna command: {0}", e.Message));
             }
             return strWriter.ToString();
         }

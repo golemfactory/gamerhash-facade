@@ -78,7 +78,7 @@ namespace Golem.Yagna
         string ExecToText(IEnumerable<object>? args);
     }
 
-    public class Provider: IProvider
+    public class Provider : IProvider
     {
         public PresetConfigService PresetConfig { get; set; }
 
@@ -158,7 +158,7 @@ namespace Golem.Yagna
             catch (Exception e)
             {
                 _logger?.LogError(e, "failed to execute {0}", args);
-                throw;
+                throw new GolemProcessException(string.Format("Failed to execute Provider command: {0}", e.Message));
             }
         }
 
@@ -213,7 +213,7 @@ namespace Golem.Yagna
 
         public bool Run(string appKey, Network network, Action<int> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
-            if(cancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
                 return false;
 
             string debugSwitch = "";
@@ -250,7 +250,8 @@ namespace Golem.Yagna
 
             ProviderProcess = cmd;
 
-            cancellationToken.Register(async () => {
+            cancellationToken.Register(async () =>
+            {
                 _logger.LogInformation("Canceling Provider process");
                 await Stop();
             });

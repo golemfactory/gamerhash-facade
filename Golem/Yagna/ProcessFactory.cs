@@ -127,4 +127,13 @@ namespace Golem.Yagna
             return cmd.Process.ExitCode;
         }
     }
+
+    public class GolemProcessException : Exception
+    {
+
+        public GolemProcessException(string message)
+            : base(message)
+        {
+        }
+    }
 }
