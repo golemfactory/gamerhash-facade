@@ -39,49 +39,77 @@ namespace Golem
             {
                 get
                 {
-                    if (!_provider.UpdateStatus()) {
+                    if (!_provider.UpdateStatus())
+                    {
                         _provider.PresetConfig.InitilizeDefaultPresets();
                     }
 
                     var presets = _provider.PresetConfig.DefaultPresets;
-                    
-                    if(presets.Count == 0)
+
+                    if (presets.Count == 0)
                         return new GolemPrice();
 
-                    //TODO handle different values in multiple runtimes/presets
-                    var preset = presets[0];
+                    var golemPrice = presetIntoPrice(presets[0]);
 
-                    if(!preset.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
-                        numRequests = 0;
-                    if (!preset.UsageCoeffs.TryGetValue("golem.usage.duration_sec", out var duration))
-                        duration = 0;
-                    if (!preset.UsageCoeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
-                        gpuSec = 0;
+                    if (presets.Count == 1)
+                        return golemPrice;
 
-                    var initPrice = preset.InitialPrice ?? 0m;
-
-                    return new GolemPrice
+                    var golemPriceDict = golemPriceToDict(golemPrice);
+                    // Unify Preset prices
+                    for (int i = 1; i < presets.Count; i++)
                     {
-                        EnvPerHour = duration,
-                        StartPrice = initPrice,
-                        GpuPerHour = gpuSec,
-                        NumRequests = numRequests
-                    };
+                        var otherPreset = presets[i];
+                        var otherPrice = presetIntoPrice(otherPreset);
+                        var otherPriceDict = golemPriceToDict(otherPrice);
+                        if (!golemPriceDict.Equals(otherPriceDict)) {
+                            var args = _provider.PresetConfig.PriceDictToPriceArgs(golemPriceDict);
+                            _provider.PresetConfig.UpdatePrices(otherPreset.Name, args);
+                        }
+                    }
+
+                    return golemPrice;
                 }
 
                 set
                 {
-                    if (!_provider.UpdateStatus()) {
+                    if (!_provider.UpdateStatus())
+                    {
                         _provider.PresetConfig.InitilizeDefaultPresets();
                     }
-                    _provider.PresetConfig.UpdatePrices(new Dictionary<string, decimal>
-                    {
-                        { "ai-runtime.requests", value.NumRequests },
-                        { "golem.usage.duration_sec", value.EnvPerHour },
-                        { "golem.usage.gpu-sec", value.GpuPerHour },
-                        { "Initial", value.StartPrice }
-                    });
+                    var priceDict = golemPriceToDict(value);
+                    _provider.PresetConfig.UpdatePrices(priceDict);
                 }
+            }
+
+            Dictionary<string, decimal> golemPriceToDict(GolemPrice price)
+            {
+                return new Dictionary<string, decimal>
+                    {
+                        { "ai-runtime.requests", price.NumRequests },
+                        { "golem.usage.duration_sec", price.EnvPerHour },
+                        { "golem.usage.gpu-sec", price.GpuPerHour },
+                        { "Initial", price.StartPrice }
+                    };
+            }
+
+            private GolemPrice presetIntoPrice(Preset preset)
+            {
+                if (!preset.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
+                    numRequests = 0;
+                if (!preset.UsageCoeffs.TryGetValue("golem.usage.duration_sec", out var duration))
+                    duration = 0;
+                if (!preset.UsageCoeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
+                    gpuSec = 0;
+
+                var initPrice = preset.InitialPrice ?? 0m;
+
+                return new GolemPrice
+                {
+                    EnvPerHour = duration,
+                    StartPrice = initPrice,
+                    GpuPerHour = gpuSec,
+                    NumRequests = numRequests
+                };
             }
 
             private void UpdateWalletAddress(string? walletAddress = null)
