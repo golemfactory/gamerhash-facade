@@ -1,0 +1,49 @@
+param (
+    [string]$automatic_runtime_package_url = "https://gpu-on-golem.s3.eu-central-1.amazonaws.com/sd-webui-standalone/sd.webui_noxformers_nomodel.zip",
+    [string]$automatic_runtime_package_subdir = "sd.webui_noxformers",
+    [string]$automatic_package_dir = "package",
+    [bool]$compress = 0,
+    [bool]$cleanup = 0,
+    [string]$compression_lvl = "Fastest"
+)
+
+# Progress slows down download
+$ProgressPreference = 'SilentlyContinue'
+
+$bin_dir = "bin"
+if ($cleanup) {
+    Remove-Item -Path $bin_dir -Force
+}
+New-Item -Path $bin_dir -Force -ItemType Directory
+
+$automatic_runtime_package = $bin_dir + "\automatic_runtime_package.zip"
+$automatic_runtime_unpacked = $bin_dir + "\automatic_unpacked"
+
+if (!(Test-Path $automatic_runtime_package)) {
+    Invoke-WebRequest $automatic_runtime_package_url -OutFile $automatic_runtime_package
+}
+
+if (!(Test-Path $automatic_runtime_unpacked)) {
+    Expand-Archive $automatic_runtime_package -DestinationPath $automatic_runtime_unpacked
+}
+
+$plugins_package_dir = $automatic_package_dir + "\plugins"
+$automatic_runtime_dir = $plugins_package_dir + "\ya-automatic-ai"
+$automatic_runtime_dir_subdir = $automatic_runtime_dir + "\automatic"
+New-item $automatic_runtime_dir_subdir -ItemType Directory -Force
+
+$automatic_runtime_unpacked_subdir_pattern = $automatic_runtime_unpacked + "\" + $automatic_runtime_package_subdir + "\*"
+Copy-Item -Path $automatic_runtime_unpacked_subdir_pattern -Destination $automatic_runtime_dir_subdir -Recurse
+$automatic_runtime_dir_dst = $automatic_runtime_dir + "\"
+Copy-Item "scripts\config.json" -Destination $automatic_runtime_dir_dst
+$plugins_package_dir_dst = $plugins_package_dir
+Copy-Item "scripts\ya-automatic-ai.json" -Destination $plugins_package_dir_dst
+
+if ($compress) {
+    $automatic_package_dir_pattern = $automatic_package_dir + "\*"
+    $automatic_dist_package = $bin_dir + "\dist_package.zip"
+    if (Test-Path $automatic_dist_package) {
+        Remove-Item $automatic_dist_package
+    }
+    Compress-Archive -Path $automatic_package_dir_pattern -DestinationPath $automatic_dist_package -CompressionLevel $compression_lvl
+}
