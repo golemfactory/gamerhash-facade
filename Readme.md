@@ -108,3 +108,19 @@ dotnet run --project ExampleRunner --golem modules --relay Local
 
 If many people are testing facade at the same time, it can happen that other Providers will steal jobs from your `ExampleRunner`.
 If it interferes with your testing than switch to `--relay Local`.
+
+## Package with Automatic
+
+To create Golem Package with Automatic runtime run:
+
+```ps1
+dotnet build --configuration Release
+dotnet run --project Golem.Package --configuration Release build --dont-clean
+# use `-cleanup 0` to avoid downloading and unpacking again `bin\automatic_runtime_package.zip` archive
+# use `-compress 0` to skip archiving `package` dir into `bin\dist_package.zip`
+ .\scripts\automatic.ps1 -compress 1 -cleanup 1
+```
+
+Release package is stored in `bin\dist_package.zip`.
+
+Unpacked content of the archive (including Automatic) is stored in `package` directory.
