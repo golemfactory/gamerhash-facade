@@ -226,7 +226,7 @@ namespace Golem.Yagna
 
         public void UpdatePrices(string preset, List<string> priceArgs)
         {
-             var args = "preset update --no-interactive --name".Split().ToList();
+            var args = "preset update --no-interactive --name".Split().ToList();
             args.Add(preset);
             args.AddRange(priceArgs.ToArray());
             var _result = _parent.ExecToText(args);

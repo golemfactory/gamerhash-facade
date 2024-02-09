@@ -61,7 +61,8 @@ namespace Golem
                         var otherPreset = presets[i];
                         var otherPrice = presetIntoPrice(otherPreset);
                         var otherPriceDict = golemPriceToDict(otherPrice);
-                        if (!golemPriceDict.Equals(otherPriceDict)) {
+                        if (!golemPriceDict.Equals(otherPriceDict))
+                        {
                             var args = _provider.PresetConfig.PriceDictToPriceArgs(golemPriceDict);
                             _provider.PresetConfig.UpdatePrices(otherPreset.Name, args);
                         }

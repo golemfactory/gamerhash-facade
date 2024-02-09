@@ -260,7 +260,8 @@ namespace Golem.Yagna
 
         public async Task Stop()
         {
-            if (!UpdateStatus()) {
+            if (!UpdateStatus())
+            {
                 return;
             }
             _logger.LogInformation("Stopping Provider process");

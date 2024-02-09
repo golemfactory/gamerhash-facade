@@ -1,6 +1,7 @@
 using System.Reflection;
 
 using Golem.Tools;
+
 using GolemLib;
 using GolemLib.Types;
 
@@ -27,11 +28,12 @@ namespace Golem.Tests
 
             XunitContext.Register(outputHelper);
             output = outputHelper;
-            
+
             _loggerProvider = new TestLoggerProvider(golemFixture.Sink);
         }
 
-        ILoggerFactory CreateLoggerFactory(string testName) {
+        ILoggerFactory CreateLoggerFactory(string testName)
+        {
             var logfile = Path.Combine(PackageBuilder.TestDir(testName), testName + "-{Date}.log");
             return LoggerFactory.Create(builder => builder
                             .AddSimpleConsole(options => options.SingleLine = true)
@@ -103,7 +105,7 @@ namespace Golem.Tests
             var startTask = golem.Start();
             Assert.Equal(GolemStatus.Starting, status);
             await startTask;
-            
+
             Assert.Equal(GolemStatus.Ready, status);
             await golem.Stop();
 
@@ -215,53 +217,62 @@ namespace Golem.Tests
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
 
-            // Create new runtime descriptor with name "copy"
-            var dummy_desc_path = Path.Combine(golemPath, "modules", "plugins", "ya-dummy-ai.json");
-            var copy_desc_path = Path.Combine(golemPath, "modules", "plugins", "ya-dummy-ai_copy.json");
-            File.Copy(dummy_desc_path, copy_desc_path);
-            var copy_desc_json  = File.ReadAllText(copy_desc_path);
-            var copy_desc_obj = JArray.Parse(copy_desc_json);
-            var copy_desc_name = copy_desc_obj.First?.SelectToken("name");
-            copy_desc_name?.Replace("dummy_copy");
-            var copy_desc_str = copy_desc_obj.ToString();
-            File.WriteAllText(copy_desc_path, copy_desc_str);
+            // Create new runtime descriptor with name "dummy_copy"
+            var dummyDescPath = Path.Combine(golemPath, "modules", "plugins", "ya-dummy-ai.json");
+            var copyDescPath = Path.Combine(golemPath, "modules", "plugins", "ya-dummy-ai_copy.json");
+            File.Copy(dummyDescPath, copyDescPath);
+            var copyDescJson = File.ReadAllText(copyDescPath);
+            var copyDescObj = JArray.Parse(copyDescJson);
+            var copyDescName = copyDescObj.First?.SelectToken("name");
+            var presetName = "dummy_copy";
+            copyDescName?.Replace(presetName);
+            var copyDescStr = copyDescObj.ToString();
+            File.WriteAllText(copyDescPath, copyDescStr);
 
             // Start and stop golem to create and activate new presets
             await golem.Start();
             await golem.Stop();
 
             // Update price in newly created "dummy_copy" preset
-            var presets_path = Path.Combine(golemPath, "modules", "golem-data", "provider", "presets.json");
-            var presets_json = File.ReadAllText(presets_path);
-            var presets_obj = JObject.Parse(presets_json);
-            var copy_preset_gpu_price_obj = presets_obj?.SelectToken("$.presets[?(@.name == 'dummy_copy')]")?["usage-coeffs"]?["golem.usage.gpu-sec"];
-            var copy_preset_gpu_price_oiginal_value = copy_preset_gpu_price_obj?.Value<decimal>();
-            decimal copy_preset_gpu_price_modified_value = 21.37m;
-            copy_preset_gpu_price_obj?.Replace(copy_preset_gpu_price_modified_value);
-            var presets_str = presets_obj?.ToString();
-            File.WriteAllText(presets_path, presets_str);
+            var presetsPath = Path.Combine(golemPath, "modules", "golem-data", "provider", "presets.json");
+            var presetsJson = File.ReadAllText(presetsPath);
+            var presetsObj = JObject.Parse(presetsJson);
+            var copyPresetGpuPriceObj = queryGpuPrice(presetsObj, presetName);
+            var copyPresetGpuPriceOriginalValue = copyPresetGpuPriceObj?.Value<decimal>();
+            decimal copyPresetGpuPriceModifiedValue = 21.37m;
+            copyPresetGpuPriceObj?.Replace(copyPresetGpuPriceModifiedValue);
+            var presets_str = presetsObj?.ToString();
+            File.WriteAllText(presetsPath, presets_str);
 
             // Verify if preset price was saved in preset file
-            var copy_preset_gpu_price_updated_value = parseGpuPriceFromPreset(presets_path);
-            Assert.Equal(copy_preset_gpu_price_updated_value, copy_preset_gpu_price_modified_value);
+            var copyPresetGpuPriceUpdatedValue = parseGpuPriceFromPreset(presetsPath, presetName);
+            Assert.Equal(copyPresetGpuPriceModifiedValue, copyPresetGpuPriceUpdatedValue);
 
-            // Golem on initialization should unify prices in all presets
+            // Golem on initialization should unify prices in all presets 
+            // (it takes price from first Preset, and sets the same price for others if different)
             golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
             var price = golem.Price;
 
-            Assert.Equal(copy_preset_gpu_price_oiginal_value, price.GpuPerHour);
+            Assert.Equal(copyPresetGpuPriceOriginalValue, price.GpuPerHour);
 
             // Verify if "dummy_copy" gpu price got reverted in preset file.
-            copy_preset_gpu_price_updated_value = parseGpuPriceFromPreset(presets_path);
+            copyPresetGpuPriceUpdatedValue = parseGpuPriceFromPreset(presetsPath, presetName);
             // Price should be reverted.
-            Assert.Equal(copy_preset_gpu_price_updated_value, copy_preset_gpu_price_oiginal_value);
+            Assert.Equal(copyPresetGpuPriceOriginalValue, copyPresetGpuPriceUpdatedValue);
         }
 
-        decimal? parseGpuPriceFromPreset(String presets_path) {
-            var presets_json = File.ReadAllText(presets_path);
-            var presets_obj = JObject.Parse(presets_json);
-            var copy_preset_gpu_price_obj = presets_obj?.SelectToken("$.presets[?(@.name == 'dummy_copy')]")?["usage-coeffs"]?["golem.usage.gpu-sec"];
-            return copy_preset_gpu_price_obj?.Value<decimal>();
+        JToken? queryGpuPrice(JObject presetsObj, string presetName)
+        {
+            var presetQuery = String.Format("$.presets[?(@.name == '{0}')]", presetName);
+            return presetsObj.SelectToken(presetQuery)?["usage-coeffs"]?["golem.usage.gpu-sec"];
+        }
+
+        decimal? parseGpuPriceFromPreset(String presetsPath, String presetName)
+        {
+            var presetsJson = File.ReadAllText(presetsPath);
+            var presetsObj = JObject.Parse(presetsJson);
+            var copyPresetGpuPriceObj = queryGpuPrice(presetsObj, presetName);
+            return copyPresetGpuPriceObj?.Value<decimal>();
         }
 
         void ChangePrices_VerifyPrice(Golem golem, ILoggerFactory loggerFactory)
