@@ -16,7 +16,6 @@ namespace Golem.Tests
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;
         private readonly ITestOutputHelper output;
-        // private UnhandledExceptionEventArgs? _unhandledException = null;
 
 
         public GolemTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
@@ -30,14 +29,7 @@ namespace Golem.Tests
             output = outputHelper;
             
             _loggerProvider = new TestLoggerProvider(golemFixture.Sink);
-            
-            // AppDomain.CurrentDomain.UnhandledException += SetUnhandledException;
         }
-
-        // public void SetUnhandledException(object sender, UnhandledExceptionEventArgs exception)
-        // {
-        //     _unhandledException = exception;
-        // }
 
         ILoggerFactory CreateLoggerFactory(string testName) {
             var logfile = Path.Combine(PackageBuilder.TestDir(testName), testName + "-{Date}.log");
@@ -228,9 +220,9 @@ namespace Golem.Tests
             var copy_desc_path = Path.Combine(golemPath, "modules", "plugins", "ya-dummy-ai_copy.json");
             File.Copy(dummy_desc_path, copy_desc_path);
             var copy_desc_json  = File.ReadAllText(copy_desc_path);
-            var copy_desc_obj = Newtonsoft.Json.JsonConvert.DeserializeObject(copy_desc_json) as JArray;
-            var copy_desc_name = copy_desc_obj.First.SelectToken("name");
-            copy_desc_name.Replace("dummy_copy");
+            var copy_desc_obj = JArray.Parse(copy_desc_json);
+            var copy_desc_name = copy_desc_obj.First?.SelectToken("name");
+            copy_desc_name?.Replace("dummy_copy");
             var copy_desc_str = copy_desc_obj.ToString();
             File.WriteAllText(copy_desc_path, copy_desc_str);
 
@@ -241,19 +233,16 @@ namespace Golem.Tests
             // Update price in newly created "dummy_copy" preset
             var presets_path = Path.Combine(golemPath, "modules", "golem-data", "provider", "presets.json");
             var presets_json = File.ReadAllText(presets_path);
-            var presets_obj = Newtonsoft.Json.JsonConvert.DeserializeObject(presets_json) as JObject;
-            var copy_preset_gpu_price_obj = presets_obj.SelectToken("$.presets[?(@.name == 'dummy_copy')]")["usage-coeffs"]["golem.usage.gpu-sec"];
-            var copy_preset_gpu_price_oiginal_value = copy_preset_gpu_price_obj.Value<decimal>();
+            var presets_obj = JObject.Parse(presets_json);
+            var copy_preset_gpu_price_obj = presets_obj?.SelectToken("$.presets[?(@.name == 'dummy_copy')]")?["usage-coeffs"]?["golem.usage.gpu-sec"];
+            var copy_preset_gpu_price_oiginal_value = copy_preset_gpu_price_obj?.Value<decimal>();
             decimal copy_preset_gpu_price_modified_value = 21.37m;
-            copy_preset_gpu_price_obj.Replace(copy_preset_gpu_price_modified_value);
-            var presets_str = presets_obj.ToString();
+            copy_preset_gpu_price_obj?.Replace(copy_preset_gpu_price_modified_value);
+            var presets_str = presets_obj?.ToString();
             File.WriteAllText(presets_path, presets_str);
 
             // Verify if preset price was saved in preset file
-            presets_json = File.ReadAllText(presets_path);
-            presets_obj = Newtonsoft.Json.JsonConvert.DeserializeObject(presets_json) as JObject;
-            copy_preset_gpu_price_obj = presets_obj.SelectToken("$.presets[?(@.name == 'dummy_copy')]")["usage-coeffs"]["golem.usage.gpu-sec"];
-            var copy_preset_gpu_price_updated_value = copy_preset_gpu_price_obj.Value<decimal>();
+            var copy_preset_gpu_price_updated_value = parseGpuPriceFromPreset(presets_path);
             Assert.Equal(copy_preset_gpu_price_updated_value, copy_preset_gpu_price_modified_value);
 
             // Golem on initialization should unify prices in all presets
@@ -263,12 +252,16 @@ namespace Golem.Tests
             Assert.Equal(copy_preset_gpu_price_oiginal_value, price.GpuPerHour);
 
             // Verify if "dummy_copy" gpu price got reverted in preset file.
-            presets_json = File.ReadAllText(presets_path);
-            presets_obj = Newtonsoft.Json.JsonConvert.DeserializeObject(presets_json) as JObject;
-            copy_preset_gpu_price_obj = presets_obj.SelectToken("$.presets[?(@.name == 'dummy_copy')]")["usage-coeffs"]["golem.usage.gpu-sec"];
-            copy_preset_gpu_price_updated_value = copy_preset_gpu_price_obj.Value<decimal>();
+            copy_preset_gpu_price_updated_value = parseGpuPriceFromPreset(presets_path);
             // Price should be reverted.
             Assert.Equal(copy_preset_gpu_price_updated_value, copy_preset_gpu_price_oiginal_value);
+        }
+
+        decimal? parseGpuPriceFromPreset(String presets_path) {
+            var presets_json = File.ReadAllText(presets_path);
+            var presets_obj = JObject.Parse(presets_json);
+            var copy_preset_gpu_price_obj = presets_obj?.SelectToken("$.presets[?(@.name == 'dummy_copy')]")?["usage-coeffs"]?["golem.usage.gpu-sec"];
+            return copy_preset_gpu_price_obj?.Value<decimal>();
         }
 
         void ChangePrices_VerifyPrice(Golem golem, ILoggerFactory loggerFactory)
