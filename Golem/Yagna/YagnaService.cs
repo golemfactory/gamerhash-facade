@@ -20,6 +20,7 @@ namespace Golem.Yagna
 
         public string YagnaApiUrl { get; set; } = "";
         public Network Network { get; set; } = Network.Holesky;
+        public PaymentDriver PaymentDriver { get; set; } = PaymentDriver.ERC20next;
     }
 
 
