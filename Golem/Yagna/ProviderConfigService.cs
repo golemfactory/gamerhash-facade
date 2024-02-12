@@ -39,7 +39,7 @@ namespace Golem
             {
                 get
                 {
-                    if (!_provider.UpdateStatus())
+                    if (!_provider.ClearHandle())
                     {
                         _provider.PresetConfig.InitilizeDefaultPresets();
                     }
@@ -73,7 +73,7 @@ namespace Golem
 
                 set
                 {
-                    if (!_provider.UpdateStatus())
+                    if (!_provider.ClearHandle())
                     {
                         _provider.PresetConfig.InitilizeDefaultPresets();
                     }

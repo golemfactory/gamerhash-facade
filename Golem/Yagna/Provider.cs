@@ -233,7 +233,7 @@ namespace Golem.Yagna
 
             cmd.Task.ContinueWith(result =>
             {
-                UpdateStatus();
+                ClearHandle();
                 if (result.IsFaulted)
                 {
                     var res = result.Result;
@@ -255,26 +255,26 @@ namespace Golem.Yagna
                 await Stop();
             });
 
-            return UpdateStatus();
+            return ClearHandle();
         }
 
         public async Task Stop()
         {
-            if (!UpdateStatus())
+            if (!ClearHandle())
             {
                 return;
             }
             _logger.LogInformation("Stopping Provider process");
             var cmd = ProviderProcess;
             await ProcessFactory.StopCmd(cmd, logger: _logger);
-            UpdateStatus();
+            ClearHandle();
         }
 
         /// <summary>
-        /// Check and update Provider process status.
+        /// Check and update Provider process handle.
         /// </summary>
         /// <returns>`True` if Proider is alive. `False` if it is not.</returns>
-        public bool UpdateStatus()
+        public bool ClearHandle()
         {
             if (ProviderProcess == null)
                 return false;
