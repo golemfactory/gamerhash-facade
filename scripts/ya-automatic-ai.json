@@ -1,0 +1,34 @@
+[
+  {
+    "name": "automatic",
+    "version": "0.1.0",
+    "extra-args": [
+      "--runtime",
+      "automatic",
+      "--runtime-config",
+      "ya-automatic-ai/config.json"
+    ],
+    "description": "Runtime providing access to Stable Diffusion through Automatic API",
+    "properties": {},
+    "config": {
+      "counters": {
+        "golem.usage.gpu-sec": {
+          "name": "gpu-sec",
+          "description": "GpuPerHour",
+          "price": true
+        },
+        "ai-runtime.requests": {
+          "name": "num-requests",
+          "description": "NumRequests",
+          "price": true
+        },
+        "golem.usage.duration_sec": {
+          "name": "duration",
+          "description": "EnvPerHour",
+          "price": true
+        }
+      }
+    },
+    "supervisor-path": "ya-runtime-ai.exe"
+  }
+]

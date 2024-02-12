@@ -112,7 +112,7 @@ namespace Golem.Yagna
             catch (Exception e)
             {
                 _logger?.LogError(e, "Failed to run yagna");
-                throw;
+                throw new GolemProcessException(string.Format("Failed to execute Yagna command: {0}", e.Message));
             }
             return strWriter.ToString();
         }
@@ -231,7 +231,8 @@ namespace Golem.Yagna
 
             YagnaProcess = cmd;
 
-            cancellationToken.Register(async () => {
+            cancellationToken.Register(async () =>
+            {
                 _logger.LogInformation("Canceling Yagna process");
                 await Stop();
             });

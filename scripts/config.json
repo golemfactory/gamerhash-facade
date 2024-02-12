@@ -1,0 +1,4 @@
+{
+    "startup_timeout": "10m",
+    "startup_script": "ya-automatic-ai/automatic/run.bat"
+}

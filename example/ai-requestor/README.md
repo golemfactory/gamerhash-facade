@@ -11,4 +11,5 @@ Requires a running requestor yagna with support for http proxying over GSB. An e
 ```
 yagna service run > yagn.log &
 export $(grep -v '^#' .env | xargs)
+yagna payment fund --network goerli --driver erc20next
 ```

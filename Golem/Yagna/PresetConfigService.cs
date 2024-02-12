@@ -204,6 +204,16 @@ namespace Golem.Yagna
         {
             var defaultPresetNames = new HashSet<String>(ExeUnits.Select(defaultPresetName));
 
+            var priceArgs = PriceDictToPriceArgs(prices);
+
+            foreach (String presetName in defaultPresetNames)
+            {
+                UpdatePrices(presetName, priceArgs);
+            }
+        }
+
+        public List<string> PriceDictToPriceArgs(IDictionary<string, decimal> prices)
+        {
             var priceArgs = new List<string>();
             foreach (KeyValuePair<string, decimal> priceKV in prices)
             {
@@ -211,14 +221,15 @@ namespace Golem.Yagna
                 priceArgs.Add("--price");
                 priceArgs.Add($"{priceKV.Key}={priceValue}");
             }
+            return priceArgs;
+        }
 
-            foreach (String presetName in defaultPresetNames)
-            {
-                var args = "preset update --no-interactive --name".Split().ToList();
-                args.Add(presetName);
-                args.AddRange(priceArgs.ToArray());
-                var _result = _parent.ExecToText(args);
-            }
+        public void UpdatePrices(string preset, List<string> priceArgs)
+        {
+            var args = "preset update --no-interactive --name".Split().ToList();
+            args.Add(preset);
+            args.AddRange(priceArgs.ToArray());
+            var _result = _parent.ExecToText(args);
         }
     }
 }

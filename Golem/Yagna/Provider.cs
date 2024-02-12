@@ -78,7 +78,7 @@ namespace Golem.Yagna
         string ExecToText(IEnumerable<object>? args);
     }
 
-    public class Provider: IProvider
+    public class Provider : IProvider
     {
         public PresetConfigService PresetConfig { get; set; }
 
@@ -158,7 +158,7 @@ namespace Golem.Yagna
             catch (Exception e)
             {
                 _logger?.LogError(e, "failed to execute {0}", args);
-                throw;
+                throw new GolemProcessException(string.Format("Failed to execute Provider command: {0}", e.Message));
             }
         }
 
@@ -213,7 +213,7 @@ namespace Golem.Yagna
 
         public bool Run(string appKey, Network network, Action<int> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
-            if(cancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
                 return false;
 
             string debugSwitch = "";
@@ -233,8 +233,7 @@ namespace Golem.Yagna
 
             cmd.Task.ContinueWith(result =>
             {
-                if (ProviderProcess is not null)
-                    ProviderProcess = null;
+                ClearHandle();
                 if (result.IsFaulted)
                 {
                     var res = result.Result;
@@ -250,27 +249,41 @@ namespace Golem.Yagna
 
             ProviderProcess = cmd;
 
-            cancellationToken.Register(async () => {
+            cancellationToken.Register(async () =>
+            {
                 _logger.LogInformation("Canceling Provider process");
                 await Stop();
             });
 
-            return !ProviderProcess.Process.HasExited;
+            return ClearHandle();
         }
 
         public async Task Stop()
         {
-            if (ProviderProcess == null)
-                return;
-            if (ProviderProcess.Process.HasExited)
+            if (!ClearHandle())
             {
-                ProviderProcess = null;
                 return;
             }
             _logger.LogInformation("Stopping Provider process");
             var cmd = ProviderProcess;
             await ProcessFactory.StopCmd(cmd, logger: _logger);
-            ProviderProcess = null;
+            ClearHandle();
+        }
+
+        /// <summary>
+        /// Check and update Provider process handle.
+        /// </summary>
+        /// <returns>`True` if Proider is alive. `False` if it is not.</returns>
+        public bool ClearHandle()
+        {
+            if (ProviderProcess == null)
+                return false;
+            if (ProviderProcess.Process.HasExited)
+            {
+                ProviderProcess = null;
+                return false;
+            }
+            return true;
         }
 
         private void BindOutputEventHandlers(Process proc)
