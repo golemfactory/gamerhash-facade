@@ -6,6 +6,9 @@ on:
       - v*
       - pre-rel-*
 
+env:
+  automatic_pckg_name_prefix: 'gamerhash-ai-facade-windows-w-automatic'
+
 jobs:
   build:
 
@@ -30,7 +33,7 @@ jobs:
     - name: Collect binaries
       run: >
         dotnet run --project Golem.Package --configuration Release build --dont-clean 
-         --dll-file-patterns *.dll --dll-dir ${{ github.workspace }}\Golem\bin\Release\net7.0\publish
+         --dll-file-patterns *.dll --dll-dir ${{ github.workspace }}/Golem/bin/Release/net7.0/publish
 
     - name: Pack
       id: pack
@@ -40,6 +43,10 @@ jobs:
         GITHUB_REF: ${{ github.ref }}
       run: |
         bash .ci/pack-build.sh
+        VERSION="${GITHUB_REF##*/}"
+        VERSION="${VERSION#pre-rel-}"
+        # Export version e.g. "v0.1.5-RC1"
+        echo "::set-output name=version::${VERSION}"
 
     - name: Release
       uses: softprops/action-gh-release@v1
@@ -48,3 +55,24 @@ jobs:
         files: |
           releases/gamerhash-ai-facade-*
         prerelease: ${{ startsWith(github.ref, 'refs/tags/pre-rel-v') }}
+
+    - name: Pack Automatic
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      env:
+        PKG_NAME: ${{ env.automatic_pckg_name_prefix }}_${{ steps.pack.outputs.version }}.zip
+      run: |
+        .\scripts\automatic.ps1 -compress 1 -cleanup 1
+        mv bin\dist_package.zip bin\$env:PKG_NAME
+
+    - name: Upload Automatic
+      uses: jakejarvis/s3-sync-action@master
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'eu-central-1'
+        AWS_S3_BUCKET: 'gpu-on-golem'
+        SOURCE_DIR: 'bin/${{ env.automatic_pckg_name_prefix }}_${{ steps.pack.outputs.version }}.zip'
+        DEST_DIR: 'gh-ai-facade'
+      with:
+        args: --acl public-read --follow-symlinks
