@@ -309,8 +309,15 @@ namespace Golem
 
             try
             {
-                _logger.LogInformation($"Init Payment {yagnaOptions.Network} {yagnaOptions.PaymentDriver.Id} {account}");
+                _logger.LogInformation($"Init Payment (node id) {yagnaOptions.Network} {yagnaOptions.PaymentDriver.Id} {account}");
                 Yagna.PaymentService.Init(yagnaOptions.Network, yagnaOptions.PaymentDriver.Id, account ?? "");
+
+                var walletAddress = WalletAddress;
+                if (walletAddress != account)
+                {
+                    _logger.LogInformation($"Init Payment (wallet) {yagnaOptions.Network} {yagnaOptions.PaymentDriver.Id} {account}");
+                    Yagna.PaymentService.Init(yagnaOptions.Network, yagnaOptions.PaymentDriver.Id, walletAddress ?? "");
+                }
             }
             catch (Exception e)
             {
