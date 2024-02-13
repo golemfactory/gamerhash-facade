@@ -10,7 +10,7 @@ param (
 $ProgressPreference = 'SilentlyContinue'
 
 $bin_dir = "bin"
-if ($cleanup) {
+if (($cleanup) -and (Test-Path $bin_dir)) {
     Remove-Item -Path $bin_dir -Force -Recurse
 }
 New-Item -Path $bin_dir -Force -ItemType Directory
