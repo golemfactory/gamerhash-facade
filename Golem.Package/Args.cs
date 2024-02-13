@@ -11,6 +11,11 @@ public class BuildArgs
     public required string RuntimeVersion { get; set; }
     [Option('c', "dont-clean", Default = false, Required = false, HelpText = "Remove temporary directories")]
     public required bool DontClean { get; set; }
+    [Option('d', "dll-dir", Default = null, Required = false, HelpText = "dll directory")]
+    public required string? DllDir { get; set; }
+    [Option('p', "dll-file-patterns", Default = "Golem.dll,GolemLib.dll", Required = false, HelpText = "Coma separated dll file name patterns")]
+    public required string DllFilePatterns { get; set; }
+    
 }
 
 [Verb("download", HelpText = "Downloads package from public repository.")]

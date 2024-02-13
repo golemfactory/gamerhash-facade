@@ -26,9 +26,11 @@ jobs:
       run: dotnet restore
       
     - name: Build
-      run: dotnet build --configuration Release
+      run: dotnet publish --configuration Release
     - name: Collect binaries
-      run: dotnet run --project Golem.Package --configuration Release build --dont-clean
+      run: >
+        dotnet run --project Golem.Package --configuration Release build --dont-clean 
+         --dll-file-patterns *.dll --dll-dir ${{ github.workspace }}\Golem\bin\Release\net7.0\publish
 
     - name: Pack
       id: pack
