@@ -63,16 +63,18 @@ jobs:
         PKG_NAME: ${{ env.automatic_pckg_name_prefix }}_${{ steps.pack.outputs.version }}.zip
       run: |
         .\scripts\automatic.ps1 -compress 1 -cleanup 1
-        mv bin\dist_package.zip bin\$env:PKG_NAME
+        $env:dist
+        mv bin\dist_package.zip "bin\$($env:PKG_NAME)"
 
     - name: Upload Automatic
+      if: matrix.os == 'windows-latest'
       uses: jakejarvis/s3-sync-action@master
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_REGION: 'eu-central-1'
-        AWS_S3_BUCKET: 'gpu-on-golem'
+        AWS_S3_BUCKET: 'gh-facade'
         SOURCE_DIR: 'bin/${{ env.automatic_pckg_name_prefix }}_${{ steps.pack.outputs.version }}.zip'
-        DEST_DIR: 'gh-ai-facade'
+        DEST_DIR: 'packages'
       with:
         args: --acl public-read --follow-symlinks
