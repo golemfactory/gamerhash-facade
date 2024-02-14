@@ -157,8 +157,8 @@ namespace Golem
                     Status = GolemStatus.Error;
             }
 
-            OnPropertyChanged("WalletAddress");
-            OnPropertyChanged("NodeId");
+            OnPropertyChanged(nameof(WalletAddress));
+            OnPropertyChanged(nameof(NodeId));
         }
 
         void HandleStartupProvider(YagnaStartupOptions yagnaOptions, Action<Task<CommandResult>> exitHandler, CancellationToken providerCancellationToken)
@@ -273,7 +273,7 @@ namespace Golem
 
             Yagna = new YagnaService(golemPath, yagna_datadir, loggerFactory);
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
-            ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork);
+            ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork, loggerFactory);
             _golemPrice = ProviderConfig.GolemPrice;
             _jobs = new Jobs(SetCurrentJob, loggerFactory);
 
@@ -315,7 +315,7 @@ namespace Golem
                 var walletAddress = WalletAddress;
                 if (walletAddress != account)
                 {
-                    _logger.LogInformation($"Init Payment (wallet) {yagnaOptions.Network} {yagnaOptions.PaymentDriver.Id} {account}");
+                    _logger.LogInformation($"Init Payment (wallet) {yagnaOptions.Network} {yagnaOptions.PaymentDriver.Id} {walletAddress}");
                     Yagna.PaymentService.Init(yagnaOptions.Network, yagnaOptions.PaymentDriver.Id, walletAddress ?? "");
                 }
             }
