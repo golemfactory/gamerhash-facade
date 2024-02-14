@@ -11,10 +11,12 @@ namespace Golem
     using GolemLib.Types;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Abstractions;
+    using System.ComponentModel;
+    using System.Runtime.CompilerServices;
 
     namespace GolemUI.Src
     {
-        public class ProviderConfigService
+        public class ProviderConfigService : INotifyPropertyChanged
         {
             private readonly Provider _provider;
 
@@ -25,9 +27,9 @@ namespace Golem
             public ProviderConfigService(Provider provider, Network network, ILoggerFactory? loggerFactory = null)
             {
                 _provider = provider;
-                Network = network;
                 loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
                 _logger = loggerFactory.CreateLogger<Provider>();
+                Network = network;
             }
 
             public string WalletAddress
@@ -122,13 +124,20 @@ namespace Golem
 
             private void UpdateWalletAddress(string? walletAddress = null)
             {
-                _logger.LogInformation($"Set WalletAddress {walletAddress}");
+                _logger.LogInformation($"Set WalletAddress '{walletAddress}'");
                 var config = _provider.Config;
                 if (config != null)
                 {
                     config.Account = walletAddress;
                     _provider.Config = config;
+                    OnPropertyChanged(nameof(WalletAddress));
                 }
+            }
+
+            public event PropertyChangedEventHandler? PropertyChanged;
+            protected void OnPropertyChanged([CallerMemberName] string? name = null)
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
             }
         }
     }

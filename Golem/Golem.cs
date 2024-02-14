@@ -47,12 +47,20 @@ namespace Golem
             }
             set
             {
-                _golemPrice.StartPrice = value.StartPrice;
-                _golemPrice.GpuPerHour = value.GpuPerHour;
-                _golemPrice.EnvPerHour = value.EnvPerHour;
-                _golemPrice.NumRequests = value.NumRequests;
+                if (
+                    _golemPrice.StartPrice != value.StartPrice
+                    || _golemPrice.GpuPerHour != value.GpuPerHour
+                    || _golemPrice.EnvPerHour != value.EnvPerHour
+                    || _golemPrice.NumRequests != value.NumRequests
+                )
+                {
+                    _golemPrice.StartPrice = value.StartPrice;
+                    _golemPrice.GpuPerHour = value.GpuPerHour;
+                    _golemPrice.EnvPerHour = value.EnvPerHour;
+                    _golemPrice.NumRequests = value.NumRequests;
 
-                OnPropertyChanged();
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -63,8 +71,11 @@ namespace Golem
             get => _networkSpeed;
             set
             {
-                _networkSpeed = value;
-                OnPropertyChanged();
+                if (_networkSpeed != value)
+                {
+                    _networkSpeed = value;
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -75,8 +86,11 @@ namespace Golem
             get { return status; }
             set
             {
-                status = value;
-                OnPropertyChanged();
+                if (status != value)
+                {
+                    status = value;
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -92,8 +106,11 @@ namespace Golem
             get
             {
                 var walletAddress = ProviderConfig.WalletAddress;
-                if (walletAddress == null || walletAddress.Length == 0)
+                if (String.IsNullOrEmpty(walletAddress))
+                {
+                    _logger.LogInformation("No WalletAddress set. Using NodeId as a wallet address.");
                     walletAddress = Yagna.Id?.NodeId;
+                }
                 return walletAddress ?? "";
             }
 
@@ -136,7 +153,7 @@ namespace Golem
 
             var (yagnaCancellationTokenSource, providerCancellationTokenSource) = resetTokens();
 
-            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions();
+            var yagnaOptions = Yagna.StartupOptions();
 
             _logger.LogInformation("Starting Golem's Yagna");
             var success = await StartupYagnaAsync(yagnaOptions, yagnaProcessExitHandler(yagnaCancellationTokenSource, providerCancellationTokenSource), yagnaCancellationTokenSource.Token);
@@ -146,7 +163,7 @@ namespace Golem
                 var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
                 if (defaultKey is not null)
                 {
-                    HandleStartupProvider(yagnaOptions, providerProcessExitHandler(yagnaOptions, yagnaCancellationTokenSource.Token), providerCancellationTokenSource.Token);
+                    HandleStartupProvider(yagnaOptions, providerProcessExitHandler(yagnaCancellationTokenSource.Token), providerCancellationTokenSource.Token);
                 }
             }
             else
@@ -198,7 +215,7 @@ namespace Golem
             return exitHandler;
         }
 
-        Action<Task<CommandResult>> providerProcessExitHandler(YagnaStartupOptions yagnaOptions, CancellationToken providerCancellationToken)
+        Action<Task<CommandResult>> providerProcessExitHandler(CancellationToken providerCancellationToken)
         {
             Action<Task<CommandResult>> exitHandler = (Task<CommandResult> cmdResult) => { throw new Exception("Uninitialized exit handler"); };
             exitHandler = (Task<CommandResult> cmdResult) =>
@@ -282,7 +299,8 @@ namespace Golem
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
 
-            this.Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
+            Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
+            ProviderConfig.PropertyChanged += WalletAaddress_PropertyChangedHandler;
         }
 
         private void GolemPrice_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
@@ -290,6 +308,28 @@ namespace Golem
             if (sender is GolemPrice price)
             {
                 ProviderConfig.GolemPrice = price;
+            }
+        }
+
+        private void WalletAaddress_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is ProviderConfigService providerConfig)
+            {
+                if (Status != GolemStatus.Starting && Status != GolemStatus.Ready)
+                {
+                    _logger.LogWarning("Unable to init payment for WalletAddress. Yagna not started");
+                    return;
+                }
+                var walletAddress = providerConfig.WalletAddress;
+                try
+                {
+                    _logger.LogInformation($"Init Payment (wallet changed) {walletAddress}");
+                    Yagna.PaymentService.Init(walletAddress);
+                }
+                catch (Exception err)
+                {
+                    _logger.LogError($"Failed to init Payment on wallet change. Err: {err}");
+                }
             }
         }
 
@@ -309,14 +349,14 @@ namespace Golem
 
             try
             {
-                _logger.LogInformation($"Init Payment (node id) {yagnaOptions.Network} {yagnaOptions.PaymentDriver.Id} {account}");
-                Yagna.PaymentService.Init(yagnaOptions.Network, yagnaOptions.PaymentDriver.Id, account ?? "");
+                _logger.LogInformation($"Init Payment (node id) {account}");
+                Yagna.PaymentService.Init(account ?? "");
 
                 var walletAddress = WalletAddress;
                 if (walletAddress != account)
                 {
-                    _logger.LogInformation($"Init Payment (wallet) {yagnaOptions.Network} {yagnaOptions.PaymentDriver.Id} {walletAddress}");
-                    Yagna.PaymentService.Init(yagnaOptions.Network, yagnaOptions.PaymentDriver.Id, walletAddress ?? "");
+                    _logger.LogInformation($"Init Payment (wallet) {walletAddress}");
+                    Yagna.PaymentService.Init(walletAddress ?? "");
                 }
             }
             catch (Exception e)
@@ -376,7 +416,7 @@ namespace Golem
                     //sanity check
                     if (meInfo != null)
                     {
-                        if (identity == null || identity.Length == 0)
+                        if (String.IsNullOrEmpty(identity))
                             identity = meInfo.Identity;
                         break;
                     }

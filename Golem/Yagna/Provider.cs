@@ -216,7 +216,7 @@ namespace Golem.Yagna
             if (cancellationToken.IsCancellationRequested)
                 return false;
 
-            string debugSwitch = "";
+            string debugSwitch = "";    
             if (enableDebugLogs)
             {
                 debugSwitch = "--debug";

@@ -128,10 +128,20 @@ namespace Golem.Yagna
         }
     }
 
-    public class GolemProcessException : Exception
+    interface IGolemException {}
+
+    public class GolemProcessException : Exception, IGolemException
     {
 
         public GolemProcessException(string message)
+            : base(message)
+        {
+        }
+    }
+
+    public class GolemException : Exception, IGolemException
+    {
+        public GolemException(string message)
             : base(message)
         {
         }

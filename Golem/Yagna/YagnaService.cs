@@ -142,6 +142,10 @@ namespace Golem.Yagna
             return JsonSerializer.Deserialize<T>(text, options);
         }
 
+        internal YagnaStartupOptions StartupOptions()
+        {
+            return YagnaOptionsFactory.CreateStartupOptions();
+        }
 
         public IdService Ids
         {
@@ -430,14 +434,10 @@ namespace Golem.Yagna
             _yagna = yagna;
         }
 
-        public void Init(Network network, string driver, string account)
+        public void Init(string account)
         {
-            _yagna.ExecToText("payment", "init", "--receiver", "--network", network.Id, "--driver", driver, "--account", account);
-        }
-
-        public void Init(Network network, string account)
-        {
-            _yagna.ExecToText("payment", "init", "--receiver", "--network", network.Id, "--account", account);
+            var yagnaOptions = _yagna.StartupOptions();
+            _yagna.ExecToText("payment", "init", "--receiver", "--network", yagnaOptions.Network.Id, "--driver", yagnaOptions.PaymentDriver.Id, "--account", account);
         }
 
         public async Task<PaymentStatus?> Status(Network network, string driver, string account)
