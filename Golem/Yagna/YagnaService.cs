@@ -238,7 +238,7 @@ namespace Golem.Yagna
             return !YagnaProcess.Process.HasExited;
         }
 
-        public async Task Stop()
+        public async Task Stop(int stopTimeoutMs = 5_000)
         {
             if (YagnaProcess == null)
                 return;
@@ -249,7 +249,7 @@ namespace Golem.Yagna
             }
             _logger.LogInformation("Stopping Yagna process");
             var cmd = YagnaProcess;
-            await ProcessFactory.StopCmd(cmd, logger: _logger);
+            await ProcessFactory.StopCmd(cmd, stopTimeoutMs, _logger);
             YagnaProcess = null;
         }
 

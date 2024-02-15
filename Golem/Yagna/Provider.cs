@@ -250,7 +250,7 @@ namespace Golem.Yagna
             return ClearHandle();
         }
 
-        public async Task Stop()
+        public async Task Stop(int stopTimeoutMs = 5_000)
         {
             if (!ClearHandle())
             {
@@ -258,7 +258,7 @@ namespace Golem.Yagna
             }
             _logger.LogInformation("Stopping Provider process");
             if (ProviderProcess != null)
-                await ProcessFactory.StopCmd(ProviderProcess, logger: _logger);
+                await ProcessFactory.StopCmd(ProviderProcess, stopTimeoutMs, _logger);
             ClearHandle();
         }
 
