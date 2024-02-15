@@ -18,8 +18,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
-
-
     public class Golem : IGolem, IAsyncDisposable
     {
         private YagnaService Yagna { get; set; }
@@ -88,6 +86,7 @@ namespace Golem
             {
                 if (status != value)
                 {
+                    _logger.LogInformation($"Status change from {status} into {value}");
                     status = value;
                     OnPropertyChanged();
                 }
@@ -116,7 +115,13 @@ namespace Golem
 
             set
             {
-                ProviderConfig.WalletAddress = value;
+                _logger.LogInformation($"Set WalletAddress '{value}'");
+                if (Status == GolemStatus.Ready)
+                {
+                    _logger.LogInformation($"Init Payment (wallet changed) {value}");
+                    Yagna.PaymentService.Init(value);
+                }
+                ProviderConfig.UpdateAccount(value, () => OnPropertyChanged(nameof(WalletAddress)));
             }
         }
 
@@ -168,10 +173,7 @@ namespace Golem
             }
             else
             {
-                if (yagnaCancellationTokenSource.Token.IsCancellationRequested)
-                    Status = GolemStatus.Off;
-                else
-                    Status = GolemStatus.Error;
+                Status = yagnaCancellationTokenSource.Token.IsCancellationRequested ? GolemStatus.Off : GolemStatus.Error;
             }
 
             OnPropertyChanged(nameof(WalletAddress));
@@ -300,7 +302,6 @@ namespace Golem
             };
 
             Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
-            ProviderConfig.PropertyChanged += WalletAaddress_PropertyChangedHandler;
         }
 
         private void GolemPrice_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
@@ -308,28 +309,6 @@ namespace Golem
             if (sender is GolemPrice price)
             {
                 ProviderConfig.GolemPrice = price;
-            }
-        }
-
-        private void WalletAaddress_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
-        {
-            if (sender is ProviderConfigService providerConfig)
-            {
-                if (Status != GolemStatus.Starting && Status != GolemStatus.Ready)
-                {
-                    _logger.LogWarning("Unable to init payment for WalletAddress. Yagna not started");
-                    return;
-                }
-                var walletAddress = providerConfig.WalletAddress;
-                try
-                {
-                    _logger.LogInformation($"Init Payment (wallet changed) {walletAddress}");
-                    Yagna.PaymentService.Init(walletAddress);
-                }
-                catch (Exception err)
-                {
-                    _logger.LogError($"Failed to init Payment on wallet change. Err: {err}");
-                }
             }
         }
 

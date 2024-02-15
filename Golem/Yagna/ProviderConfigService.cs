@@ -16,7 +16,7 @@ namespace Golem
 
     namespace GolemUI.Src
     {
-        public class ProviderConfigService : INotifyPropertyChanged
+        public class ProviderConfigService
         {
             private readonly Provider _provider;
 
@@ -37,10 +37,6 @@ namespace Golem
                 get
                 {
                     return _provider.Config?.Account ?? "";
-                }
-                set
-                {
-                    UpdateWalletAddress(value);
                 }
             }
 
@@ -122,22 +118,26 @@ namespace Golem
                 };
             }
 
-            private void UpdateWalletAddress(string? walletAddress = null)
+            public void UpdateAccount(string? account, Action update)
             {
-                _logger.LogInformation($"Set WalletAddress '{walletAddress}'");
+                _logger.LogInformation($"Updating provider account to {account}");
                 var config = _provider.Config;
                 if (config != null)
                 {
-                    config.Account = walletAddress;
+                    if (config.Account == account)
+                    {
+                        _logger.LogInformation("Provider account has not changed");
+                        return;
+                    }
+                    config.Account = account;
+                    _logger.LogInformation($"Set Provider account '{account}'");
                     _provider.Config = config;
-                    OnPropertyChanged(nameof(WalletAddress));
+                    update();
                 }
-            }
-
-            public event PropertyChangedEventHandler? PropertyChanged;
-            protected void OnPropertyChanged([CallerMemberName] string? name = null)
-            {
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+                else
+                {
+                    _logger.LogWarning("Unable to get provider config");
+                }
             }
         }
     }
