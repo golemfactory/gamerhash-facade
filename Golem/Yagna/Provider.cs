@@ -250,7 +250,7 @@ namespace Golem.Yagna
             return ClearHandle();
         }
 
-        public async Task Stop(int stopTimeoutMs = 5_000)
+        public async Task Stop(int stopTimeoutMs = 15_000)
         {
             if (!ClearHandle())
             {
@@ -272,6 +272,7 @@ namespace Golem.Yagna
                 return false;
             if (ProviderProcess.Process.HasExited)
             {
+                _logger.LogInformation("Clearing process handle");
                 ProviderProcess = null;
                 return false;
             }

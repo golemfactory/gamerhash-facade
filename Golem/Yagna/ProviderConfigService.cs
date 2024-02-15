@@ -28,7 +28,7 @@ namespace Golem
             {
                 _provider = provider;
                 loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
-                _logger = loggerFactory.CreateLogger<Provider>();
+                _logger = loggerFactory.CreateLogger<ProviderConfigService>();
                 Network = network;
             }
 

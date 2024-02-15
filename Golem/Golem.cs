@@ -260,12 +260,12 @@ namespace Golem
 
             _logger.LogInformation("Stopping Golem's Provider");
             if (!_providerCancellationtokenSource.IsCancellationRequested)
-                _providerCancellationtokenSource?.Cancel();
+                _providerCancellationtokenSource.Cancel();
             await Provider.Stop();
 
             _logger.LogInformation("Stopping Golem's Yagna");
             if (!_yagnaCancellationtokenSource.IsCancellationRequested)
-                _yagnaCancellationtokenSource?.Cancel();
+                _yagnaCancellationtokenSource.Cancel();
             await Yagna.Stop();
 
             Status = GolemStatus.Off;

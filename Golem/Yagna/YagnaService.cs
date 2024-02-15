@@ -238,7 +238,7 @@ namespace Golem.Yagna
             return !YagnaProcess.Process.HasExited;
         }
 
-        public async Task Stop(int stopTimeoutMs = 5_000)
+        public async Task Stop(int stopTimeoutMs = 15_000)
         {
             if (YagnaProcess == null)
                 return;

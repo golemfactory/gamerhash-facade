@@ -123,6 +123,8 @@ namespace Golem.Yagna
                     logger?.LogWarning($"Failed to stop process. Killing it. Err: {err.Message}");
                     cmd.Kill();
                 }
+            } else {
+                logger?.LogWarning("Process has exited already.");
             }
             return cmd.Process.ExitCode;
         }
