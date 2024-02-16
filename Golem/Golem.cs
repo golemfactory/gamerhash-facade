@@ -52,6 +52,7 @@ namespace Golem
                     || _golemPrice.NumRequests != value.NumRequests
                 )
                 {
+                    // Set individual values, because we don't want to drop GolemPrice object here.
                     _golemPrice.StartPrice = value.StartPrice;
                     _golemPrice.GpuPerHour = value.GpuPerHour;
                     _golemPrice.EnvPerHour = value.EnvPerHour;
