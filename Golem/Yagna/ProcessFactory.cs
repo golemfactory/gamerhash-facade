@@ -128,7 +128,7 @@ namespace Golem.Yagna
             var startInfo = new ProcessStartInfo
             {
                 FileName = fileName,
-                // The Process object must have the UseShellExecute property set to false in order to use environment variables.
+                // Error: The Process object must have the UseShellExecute property set to false in order to use environment variables.
                 // UseShellExecute = true,
                 RedirectStandardOutput = false,
                 RedirectStandardError = true,
@@ -170,7 +170,7 @@ namespace Golem.Yagna
             }
             logger.LogInformation($"XXX Process id {providerProc.Id}");
 
-            ctrcalt(providerProc, logger).GetAwaiter().GetResult();
+            ctrc_alt(providerProc, logger).GetAwaiter().GetResult();
 
             // close(providerProc, logger).GetAwaiter().GetResult();
 
@@ -197,7 +197,7 @@ namespace Golem.Yagna
         delegate Boolean ConsoleCtrlDelegate(uint CtrlType);
         // #endif
 
-        private static async Task ctrcalt(Process proc, ILogger logger) {
+        private static async Task ctrc_alt(Process proc, ILogger logger) {
             await Task.Delay(10_000);
             logger.LogInformation("XXX Sending Ctrl-C");
             try {
@@ -236,19 +236,30 @@ namespace Golem.Yagna
 
         private static async Task close(Process proc, ILogger logger) {
             await Task.Delay(10_000);
-            logger.LogInformation("XXX Sending Ctrl-C");
+            logger.LogInformation("XXX Closing");
             try {
-                // proc.StandardInput.Close();
-                // proc.CancelOutputRead();
-                // proc.StandardOutput.Close();
-                // logger.LogInformation("XXX Close sent");
+                //// Does not shutdown Yagna because it has no window. This setting does not help:
+                /// ProcessStartInfo CreateNoWindow = false 
+                /// only make console to not open when parent process is started as an console app
                 if (!proc.CloseMainWindow()) {
                     logger.LogInformation("XXX Closed main windows");
                 } else {
                     logger.LogInformation("XXX Failed to close");
                 }
+                logger.LogInformation("XXX Closed using CloseMainWindow");
+
             } catch (Exception e) {
-                logger.LogInformation("XXX Failed to sent: {0}", e);
+                logger.LogInformation("XXX Failed to close using CloseMainWindow", e);
+            }
+            
+            try {
+                //// Does not shutdown Yagna because yagna does not listen on stdin.
+                proc.StandardInput.Close();
+                // proc.CancelOutputRead();
+                // proc.StandardOutput.Close();
+                logger.LogInformation("XXX Closed using IO");
+            } catch (Exception e) {
+                logger.LogInformation("XXX Failed to close using IO", e);
             }
             await Task.Delay(10_000);
         }
