@@ -106,9 +106,10 @@ namespace Golem.Yagna
         {
             if (!cmd.Process.HasExited)
             {
-                if (!await cmd.TrySignalAsync(CommandSignal.ControlC))
+                if (!cmd.Process.CloseMainWindow())
                 {
-                    cmd.Kill();
+                    if (!await cmd.TrySignalAsync(CommandSignal.ControlC))
+                        cmd.Kill();
                 }
 
                 CancellationTokenSource stopTimeoutTokenSrc = new CancellationTokenSource();
@@ -128,7 +129,9 @@ namespace Golem.Yagna
         }
     }
 
-    public class GolemProcessException : Exception
+    interface IGolemException { }
+
+    public class GolemProcessException : Exception, IGolemException
     {
 
         public GolemProcessException(string message)

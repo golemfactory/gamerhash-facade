@@ -185,7 +185,7 @@ class AiRuntimeService(Service):
 async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
     strategy = ProviderOnceStrategy()
     async with Golem(
-        budget=1.0,
+        budget=20.0,
         subnet_tag=subnet_tag,
         strategy=strategy,
         payment_driver=driver,
