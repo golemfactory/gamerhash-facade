@@ -7,6 +7,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 using Medallion.Shell;
+using System.Data;
 
 namespace Golem.Yagna
 {
@@ -20,6 +21,7 @@ namespace Golem.Yagna
 
         public string YagnaApiUrl { get; set; } = "";
         public Network Network { get; set; } = Network.Holesky;
+        public PaymentDriver PaymentDriver { get; set; } = PaymentDriver.ERC20next;
     }
 
 
@@ -190,7 +192,7 @@ namespace Golem.Yagna
 
         public bool HasExited => YagnaProcess?.Process.HasExited ?? true;
 
-        public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
+        public bool Run(YagnaStartupOptions options, Action<Task<CommandResult>> exitHandler, CancellationToken cancellationToken)
         {
             if (YagnaProcess != null || cancellationToken.IsCancellationRequested)
             {
@@ -216,15 +218,7 @@ namespace Golem.Yagna
             {
                 if (YagnaProcess is not null)
                     YagnaProcess = null;
-                if (result.IsFaulted)
-                {
-                    var res = result.Result;
-                    _logger.LogInformation("Yagna process cmd has failed.");
-                    exitHandler(1);
-                    return;
-                }
-                _logger.LogInformation("Yagna process finished, exit code {1}", result.Result.ExitCode);
-                exitHandler(result.Result.ExitCode);
+                exitHandler(result);
             });
 
             ChildProcessTracker.AddProcess(cmd);

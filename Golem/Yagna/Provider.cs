@@ -211,7 +211,7 @@ namespace Golem.Yagna
             ExecToText($"profile update {param} {value} default".Split());
         }
 
-        public bool Run(string appKey, Network network, Action<int> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
+        public bool Run(string appKey, Network network, Action<Task<CommandResult>> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
             if (cancellationToken.IsCancellationRequested)
                 return false;
@@ -234,15 +234,7 @@ namespace Golem.Yagna
             cmd.Task.ContinueWith(result =>
             {
                 ClearHandle();
-                if (result.IsFaulted)
-                {
-                    var res = result.Result;
-                    _logger.LogInformation("Provider process cmd has failed.");
-                    exitHandler(1);
-                    return;
-                }
-                _logger.LogInformation("Provider process finished: exit code {1}", result.Result.ExitCode);
-                exitHandler(result.Result.ExitCode);
+                exitHandler(result);
             });
 
             ChildProcessTracker.AddProcess(cmd);
@@ -265,8 +257,8 @@ namespace Golem.Yagna
                 return;
             }
             _logger.LogInformation("Stopping Provider process");
-            var cmd = ProviderProcess;
-            await ProcessFactory.StopCmd(cmd, logger: _logger);
+            if (ProviderProcess != null)
+                await ProcessFactory.StopCmd(ProviderProcess, logger: _logger);
             ClearHandle();
         }
 

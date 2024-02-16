@@ -39,11 +39,25 @@ static async Task Build(BuildArgs args)
     var current = Directory.GetCurrentDirectory();
     var root = await PackageBuilder.BuildTestDirectory("pack");
     var bins = PackageBuilder.BinariesDir(root);
-    var build_dir = AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
+
+    var build_dir = (args.DllDir != null) 
+        ? args.DllDir 
+        : AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
+
     var package_dir = Path.Combine(current, args.Target);
 
-    File.Copy(Path.Combine(build_dir, "Golem.dll"), Path.Combine(bins, "Golem.dll"));
-    File.Copy(Path.Combine(build_dir, "GolemLib.dll"), Path.Combine(bins, "GolemLib.dll"));
+    var dll_file_paths = new HashSet<string>();
+    foreach (var dll_file_pattern in args.DllFilePatterns.Split(',')) {
+        foreach (var dll_file_path in  Directory.GetFiles(build_dir, dll_file_pattern)) {
+            dll_file_paths.Add(dll_file_path);
+        }
+    }
+
+    foreach (var dll_file_path in dll_file_paths)
+    {
+        var dll_file_name = Path.GetFileName(dll_file_path);
+        File.Copy(dll_file_path, Path.Combine(bins, dll_file_name));
+    }
 
     Directory.Delete(Path.Combine(bins, "plugins"), true);
     File.Delete(Path.Combine(bins, "golemsp"));

@@ -6,6 +6,9 @@ on:
       - v*
       - pre-rel-*
 
+env:
+  automatic_pckg_name_prefix: 'gamerhash-ai-facade-windows-w-automatic'
+
 jobs:
   build:
 
@@ -26,9 +29,10 @@ jobs:
       run: dotnet restore
       
     - name: Build
-      run: dotnet build --configuration Release
+      run: dotnet publish --configuration Release
     - name: Collect binaries
-      run: dotnet run --project Golem.Package --configuration Release build --dont-clean
+      run: |
+        dotnet run --project Golem.Package --configuration Release build --dont-clean  --dll-file-patterns *.dll --dll-dir ${{ github.workspace }}/Golem/bin/Release/net7.0/publish
 
     - name: Pack
       id: pack
@@ -38,6 +42,10 @@ jobs:
         GITHUB_REF: ${{ github.ref }}
       run: |
         bash .ci/pack-build.sh
+        VERSION="${GITHUB_REF##*/}"
+        VERSION="${VERSION#pre-rel-}"
+        # Export version e.g. "v0.1.5-RC1"
+        echo "::set-output name=version::${VERSION}"
 
     - name: Release
       uses: softprops/action-gh-release@v1
@@ -46,3 +54,24 @@ jobs:
         files: |
           releases/gamerhash-ai-facade-*
         prerelease: ${{ startsWith(github.ref, 'refs/tags/pre-rel-v') }}
+
+    - name: Release Automatic
+      if: matrix.os == 'windows'
+      shell: pwsh
+      env:
+        PKG_NAME: ${{ env.automatic_pckg_name_prefix }}_${{ steps.pack.outputs.version }}.zip
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      run: |
+        .\scripts\automatic.ps1 `
+          -compress 1 `
+          -cleanup 1
+        
+        Write-S3Object `
+          -BucketName gh-facade `
+          -AccessKey $env:AWS_ACCESS_KEY_ID `
+          -SecretKey $env:AWS_SECRET_ACCESS_KEY `
+          -File "bin\dist_package.zip" `
+          -Key "packages\$($env:PKG_NAME)" `
+          -PublicReadOnly `
+          -Force

@@ -9,18 +9,25 @@ namespace Golem
     using global::Golem.Yagna.Types;
     using global::Golem.Yagna;
     using GolemLib.Types;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Abstractions;
 
     namespace GolemUI.Src
     {
         public class ProviderConfigService
         {
             private readonly Provider _provider;
+
+            private readonly ILogger _logger;
+
             public Network Network { get; private set; }
 
-            public ProviderConfigService(Provider provider, Network network)
+            public ProviderConfigService(Provider provider, Network network, ILoggerFactory? loggerFactory = null)
             {
                 _provider = provider;
                 Network = network;
+                loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+                _logger = loggerFactory.CreateLogger<Provider>();
             }
 
             public string WalletAddress
@@ -115,6 +122,7 @@ namespace Golem
 
             private void UpdateWalletAddress(string? walletAddress = null)
             {
+                _logger.LogInformation($"Set WalletAddress {walletAddress}");
                 var config = _provider.Config;
                 if (config != null)
                 {

@@ -160,8 +160,8 @@ class ActivityLoop
         var usage = GetUsage(activityState.Usage);
         if (usage != null)
             job.CurrentUsage = usage;
-
-        jobs.UpdateActivityState(jobId, state);
+        if (state != null)
+            jobs.UpdateActivityState(jobId, state);
 
         if (job.Status == JobStatus.Finished)
             return null;
@@ -224,7 +224,7 @@ class ActivityLoop
             }
             catch (Exception error)
             {
-                if(!token.IsCancellationRequested)
+                if (!token.IsCancellationRequested)
                     _logger.LogError("Failed to read message: {}", error);
                 break;
             }
