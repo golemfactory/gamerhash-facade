@@ -31,6 +31,27 @@ namespace Golem.Yagna
 
         [JsonPropertyName("usage-coeffs")]
         public Dictionary<string, decimal> UsageCoeffs { get; set; }
+
+
+        public GolemPrice ToPrice()
+        {
+            if (!this.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
+                numRequests = 0;
+            if (!this.UsageCoeffs.TryGetValue("golem.usage.duration_sec", out var duration))
+                duration = 0;
+            if (!this.UsageCoeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
+                gpuSec = 0;
+
+            var initPrice = this.InitialPrice ?? 0m;
+
+            return new GolemPrice
+            {
+                EnvPerHour = duration,
+                StartPrice = initPrice,
+                GpuPerHour = gpuSec,
+                NumRequests = numRequests
+            };
+        }
     }
 
     public class ExeUnit
@@ -81,7 +102,7 @@ namespace Golem.Yagna
 
                     var preset = new Preset(presetName, exeUnit.Name, coeffs);
 
-                    AddPreset(preset, out string info);
+                    AddPreset(preset);
                 }
                 if (!activePresetNames.Contains(presetName))
                 {
@@ -147,6 +168,7 @@ namespace Golem.Yagna
             args.Add(presetName);
             return _parent.ExecToText(args);
         }
+
         public void DeactivatePreset(string presetName)
         {
             var args = "preset deactivate".Split().ToList();
@@ -161,7 +183,7 @@ namespace Golem.Yagna
             return preset;
         }
 
-        public void AddPreset(Preset preset, out string info)
+        public string AddPreset(Preset preset)
         {
             List<string> args = "preset create --no-interactive".Split().ToList();
             args.Add("--preset-name");
@@ -177,59 +199,39 @@ namespace Golem.Yagna
                     args.Add($"{usageKV.Key}={coeffUsage}");
                 }
             }
-            info = _parent.ExecToText(args);
+            return _parent.ExecToText(args);
         }
 
-        public void UpdatePreset(Preset preset, out string info)
-        {
-            List<string> args = "preset update --no-interactive".Split().ToList();
-
-            args.Add("--preset-name");
-            args.Add(preset.Name);
-            args.Add("--exe-unit");
-            args.Add(preset.ExeunitName);
-            if (preset.PricingModel != null)
-            {
-                foreach (KeyValuePair<string, decimal> kv in preset.UsageCoeffs)
-                {
-                    var coeffsUsage = kv.Value.ToString(CultureInfo.InvariantCulture);
-                    args.Add(" --price ");
-                    args.Add($"{kv.Key}={coeffsUsage}");
-                }
-            }
-            info = _parent.ExecToText(args);
-        }
-
-        public void UpdatePrices(IDictionary<string, decimal> prices)
+        public void UpdateAllPrices(GolemPrice price)
         {
             var defaultPresetNames = new HashSet<String>(ExeUnits.Select(defaultPresetName));
-
-            var priceArgs = PriceDictToPriceArgs(prices);
-
             foreach (String presetName in defaultPresetNames)
             {
-                UpdatePrices(presetName, priceArgs);
+                UpdatePrice(presetName, price);
             }
         }
 
-        public List<string> PriceDictToPriceArgs(IDictionary<string, decimal> prices)
+        public string UpdatePrice(string preset, GolemPrice price)
         {
+            var priceArgs = BuildPresetArgs(price);
+
+            var args = "preset update --no-interactive --name".Split().ToList();
+            args.Add(preset);
+            args.AddRange(priceArgs.ToArray());
+            return _parent.ExecToText(args);
+        }
+
+        public List<string> BuildPresetArgs(GolemPrice price)
+        {
+            var priceDict = price.GolemCounters();
             var priceArgs = new List<string>();
-            foreach (KeyValuePair<string, decimal> priceKV in prices)
+            foreach (KeyValuePair<string, decimal> priceKV in priceDict)
             {
                 var priceValue = priceKV.Value.ToString(CultureInfo.InvariantCulture);
                 priceArgs.Add("--price");
                 priceArgs.Add($"{priceKV.Key}={priceValue}");
             }
             return priceArgs;
-        }
-
-        public void UpdatePrices(string preset, List<string> priceArgs)
-        {
-            var args = "preset update --no-interactive --name".Split().ToList();
-            args.Add(preset);
-            args.AddRange(priceArgs.ToArray());
-            var _result = _parent.ExecToText(args);
         }
     }
 }
