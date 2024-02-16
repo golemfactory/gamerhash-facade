@@ -35,20 +35,20 @@ namespace Golem.Tools
             }
             else
             {
-                if (s_jobHandle != nint.Zero)
-                {
-                    bool success = true;
-                    try
-                    {
-                        success = AssignProcessToJobObject(s_jobHandle, cmd.Process.Handle);
-                    }
-                    catch
-                    {
-                        success = false;
-                    }
-                    if (!success && !cmd.Process.HasExited)
-                        Console.WriteLine("Failed to track process {0}. Error: {1}", cmd.Process.Id, new Win32Exception().Message);                
-                }
+                // if (s_jobHandle != nint.Zero)
+                // {
+                //     bool success = true;
+                //     try
+                //     {
+                //         success = AssignProcessToJobObject(s_jobHandle, cmd.Process.Handle);
+                //     }
+                //     catch
+                //     {
+                //         success = false;
+                //     }
+                //     if (!success && !cmd.Process.HasExited)
+                //         Console.WriteLine("Failed to track process {0}. Error: {1}", cmd.Process.Id, new Win32Exception().Message);                
+                // }
             }
         }
 

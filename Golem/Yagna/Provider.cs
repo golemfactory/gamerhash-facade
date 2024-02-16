@@ -227,9 +227,8 @@ namespace Golem.Yagna
             env["MIN_AGREEMENT_EXPIRATION"] = "30s";
             env["YAGNA_APPKEY"] = appKey;
 
-            var outLogger = new OutputLogger(_logger, "Provider");
-
-            var cmd = ProcessFactory.CreateProcess(_yaProviderPath, arguments, env, outLogger, outLogger);
+            var outLogger = new OutputLogger(_logger, "Provider ALT");
+            var cmd = ProcessFactory.CreateProcessAlt(_yaProviderPath, arguments, env, outLogger, outLogger, _logger);
 
             cmd.Task.ContinueWith(result =>
             {
@@ -244,7 +243,8 @@ namespace Golem.Yagna
             cancellationToken.Register(async () =>
             {
                 _logger.LogInformation("Canceling Provider process");
-                await Stop();
+                _logger.LogInformation("Nope");
+                // await Stop();
             });
 
             return ClearHandle();

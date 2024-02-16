@@ -340,7 +340,7 @@ namespace Golem
             }
             catch (Exception e)
             {
-                _logger.LogError("Payment init failed: {}", e);
+                _logger.LogError("Payment init failed: {0}", e);
                 return false;
             }
 
@@ -357,7 +357,7 @@ namespace Golem
             }
             catch (Exception e)
             {
-                _logger.LogError("Failed to start provider: {}", e);
+                _logger.LogError("Failed to start provider: {0}", e);
                 return false;
             }
         }

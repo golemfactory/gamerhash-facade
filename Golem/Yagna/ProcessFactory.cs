@@ -89,6 +89,229 @@ namespace Golem.Yagna
             return options;
         }
 
+        public static Process CreateNativeProcess<OUT_WRITER, ERR_WRITER>(string fileName, IEnumerable<object>? args, Dictionary<string, string> env, OUT_WRITER stdOut, ERR_WRITER errOut)
+        where OUT_WRITER : TextWriter
+        where ERR_WRITER : TextWriter
+        {
+            var startInfo = CreateProcessStartInfo(fileName, args);
+
+            foreach (var (k, v) in env)
+            {
+                if(startInfo.EnvironmentVariables.ContainsKey(k))
+                    startInfo.EnvironmentVariables[k] = v;
+                else
+                    startInfo.EnvironmentVariables.Add(k, v);
+            }
+
+            var process = new Process
+            {
+                StartInfo = startInfo,
+                EnableRaisingEvents = true,
+            };
+
+            return process;
+        }
+
+        private static ProcessStartInfo CreateProcessStartInfo(string fileName, IEnumerable<object>? args)
+        {
+            var startInfo = CreateProcessStartInfo(fileName);
+            foreach (var arg in args) {
+                var arg1 = arg.ToString();
+                startInfo.ArgumentList.Add(arg1);
+            }
+
+            return startInfo;
+        }
+
+        private static ProcessStartInfo CreateProcessStartInfo(string fileName)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                // The Process object must have the UseShellExecute property set to false in order to use environment variables.
+                // UseShellExecute = true,
+                RedirectStandardOutput = false,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+            };
+            return startInfo;
+        }
+
+        // private void BindOutputEventHandlers(Process proc)
+        // {
+        //     proc.OutputDataReceived += OnOutputDataRecv;
+        //     proc.ErrorDataReceived += OnErrorDataRecv;
+        //     proc.BeginErrorReadLine();
+        //     proc.BeginOutputReadLine();
+        // }
+
+        // private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
+        // {
+        //     _logger.LogInformation($"{e.Data}");
+        // }
+        // private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
+        // {
+        //     _logger.LogInformation($"{e.Data}");
+        // }
+
+
+
+        static Process providerProc = null;
+
+        public static Command CreateProcessAlt<OUT_WRITER, ERR_WRITER>(string executable, IEnumerable<object>? args, Dictionary<string, string> env, OUT_WRITER stdOut, ERR_WRITER errOut, ILogger logger)
+        where OUT_WRITER : TextWriter
+        where ERR_WRITER : TextWriter
+        {
+            providerProc = CreateNativeProcess(executable, args, env, stdOut, errOut);
+            if (!providerProc.Start()) {
+                throw new GolemException("Failed to start Provider process");
+            }
+            logger.LogInformation($"XXX Process id {providerProc.Id}");
+
+            ctrcalt(providerProc, logger).GetAwaiter().GetResult();
+
+            // close(providerProc, logger).GetAwaiter().GetResult();
+
+            // if (Command.TryAttachToProcess(providerProc.Id, out var thisCommand)) {
+            //     logger.LogInformation("XXX Giving provider time to start");
+            //     ctrlc(thisCommand, logger).GetAwaiter().GetResult();
+            //     return thisCommand;
+            // }
+            
+            throw new GolemException("Failed to attach to Provider process");
+        }
+
+        // #if Windows
+        internal const int CTRL_C_EVENT = 0;
+        [DllImport("kernel32.dll")]
+        internal static extern bool GenerateConsoleCtrlEvent(uint dwCtrlEvent, uint dwProcessGroupId);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern bool AttachConsole(uint dwProcessId);
+        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+        internal static extern bool FreeConsole();
+        [DllImport("kernel32.dll")]
+        static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate HandlerRoutine, bool Add);
+        // Delegate type to be used as the Handler Routine for SCCH
+        delegate Boolean ConsoleCtrlDelegate(uint CtrlType);
+        // #endif
+
+        private static async Task ctrcalt(Process proc, ILogger logger) {
+            await Task.Delay(10_000);
+            logger.LogInformation("XXX Sending Ctrl-C");
+            try {
+
+                // #if Linux
+                //     logger.LogInformation("XXX Linux kill");
+                //     proc.Kill();
+                // #elif Windows
+                    logger.LogInformation("XXX WIndows ctrl-c");
+
+                    if (AttachConsole((uint)proc.Id)) {
+                        SetConsoleCtrlHandler(null, true);
+                        try { 
+                            if (!GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0))
+                                logger.LogError("XXX GenerateConsoleCtrlEvent failed");
+                            logger.LogInformation("XXX Waiting for exit");
+                            proc.WaitForExit();
+                            logger.LogInformation("XXX GenerateConsoleCtrlEvent succeeded");
+                        } catch (Exception e) {
+                            logger.LogError("XXX GenerateConsoleCtrlEvent failed. Err {0}", e);
+                        } finally {
+                            SetConsoleCtrlHandler(null, false);
+                            FreeConsole();
+                        }
+                    } else {
+                        logger.LogError("XXX AttachConsole failed");
+                    }
+
+                // #endif
+
+            } catch (Exception e) {
+                logger.LogInformation("XXX Failed to sent: {0}", e);
+            }
+            await Task.Delay(10_000);
+        }
+
+        private static async Task close(Process proc, ILogger logger) {
+            await Task.Delay(10_000);
+            logger.LogInformation("XXX Sending Ctrl-C");
+            try {
+                // proc.StandardInput.Close();
+                // proc.CancelOutputRead();
+                // proc.StandardOutput.Close();
+                // logger.LogInformation("XXX Close sent");
+                if (!proc.CloseMainWindow()) {
+                    logger.LogInformation("XXX Closed main windows");
+                } else {
+                    logger.LogInformation("XXX Failed to close");
+                }
+            } catch (Exception e) {
+                logger.LogInformation("XXX Failed to sent: {0}", e);
+            }
+            await Task.Delay(10_000);
+        }
+
+        private static async Task ctrlc(Command cmd, ILogger logger) {
+            await Task.Delay(10_000);
+            logger.LogInformation("XXX Sending Ctrl-C");
+            if (await cmd.TrySignalAsync(CommandSignal.ControlC)) {
+                logger.LogInformation("XXX Ctrl-C sent");
+            } else {
+                logger.LogInformation("XXX Ctrl-C failed");
+            }
+            await Task.Delay(10_000);
+        }
+
+        // public static Command CreateProcessAlt<OUT_WRITER, ERR_WRITER>(string executable, IEnumerable<object>? args, Dictionary<string, string> env, OUT_WRITER stdOut, ERR_WRITER errOut)
+        // where OUT_WRITER : TextWriter
+        // where ERR_WRITER : TextWriter
+        // {
+        //     var argList = args?.ToList();
+        //     argList?.RemoveAll(s => string.IsNullOrWhiteSpace((string?)s));
+        //     var executablePath = Path.GetFullPath(executable);
+        //     var workDir = Directory.GetParent(executablePath)?.ToString() ?? "";
+
+        //     Shell MyShell = new Shell(options => options
+        //         .EnvironmentVariables(env)
+        //         .WorkingDirectory(workDir)
+        //         // .ThrowOnError(true)
+        //         // .DisposeOnExit(false)
+        //         .StartInfo(info =>
+        //         {
+        //             // info.CreateNoWindow = false;
+        //             info.UseShellExecute = true;
+        //             info.WindowStyle = ProcessWindowStyle.Hidden;
+        //             // info.RedirectStandardOutput = false;
+        //             // info.RedirectStandardError = false;
+        //             // info.RedirectStandardInput = false;
+        //         }));
+
+        //     return MyShell.Run(executablePath, argList);
+        //     // return Command
+        //     //     .Run(executablePath, argList, options => updateOptionsAlt(options, workDir, env))
+        //     //     // .RedirectTo(stdOut)
+        //     //     // .RedirectStandardErrorTo(errOut)
+        //     //     ;
+        // }
+
+        // static Shell.Options updateOptionsAlt(Shell.Options options, string workDir, Dictionary<string, string> env)
+        // {
+        //     options = options
+        //         .EnvironmentVariables(env)
+        //         .WorkingDirectory(workDir)
+        //         .ThrowOnError(true)
+        //         .DisposeOnExit(false)
+        //         .StartInfo(info =>
+        //         {
+        //             info.CreateNoWindow = false;
+        //             info.UseShellExecute = true;
+        //         });
+        //     return options;
+        // }
+
+
         public static string BinName(string name)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -108,15 +331,17 @@ namespace Golem.Yagna
             {
                 if (!await cmd.TrySignalAsync(CommandSignal.ControlC))
                 {
+                    logger?.LogWarning("Failed to signal Ctrl-C to process. Killing it.");
                     cmd.Kill();
                 }
-
                 CancellationTokenSource stopTimeoutTokenSrc = new CancellationTokenSource();
                 var stopTimeoutToken = stopTimeoutTokenSrc.Token;
                 stopTimeoutTokenSrc.CancelAfter(stopTimeoutMs);
                 try
                 {
+                    logger?.LogInformation("Waiting for process to stop.");
                     await cmd.Process.WaitForExitAsync(stopTimeoutToken);
+                    logger?.LogInformation("Process stopped.");
                 }
                 catch (TaskCanceledException err)
                 {
