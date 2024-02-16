@@ -242,11 +242,10 @@ namespace Golem.Yagna
                 /// ProcessStartInfo CreateNoWindow = false 
                 /// only make console to not open when parent process is started as an console app
                 if (!proc.CloseMainWindow()) {
-                    logger.LogInformation("XXX Closed main windows");
-                } else {
                     logger.LogInformation("XXX Failed to close");
+                } else {
+                    logger.LogInformation("XXX Closed main windows");
                 }
-                logger.LogInformation("XXX Closed using CloseMainWindow");
 
             } catch (Exception e) {
                 logger.LogInformation("XXX Failed to close using CloseMainWindow", e);
