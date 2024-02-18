@@ -93,6 +93,15 @@ namespace Golem.Yagna
         where OUT_WRITER : TextWriter
         where ERR_WRITER : TextWriter
         {
+            // List<string> args2 = new List<string>();
+            // args2.Append("/c");
+            // args2.Append("D:\\Code\\gamerhash-facade\\modules\\golem\\ya-provider.exe");
+            // foreach (var a in args) {
+            //     args2.Append(a);
+            // };
+            // fileName = "cmd";
+            // var startInfo = CreateProcessStartInfo(fileName, args2);
+
             var startInfo = CreateProcessStartInfo(fileName, args);
 
             foreach (var (k, v) in env)
@@ -130,31 +139,49 @@ namespace Golem.Yagna
                 FileName = fileName,
                 // Error: The Process object must have the UseShellExecute property set to false in order to use environment variables.
                 // UseShellExecute = true,
+
+                // RedirectStandardOutput = false,
+                // RedirectStandardError = false,
+                // RedirectStandardInput = false,
+
+                // RedirectStandardOutput = true,
+                // RedirectStandardError = true,
+                // RedirectStandardInput = false,
+
+                // CreateNoWindow = false,
+
+
+                
                 RedirectStandardOutput = false,
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
+                RedirectStandardError = false,
+                // RedirectStandardInput = false,
                 CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden,
+
+                // WindowStyle = ProcessWindowStyle.Hidden,
+
+                
             };
             return startInfo;
         }
 
-        // private void BindOutputEventHandlers(Process proc)
-        // {
-        //     proc.OutputDataReceived += OnOutputDataRecv;
-        //     proc.ErrorDataReceived += OnErrorDataRecv;
-        //     proc.BeginErrorReadLine();
-        //     proc.BeginOutputReadLine();
-        // }
+        private static void BindOutputEventHandlers(Process proc)
+        {
+            proc.OutputDataReceived += OnOutputDataRecv;
+            proc.ErrorDataReceived += OnErrorDataRecv;
+            proc.BeginErrorReadLine();
+            proc.BeginOutputReadLine();
+        }
 
-        // private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
-        // {
-        //     _logger.LogInformation($"{e.Data}");
-        // }
-        // private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
-        // {
-        //     _logger.LogInformation($"{e.Data}");
-        // }
+        private static void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
+        {
+            // _logger.LogInformation($"{e.Data}");
+            Console.WriteLine($">>> {e.Data}");
+        }
+        private static void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
+        {
+            // _logger.LogInformation($"{e.Data}");
+            Console.WriteLine($">>> {e.Data}");
+        }
 
 
 
@@ -164,23 +191,46 @@ namespace Golem.Yagna
         where OUT_WRITER : TextWriter
         where ERR_WRITER : TextWriter
         {
+            
+            // var executablePath = Path.GetFullPath(executable);
+            // var workDir = Directory.GetParent(executablePath)?.ToString() ?? "";
+            // var dotEnv = Path.Combine(workDir, ".env");
+            // if (Path.Exists(dotEnv)) {
+            //     File.Delete(dotEnv);
+            // }
+            // var fs = new StreamWriter(dotEnv);
+            // foreach(KeyValuePair<string, string> entry in env)
+            // {
+            //     fs.WriteLine($"{entry.Key}={entry.Value}");
+            // }
+            // fs.Close();
+
+            // executable = Path.ChangeExtension(executable, ".bat");
+
+            logger.LogInformation($"XXX Creting process w exec {executable}");
             providerProc = CreateNativeProcess(executable, args, env, stdOut, errOut);
             if (!providerProc.Start()) {
                 throw new GolemException("Failed to start Provider process");
             }
+
+            // BindOutputEventHandlers(providerProc);
+            
             logger.LogInformation($"XXX Process id {providerProc.Id}");
 
-            ctrc_alt(providerProc, logger).GetAwaiter().GetResult();
+            // ctrc_alt(providerProc, logger).GetAwaiter().GetResult();
 
             // close(providerProc, logger).GetAwaiter().GetResult();
 
-            // if (Command.TryAttachToProcess(providerProc.Id, out var thisCommand)) {
-            //     logger.LogInformation("XXX Giving provider time to start");
-            //     ctrlc(thisCommand, logger).GetAwaiter().GetResult();
-            //     return thisCommand;
-            // }
-            
-            throw new GolemException("Failed to attach to Provider process");
+            Thread.Sleep(10_000);
+            if (Command.TryAttachToProcess(providerProc.Id, out var thisCommand)) {
+                ctrlc(thisCommand, logger).GetAwaiter().GetResult();
+                return thisCommand;
+            } else {
+                logger.LogError("XXX Failed to attach to process");
+            }
+
+            Thread.Sleep(60_000);
+            throw new GolemException("XXX XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
         }
 
         // #if Windows
@@ -222,6 +272,7 @@ namespace Golem.Yagna
                             SetConsoleCtrlHandler(null, false);
                             FreeConsole();
                         }
+                        logger.LogInformation("XXX Ctrl c success XXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
                     } else {
                         logger.LogError("XXX AttachConsole failed");
                     }
@@ -264,6 +315,7 @@ namespace Golem.Yagna
         }
 
         private static async Task ctrlc(Command cmd, ILogger logger) {
+            logger.LogInformation("XXX Giving provider time to start");
             await Task.Delay(10_000);
             logger.LogInformation("XXX Sending Ctrl-C");
             if (await cmd.TrySignalAsync(CommandSignal.ControlC)) {
