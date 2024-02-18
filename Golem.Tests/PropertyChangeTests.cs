@@ -41,25 +41,13 @@ namespace Golem.Tests
                             .AddProvider(_loggerProvider));
         }
 
-        async Task<IGolem> LoadBinaryLib(string dllPath, string modulesDir, ILoggerFactory? loggerFactory)
-        {
-            const string factoryType = "Golem.Factory";
-
-            Assembly ass = Assembly.LoadFrom(dllPath);
-            Type? t = ass.GetType(factoryType) ?? throw new Exception("Factory Type not found. Lib not loaded: " + dllPath);
-            var obj = Activator.CreateInstance(t) ?? throw new Exception("Creating Factory instance failed. Lib not loaded: " + dllPath);
-            var factory = obj as IFactory ?? throw new Exception("Cast to IFactory failed.");
-
-            return await factory.Create(modulesDir, loggerFactory);
-        }
-
         [Fact]
         public async Task VerifyNetworkOnPropertyChange()
         {
             var testName = nameof(VerifyNetworkOnPropertyChange);
             var loggerFactory = CreateLoggerFactory(testName);
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-            var golem = await LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
 
             // Initialize property value
             golem.NetworkSpeed = 1u;
@@ -86,7 +74,7 @@ namespace Golem.Tests
             var testName = nameof(VerifyWalletAddressOnPropertyChange);
             var loggerFactory = CreateLoggerFactory(testName);
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-            var golem = await LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
 
             // TODO Without starting fails on Provider.Config set.
             await golem.Start();
@@ -117,7 +105,7 @@ namespace Golem.Tests
             var testName = nameof(VerifyGolemPriceOnPropertyChange);
             var loggerFactory = CreateLoggerFactory(testName);
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-            var golem = await LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
 
             // Initialize property value
             var initialValue = new GolemPrice
