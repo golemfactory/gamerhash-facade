@@ -244,13 +244,20 @@ namespace Golem
         {
             _logger.LogInformation("Stopping Golem");
 
-            if (!_providerCancellationtokenSource.IsCancellationRequested)
-                _providerCancellationtokenSource.Cancel();
             await Provider.Stop();
-
-            if (!_yagnaCancellationtokenSource.IsCancellationRequested)
-                _yagnaCancellationtokenSource.Cancel();
             await Yagna.Stop();
+
+            try
+            {
+                if (!_providerCancellationtokenSource.IsCancellationRequested)
+                    _providerCancellationtokenSource.Cancel();
+                if (!_yagnaCancellationtokenSource.IsCancellationRequested)
+                    _yagnaCancellationtokenSource.Cancel();
+            }
+            catch (Exception err)
+            {
+                _logger.LogError($"Failed to cancel Golem process. Err {err}");
+            }
 
             Status = GolemStatus.Off;
 
