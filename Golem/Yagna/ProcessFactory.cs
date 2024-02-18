@@ -74,7 +74,7 @@ namespace Golem.Yagna
             foreach (var arg in args)
             {
                 var argTxt = arg.ToString();
-                if (!String.IsNullOrWhiteSpace(argTxt)) 
+                if (!String.IsNullOrWhiteSpace(argTxt))
                     startInfo.ArgumentList.Add(argTxt);
             }
 
@@ -135,7 +135,9 @@ namespace Golem.Yagna
                 {
                     logger?.LogWarning("Failed to signal Ctrl-C to process. Killing it.");
                     cmd.Kill();
-                } else {
+                }
+                else
+                {
                     logger?.LogInformation("Signaled process to stop");
                 }
                 CancellationTokenSource stopTimeoutTokenSrc = new CancellationTokenSource();

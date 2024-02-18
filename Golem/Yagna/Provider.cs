@@ -71,8 +71,8 @@ namespace Golem.Yagna
 
     public interface IProvider
     {
-        T? Exec<T>(IEnumerable<object>? args) where T : class;
-        string ExecToText(IEnumerable<object>? args);
+        T? Exec<T>(IEnumerable<object> args) where T : class;
+        string ExecToText(IEnumerable<object> args);
     }
 
     public class Provider : IProvider
@@ -133,7 +133,7 @@ namespace Golem.Yagna
 
         }
 
-        public T? Exec<T>(IEnumerable<object>? args) where T : class
+        public T? Exec<T>(IEnumerable<object> args) where T : class
         {
             var text = ExecToText(args);
             var options = new JsonSerializerOptionsBuilder()
@@ -142,7 +142,7 @@ namespace Golem.Yagna
             return JsonSerializer.Deserialize<T>(text, options);
         }
 
-        public string ExecToText(IEnumerable<object>? args)
+        public string ExecToText(IEnumerable<object> args)
         {
             try
             {

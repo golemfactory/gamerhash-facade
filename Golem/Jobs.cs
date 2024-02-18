@@ -30,8 +30,6 @@ class Jobs : IJobsUpdater
     /// </summary>
     private readonly Dictionary<string, Job> _jobs = new();
 
-    private readonly ReaderWriterLock _jobsLock = new ReaderWriterLock();
-
     public Jobs(Action<Job?> setCurrentJob, ILoggerFactory loggerFactory)
     {
         _setCurrentJob = setCurrentJob;
