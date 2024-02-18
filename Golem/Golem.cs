@@ -180,7 +180,7 @@ namespace Golem
             OnPropertyChanged(nameof(NodeId));
         }
 
-        void HandleStartupProvider(YagnaStartupOptions yagnaOptions, Action<Task<CommandResult>> exitHandler, CancellationToken providerCancellationToken)
+        void HandleStartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken providerCancellationToken)
         {
             _logger.LogInformation("Starting Golem's Provider");
             Status = StartupProvider(yagnaOptions, exitHandler, providerCancellationToken)
@@ -190,21 +190,15 @@ namespace Golem
                     : GolemStatus.Error;
         }
 
-        Action<Task<CommandResult>> yagnaProcessExitHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
+        Action<int> yagnaProcessExitHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
         {
-            Action<Task<CommandResult>> exitHandler = (Task<CommandResult> cmdResult) => { throw new Exception("Uninitialized exit handler"); };
-            exitHandler = (Task<CommandResult> cmdResult) =>
+            return (int exitCode) =>
             {
                 _logger.LogInformation("Handling Yagna process shutdown");
-                if (cmdResult.IsFaulted && !yagnaCancellationTokenSource.IsCancellationRequested)
+                if (exitCode != 0)
                 {
                     Status = GolemStatus.Error;
                     _logger.LogError("Yagna process failed");
-                    var error = cmdResult.Exception;
-                    if (error != null)
-                    {
-                        _logger.LogError($"Error: {error.Message}");
-                    }
                 }
                 else if (Status != GolemStatus.Error)
                 {
@@ -214,24 +208,17 @@ namespace Golem
                 safeCancel(yagnaCancellationTokenSource);
                 safeCancel(providerCancellationTokenSource);
             };
-            return exitHandler;
         }
 
-        Action<Task<CommandResult>> providerProcessExitHandler(CancellationToken providerCancellationToken)
+        Action<int> providerProcessExitHandler(CancellationToken providerCancellationToken)
         {
-            Action<Task<CommandResult>> exitHandler = (Task<CommandResult> cmdResult) => { throw new Exception("Uninitialized exit handler"); };
-            exitHandler = (Task<CommandResult> cmdResult) =>
+            return (int exitCode) =>
             {
                 _logger.LogInformation("Handling Provider process shutdown");
-                if (cmdResult.IsFaulted && !providerCancellationToken.IsCancellationRequested)
+                if (exitCode != 0)
                 {
                     Status = GolemStatus.Error;
                     _logger.LogError("Provider process failed");
-                    var error = cmdResult.Exception;
-                    if (error != null)
-                    {
-                        _logger.LogError($"Error: {error.Message}");
-                    }
                 }
                 else if (Status != GolemStatus.Error)
                 {
@@ -239,7 +226,6 @@ namespace Golem
                     Status = GolemStatus.Off;
                 }
             };
-            return exitHandler;
         }
 
         void safeCancel(CancellationTokenSource cancellationTokenSource)
@@ -258,12 +244,10 @@ namespace Golem
         {
             _logger.LogInformation("Stopping Golem");
 
-            _logger.LogInformation("Stopping Golem's Provider");
             if (!_providerCancellationtokenSource.IsCancellationRequested)
                 _providerCancellationtokenSource.Cancel();
             await Provider.Stop();
 
-            _logger.LogInformation("Stopping Golem's Yagna");
             if (!_yagnaCancellationtokenSource.IsCancellationRequested)
                 _yagnaCancellationtokenSource.Cancel();
             await Yagna.Stop();
@@ -312,7 +296,7 @@ namespace Golem
             }
         }
 
-        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<Task<CommandResult>> exitHandler, CancellationToken cancellationToken)
+        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
         {
             var success = Yagna.Run(yagnaOptions, exitHandler, cancellationToken);
 
@@ -347,7 +331,7 @@ namespace Golem
             return success;
         }
 
-        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<Task<CommandResult>> exitHandler, CancellationToken cancellationToken)
+        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
         {
             try
             {
