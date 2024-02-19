@@ -19,8 +19,8 @@ namespace Golem.Tools
         /// Add the process to be tracked. If our current process is killed, the child processes
         /// that we are tracking will be automatically killed, too. If the child process terminates
         /// first, that's fine, too.</summary>
-        /// <param name="cmd"></param>
-        public static void AddProcess(Command cmd)
+        /// <param name="process"></param>
+        public static void AddProcess(Process process)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -30,7 +30,7 @@ namespace Golem.Tools
                 // with something like prctl(PR_SET_PDEATHSIG, SIGTERM)  (send SIGTERM when parent dies)
                 AppDomain.CurrentDomain.ProcessExit += async (s, e) =>
                 {
-                    await ProcessFactory.StopCmd(cmd);
+                    await ProcessFactory.StopProcess(process);
                 };
             }
             else
@@ -40,14 +40,14 @@ namespace Golem.Tools
                     bool success = true;
                     try
                     {
-                        success = AssignProcessToJobObject(s_jobHandle, cmd.Process.Handle);
+                        success = AssignProcessToJobObject(s_jobHandle, process.Handle);
                     }
                     catch
                     {
                         success = false;
                     }
-                    if (!success && !cmd.Process.HasExited)
-                        Console.WriteLine("Failed to track process {0}. Error: {1}", cmd.Process.Id, new Win32Exception().Message);                
+                    if (!success && !process.HasExited)
+                        Console.WriteLine("Failed to track process {0}. Error: {1}", process.Id, new Win32Exception().Message);                
                 }
             }
         }

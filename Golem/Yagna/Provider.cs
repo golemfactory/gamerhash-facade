@@ -1,14 +1,11 @@
 ﻿using System.Text;
 using System.Diagnostics;
-using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Golem.Yagna.Types;
 using System.Text.Json.Serialization;
 using Golem.Tools;
 using System.Text.Json;
-using System.Linq;
 using Microsoft.Extensions.Logging.Abstractions;
-using Medallion.Shell;
 
 namespace Golem.Yagna
 {
@@ -74,8 +71,8 @@ namespace Golem.Yagna
 
     public interface IProvider
     {
-        T? Exec<T>(IEnumerable<object>? args) where T : class;
-        string ExecToText(IEnumerable<object>? args);
+        T? Exec<T>(IEnumerable<object> args) where T : class;
+        string ExecToText(IEnumerable<object> args);
     }
 
     public class Provider : IProvider
@@ -109,7 +106,7 @@ namespace Golem.Yagna
         private readonly ILogger _logger;
 
 
-        private static Command? ProviderProcess { get; set; }
+        private static Process? ProviderProcess { get; set; }
 
         public Provider(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
@@ -136,7 +133,7 @@ namespace Golem.Yagna
 
         }
 
-        public T? Exec<T>(IEnumerable<object>? args) where T : class
+        public T? Exec<T>(IEnumerable<object> args) where T : class
         {
             var text = ExecToText(args);
             var options = new JsonSerializerOptionsBuilder()
@@ -145,19 +142,19 @@ namespace Golem.Yagna
             return JsonSerializer.Deserialize<T>(text, options);
         }
 
-        public string ExecToText(IEnumerable<object>? args)
+        public string ExecToText(IEnumerable<object> args)
         {
-            var strWriter = new StringWriter();
-            var outLogger = new OutputLogger(_logger, "Provider");
-            var cmd = ProcessFactory.CreateProcess(_yaProviderPath, args, Env, strWriter, outLogger);
             try
             {
-                cmd.Wait();
-                return strWriter.ToString();
+                var process = ProcessFactory.StartProcess(_yaProviderPath, args, Env, true);
+                var result = process.StandardOutput.ReadToEnd();
+                var err = process.StandardError.ReadToEnd();
+                _logger?.LogInformation("Execution result. StdOut: {0}\nStdErr {1}", result, err);
+                return result;
             }
             catch (Exception e)
             {
-                _logger?.LogError(e, "failed to execute {0}", args);
+                _logger?.LogError(e, "Failed to execute Provider cmd. Args: {0}", args);
                 throw new GolemProcessException(string.Format("Failed to execute Provider command: {0}", e.Message));
             }
         }
@@ -227,46 +224,39 @@ namespace Golem.Yagna
             env["MIN_AGREEMENT_EXPIRATION"] = "30s";
             env["YAGNA_APPKEY"] = appKey;
 
-            var outLogger = new OutputLogger(_logger, "Provider");
+            var process = ProcessFactory.StartProcess(_yaProviderPath, arguments, env);
 
-            var cmd = ProcessFactory.CreateProcess(_yaProviderPath, arguments, env, outLogger, outLogger);
-
-            cmd.Task.ContinueWith(result =>
+            process.WaitForExitAsync(cancellationToken)
+                .ContinueWith(result =>
             {
+                var exitCode = ProviderProcess?.ExitCode ?? throw new GolemException("Unable to get Provider process exit code");;
                 ClearHandle();
-                if (result.IsFaulted)
-                {
-                    var res = result.Result;
-                    _logger.LogInformation("Provider process cmd has failed.");
-                    exitHandler(1);
-                    return;
-                }
-                _logger.LogInformation("Provider process finished: exit code {1}", result.Result.ExitCode);
-                exitHandler(result.Result.ExitCode);
+                exitHandler(exitCode);
             });
 
-            ChildProcessTracker.AddProcess(cmd);
+            ChildProcessTracker.AddProcess(process);
 
-            ProviderProcess = cmd;
+            ProviderProcess = process;
 
             cancellationToken.Register(async () =>
             {
                 _logger.LogInformation("Canceling Provider process");
+                _logger.LogInformation("Nope");
                 await Stop();
             });
 
             return ClearHandle();
         }
 
-        public async Task Stop()
+        public async Task Stop(int stopTimeoutMs = 30_000)
         {
             if (!ClearHandle())
             {
                 return;
             }
             _logger.LogInformation("Stopping Provider process");
-            var cmd = ProviderProcess;
-            await ProcessFactory.StopCmd(cmd, logger: _logger);
+            if (ProviderProcess != null)
+                await ProcessFactory.StopProcess(ProviderProcess, stopTimeoutMs, _logger);
             ClearHandle();
         }
 
@@ -278,8 +268,9 @@ namespace Golem.Yagna
         {
             if (ProviderProcess == null)
                 return false;
-            if (ProviderProcess.Process.HasExited)
+            if (ProviderProcess.HasExited)
             {
+                _logger.LogInformation("Clearing process handle");
                 ProviderProcess = null;
                 return false;
             }
