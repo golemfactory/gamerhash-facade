@@ -3,10 +3,9 @@ using Golem.Yagna.Types;
 using System.Text.Json;
 using Golem.Tools;
 using System.Text.Json.Serialization;
-using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
-using Medallion.Shell;
+using System.Data;
 
 namespace Golem.Yagna
 {
@@ -20,6 +19,7 @@ namespace Golem.Yagna
 
         public string YagnaApiUrl { get; set; } = "";
         public Network Network { get; set; } = Network.Holesky;
+        public PaymentDriver PaymentDriver { get; set; } = PaymentDriver.ERC20next;
     }
 
 
@@ -58,7 +58,7 @@ namespace Golem.Yagna
     {
         private readonly string _yaExePath;
         private readonly string? _dataDir;
-        private static Command? YagnaProcess { get; set; }
+        private static Process? YagnaProcess { get; set; }
         private readonly ILogger _logger;
 
         private EnvironmentBuilder Env
@@ -85,36 +85,23 @@ namespace Golem.Yagna
             }
         }
 
-        private Command CreateCommandProcessAndStart<T>(string[] arguments, T? output = null)
-            where T : TextWriter
-        {
-            var outLogger = new OutputLogger(_logger, "Yagna");
-            var args = arguments.ToList();
-            var env = Env.Build();
-            if (output == null)
-            {
-                return ProcessFactory.CreateProcess(_yaExePath, args, env, outLogger, outLogger);
-            }
-            else
-            {
-                return ProcessFactory.CreateProcess(_yaExePath, args, env, output, outLogger);
-            }
-        }
-
         internal string ExecToText(params string[] arguments)
         {
-            var strWriter = new StringWriter();
+            var args = arguments.ToList();
+            var env = Env.Build();
             try
             {
-                var cmd = CreateCommandProcessAndStart(arguments, strWriter);
-                cmd.Wait();
+                var process = ProcessFactory.StartProcess(_yaExePath, args, env, true);
+                var result = process.StandardOutput.ReadToEnd();
+                var err = process.StandardError.ReadToEnd();
+                _logger?.LogInformation("Execution result. StdOut: {0}\nStdErr {1}", result, err);
+                return result;
             }
             catch (Exception e)
             {
-                _logger?.LogError(e, "Failed to run yagna");
-                throw new GolemProcessException(string.Format("Failed to execute Yagna command: {0}", e.Message));
+                _logger?.LogError(e, "Failed to execute Provider cmd. Args: {0}", args);
+                throw new GolemProcessException(string.Format("Failed to execute Provider command: {0}", e.Message));
             }
-            return strWriter.ToString();
         }
 
         internal async Task<string> ExecToTextAsync(params string[] arguments)
@@ -140,6 +127,10 @@ namespace Golem.Yagna
             return JsonSerializer.Deserialize<T>(text, options);
         }
 
+        internal YagnaStartupOptions StartupOptions()
+        {
+            return YagnaOptionsFactory.CreateStartupOptions();
+        }
 
         public IdService Ids
         {
@@ -188,7 +179,7 @@ namespace Golem.Yagna
             }
         }
 
-        public bool HasExited => YagnaProcess?.Process.HasExited ?? true;
+        public bool HasExited => YagnaProcess?.HasExited ?? true;
 
         public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
         {
@@ -208,28 +199,20 @@ namespace Golem.Yagna
             environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
             environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
 
-            var outLogger = new OutputLogger(_logger, "Yagna");
             var args = $"service run {debugFlag}".Split();
-            var cmd = ProcessFactory.CreateProcess(_yaExePath, args, environment.Build(), outLogger, outLogger);
+            var process = ProcessFactory.StartProcess(_yaExePath, args, environment.Build());
 
-            cmd.Task.ContinueWith(result =>
-            {
-                if (YagnaProcess is not null)
-                    YagnaProcess = null;
-                if (result.IsFaulted)
+            process.WaitForExitAsync(cancellationToken)
+                .ContinueWith(result =>
                 {
-                    var res = result.Result;
-                    _logger.LogInformation("Yagna process cmd has failed.");
-                    exitHandler(1);
-                    return;
-                }
-                _logger.LogInformation("Yagna process finished, exit code {1}", result.Result.ExitCode);
-                exitHandler(result.Result.ExitCode);
-            });
+                    var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
+                    YagnaProcess = null;
+                    exitHandler(exitCode);
+                });
 
-            ChildProcessTracker.AddProcess(cmd);
+            ChildProcessTracker.AddProcess(process);
 
-            YagnaProcess = cmd;
+            YagnaProcess = process;
 
             cancellationToken.Register(async () =>
             {
@@ -237,21 +220,21 @@ namespace Golem.Yagna
                 await Stop();
             });
 
-            return !YagnaProcess.Process.HasExited;
+            return !YagnaProcess.HasExited;
         }
 
-        public async Task Stop()
+        public async Task Stop(int stopTimeoutMs = 30_000)
         {
             if (YagnaProcess == null)
                 return;
-            if (YagnaProcess.Process.HasExited)
+            if (YagnaProcess.HasExited)
             {
                 YagnaProcess = null;
                 return;
             }
             _logger.LogInformation("Stopping Yagna process");
             var cmd = YagnaProcess;
-            await ProcessFactory.StopCmd(cmd, logger: _logger);
+            await ProcessFactory.StopProcess(cmd, stopTimeoutMs, _logger);
             YagnaProcess = null;
         }
 
@@ -436,14 +419,10 @@ namespace Golem.Yagna
             _yagna = yagna;
         }
 
-        public void Init(Network network, string driver, string account)
+        public void Init(string account)
         {
-            _yagna.ExecToText("payment", "init", "--receiver", "--network", network.Id, "--driver", driver, "--account", account);
-        }
-
-        public void Init(Network network, string account)
-        {
-            _yagna.ExecToText("payment", "init", "--receiver", "--network", network.Id, "--account", account);
+            var yagnaOptions = _yagna.StartupOptions();
+            _yagna.ExecToText("payment", "init", "--receiver", "--network", yagnaOptions.Network.Id, "--driver", yagnaOptions.PaymentDriver.Id, "--account", account);
         }
 
         public async Task<PaymentStatus?> Status(Network network, string driver, string account)

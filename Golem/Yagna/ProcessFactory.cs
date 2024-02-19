@@ -60,64 +60,97 @@ namespace Golem.Yagna
 
     public class ProcessFactory
     {
-        public static Command CreateProcess<OUT_WRITER, ERR_WRITER>(string executable, IEnumerable<object>? args, Dictionary<string, string> env, OUT_WRITER stdOut, ERR_WRITER errOut)
-        where OUT_WRITER : TextWriter
-        where ERR_WRITER : TextWriter
+        public static Process StartProcess(string executable, IEnumerable<object> args, Dictionary<string, string> env, bool redirectOutput = false)
         {
-            var argList = args?.ToList();
-            argList?.RemoveAll(s => string.IsNullOrWhiteSpace((string?)s));
-            var executablePath = Path.GetFullPath(executable);
-            var workDir = Directory.GetParent(executablePath)?.ToString() ?? "";
 
-            return Command
-                .Run(executablePath, argList, options => updateOptions(options, workDir, env))
-                .RedirectTo(stdOut)
-                .RedirectStandardErrorTo(errOut);
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = executable,
+                RedirectStandardOutput = redirectOutput,
+                RedirectStandardError = redirectOutput,
+                CreateNoWindow = true,
+            };
+
+            foreach (var arg in args)
+            {
+                var argTxt = arg.ToString();
+                if (!String.IsNullOrWhiteSpace(argTxt))
+                    startInfo.ArgumentList.Add(argTxt);
+            }
+
+            foreach (var (k, v) in env)
+            {
+                if (startInfo.EnvironmentVariables.ContainsKey(k))
+                    startInfo.EnvironmentVariables[k] = v;
+                else
+                    startInfo.EnvironmentVariables.Add(k, v);
+            }
+
+            var process = new Process
+            {
+                StartInfo = startInfo,
+                EnableRaisingEvents = true,
+            };
+
+            return process.Start() ?
+                process : throw new GolemProcessException($"Failed to start Golem process: {process}");
         }
 
-        static Shell.Options updateOptions(Shell.Options options, string workDir, Dictionary<string, string> env)
+        private static void BindOutputEventHandlers(Process proc)
         {
-            options = options
-                .EnvironmentVariables(env)
-                .WorkingDirectory(workDir)
-                .ThrowOnError(true)
-                .DisposeOnExit(false)
-                .StartInfo(info =>
-                {
-                    info.CreateNoWindow = true;
-                });
-            return options;
+            proc.OutputDataReceived += OnOutputDataRecv;
+            proc.ErrorDataReceived += OnErrorDataRecv;
+            proc.BeginErrorReadLine();
+            proc.BeginOutputReadLine();
+        }
+
+        private static void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
+        {
+            // _logger.LogInformation($"{e.Data}");
+            Console.WriteLine($">>> {e.Data}");
+        }
+        private static void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
+        {
+            // _logger.LogInformation($"{e.Data}");
+            Console.WriteLine($">>> {e.Data}");
         }
 
         public static string BinName(string name)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return Path.ChangeExtension(name, ".exe");
-            }
-            else
-            {
-                return Path.GetFileNameWithoutExtension(name);
-            }
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                Path.ChangeExtension(name, ".exe") : Path.GetFileNameWithoutExtension(name);
         }
 
         // TODO instead of passing logger as param and keeping `cmd` as variable, keep ProcessFactory (with `cmd` and `logger`) as a variable.
-        public static async Task<int> StopCmd(Command cmd, int stopTimeoutMs = 30_000, ILogger? logger = null)
+        public static async Task<int> StopProcess(Process proc, int stopTimeoutMs = 30_000, ILogger? logger = null)
         {
-            if (!cmd.Process.HasExited)
+            if (proc.HasExited)
+            {
+                logger?.LogWarning("Process has exited already.");
+                return proc.ExitCode;
+            }
+            if (Command.TryAttachToProcess(proc.Id, out var cmd))
             {
                 if (!cmd.Process.CloseMainWindow())
                 {
                     if (!await cmd.TrySignalAsync(CommandSignal.ControlC))
+                    {
+                        logger?.LogWarning("Failed to signal Ctrl-C to process. Killing it.");
                         cmd.Kill();
+                    }
                 }
-
+                else
+                {
+                    logger?.LogInformation("Signaled process to stop");
+                }
                 CancellationTokenSource stopTimeoutTokenSrc = new CancellationTokenSource();
                 var stopTimeoutToken = stopTimeoutTokenSrc.Token;
                 stopTimeoutTokenSrc.CancelAfter(stopTimeoutMs);
                 try
                 {
-                    await cmd.Process.WaitForExitAsync(stopTimeoutToken);
+                    logger?.LogInformation("Waiting for process to stop.");
+                    await cmd.Process.WaitForExitAsync();
+                    logger?.LogInformation("Process stopped.");
                 }
                 catch (TaskCanceledException err)
                 {
@@ -125,7 +158,12 @@ namespace Golem.Yagna
                     cmd.Kill();
                 }
             }
-            return cmd.Process.ExitCode;
+            else
+            {
+                logger?.LogError("Failed to attach to process. Killing.");
+                proc.Kill();
+            }
+            return proc.ExitCode;
         }
     }
 
@@ -135,6 +173,14 @@ namespace Golem.Yagna
     {
 
         public GolemProcessException(string message)
+            : base(message)
+        {
+        }
+    }
+
+    public class GolemException : Exception, IGolemException
+    {
+        public GolemException(string message)
             : base(message)
         {
         }

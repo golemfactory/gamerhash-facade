@@ -85,6 +85,23 @@
             }
         },
         {
+            "name": "Package builder (publish)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "publish",
+            "program": "${workspaceFolder}/Golem.Package/bin/Debug/net7.0/Golem.Package.dll",
+            "args": [
+                "build", "--target", "modules", 
+                "--dll-file-patterns", "*.dll", 
+                "--dll-dir", "${workspaceFolder}/Golem/bin/Debug/net7.0/publish"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "env": {
+            }
+        },
+        {
             "name": "CLI",
             "type": "coreclr",
             "request": "launch",

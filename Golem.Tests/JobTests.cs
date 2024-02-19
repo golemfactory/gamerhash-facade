@@ -117,7 +117,7 @@ namespace Golem.Tests
 
             // Job starts with `Idle` it might switch into `DownloadingModel` state and then transitions to `Computing`
             var currentState = await SkipMatching(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle, 30_000);
-            if(currentState == JobStatus.DownloadingModel)
+            if (currentState == JobStatus.DownloadingModel)
             {
                 Assert.Equal(JobStatus.Computing, await SkipMatching(jobStatusChannel, (JobStatus s) => s == JobStatus.DownloadingModel, 30_000));
             }
@@ -125,7 +125,7 @@ namespace Golem.Tests
             {
                 Assert.Equal(JobStatus.Computing, currentState);
             }
-            
+
             Assert.Same(currentJob, golem.CurrentJob);
             Assert.NotNull(currentJob);
             Assert.Equal(currentJob.RequestorId, _requestorAppKey?.Id);
