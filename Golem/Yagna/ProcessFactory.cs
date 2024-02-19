@@ -146,7 +146,7 @@ namespace Golem.Yagna
                 try
                 {
                     logger?.LogInformation("Waiting for process to stop.");
-                    await cmd.Process.WaitForExitAsync();
+                    await proc.WaitForExitAsync();
                     logger?.LogInformation("Process stopped.");
                 }
                 catch (TaskCanceledException err)
