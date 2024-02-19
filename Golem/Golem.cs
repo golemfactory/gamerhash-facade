@@ -18,8 +18,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
-
-
     public class Golem : IGolem, IAsyncDisposable
     {
         private YagnaService Yagna { get; set; }
@@ -47,12 +45,21 @@ namespace Golem
             }
             set
             {
-                _golemPrice.StartPrice = value.StartPrice;
-                _golemPrice.GpuPerHour = value.GpuPerHour;
-                _golemPrice.EnvPerHour = value.EnvPerHour;
-                _golemPrice.NumRequests = value.NumRequests;
+                if (
+                    _golemPrice.StartPrice != value.StartPrice
+                    || _golemPrice.GpuPerHour != value.GpuPerHour
+                    || _golemPrice.EnvPerHour != value.EnvPerHour
+                    || _golemPrice.NumRequests != value.NumRequests
+                )
+                {
+                    // Set individual values, because we don't want to drop GolemPrice object here.
+                    _golemPrice.StartPrice = value.StartPrice;
+                    _golemPrice.GpuPerHour = value.GpuPerHour;
+                    _golemPrice.EnvPerHour = value.EnvPerHour;
+                    _golemPrice.NumRequests = value.NumRequests;
 
-                OnPropertyChanged();
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -63,8 +70,11 @@ namespace Golem
             get => _networkSpeed;
             set
             {
-                _networkSpeed = value;
-                OnPropertyChanged();
+                if (_networkSpeed != value)
+                {
+                    _networkSpeed = value;
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -75,8 +85,12 @@ namespace Golem
             get { return status; }
             set
             {
-                status = value;
-                OnPropertyChanged();
+                if (status != value)
+                {
+                    _logger.LogInformation($"Status change from {status} into {value}");
+                    status = value;
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -92,14 +106,23 @@ namespace Golem
             get
             {
                 var walletAddress = ProviderConfig.WalletAddress;
-                if (walletAddress == null || walletAddress.Length == 0)
+                if (String.IsNullOrEmpty(walletAddress))
+                {
+                    _logger.LogInformation("No WalletAddress set. Using NodeId as a wallet address.");
                     walletAddress = Yagna.Id?.NodeId;
+                }
                 return walletAddress ?? "";
             }
 
             set
             {
-                ProviderConfig.WalletAddress = value;
+                _logger.LogInformation($"Set WalletAddress '{value}'");
+                if (Status == GolemStatus.Ready)
+                {
+                    _logger.LogInformation($"Init Payment (wallet changed) {value}");
+                    Yagna.PaymentService.Init(value);
+                }
+                ProviderConfig.UpdateAccount(value, () => OnPropertyChanged(nameof(WalletAddress)));
             }
         }
 
@@ -136,7 +159,7 @@ namespace Golem
 
             var (yagnaCancellationTokenSource, providerCancellationTokenSource) = resetTokens();
 
-            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions();
+            var yagnaOptions = Yagna.StartupOptions();
 
             _logger.LogInformation("Starting Golem's Yagna");
             var success = await StartupYagnaAsync(yagnaOptions, yagnaProcessExitHandler(yagnaCancellationTokenSource, providerCancellationTokenSource), yagnaCancellationTokenSource.Token);
@@ -146,22 +169,19 @@ namespace Golem
                 var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
                 if (defaultKey is not null)
                 {
-                    HandleStartupProvider(yagnaOptions, providerProcessExitHandler(yagnaOptions, yagnaCancellationTokenSource.Token), providerCancellationTokenSource.Token);
+                    HandleStartupProvider(yagnaOptions, providerProcessExitHandler(yagnaCancellationTokenSource.Token), providerCancellationTokenSource.Token);
                 }
             }
             else
             {
-                if (yagnaCancellationTokenSource.Token.IsCancellationRequested)
-                    Status = GolemStatus.Off;
-                else
-                    Status = GolemStatus.Error;
+                Status = yagnaCancellationTokenSource.Token.IsCancellationRequested ? GolemStatus.Off : GolemStatus.Error;
             }
 
             OnPropertyChanged(nameof(WalletAddress));
             OnPropertyChanged(nameof(NodeId));
         }
 
-        void HandleStartupProvider(YagnaStartupOptions yagnaOptions, Action<Task<CommandResult>> exitHandler, CancellationToken providerCancellationToken)
+        void HandleStartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken providerCancellationToken)
         {
             _logger.LogInformation("Starting Golem's Provider");
             Status = StartupProvider(yagnaOptions, exitHandler, providerCancellationToken)
@@ -171,21 +191,15 @@ namespace Golem
                     : GolemStatus.Error;
         }
 
-        Action<Task<CommandResult>> yagnaProcessExitHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
+        Action<int> yagnaProcessExitHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
         {
-            Action<Task<CommandResult>> exitHandler = (Task<CommandResult> cmdResult) => { throw new Exception("Uninitialized exit handler"); };
-            exitHandler = (Task<CommandResult> cmdResult) =>
+            return (int exitCode) =>
             {
                 _logger.LogInformation("Handling Yagna process shutdown");
-                if (cmdResult.IsFaulted && !yagnaCancellationTokenSource.IsCancellationRequested)
+                if (exitCode != 0)
                 {
                     Status = GolemStatus.Error;
                     _logger.LogError("Yagna process failed");
-                    var error = cmdResult.Exception;
-                    if (error != null)
-                    {
-                        _logger.LogError($"Error: {error.Message}");
-                    }
                 }
                 else if (Status != GolemStatus.Error)
                 {
@@ -195,24 +209,17 @@ namespace Golem
                 safeCancel(yagnaCancellationTokenSource);
                 safeCancel(providerCancellationTokenSource);
             };
-            return exitHandler;
         }
 
-        Action<Task<CommandResult>> providerProcessExitHandler(YagnaStartupOptions yagnaOptions, CancellationToken providerCancellationToken)
+        Action<int> providerProcessExitHandler(CancellationToken providerCancellationToken)
         {
-            Action<Task<CommandResult>> exitHandler = (Task<CommandResult> cmdResult) => { throw new Exception("Uninitialized exit handler"); };
-            exitHandler = (Task<CommandResult> cmdResult) =>
+            return (int exitCode) =>
             {
                 _logger.LogInformation("Handling Provider process shutdown");
-                if (cmdResult.IsFaulted && !providerCancellationToken.IsCancellationRequested)
+                if (exitCode != 0)
                 {
                     Status = GolemStatus.Error;
                     _logger.LogError("Provider process failed");
-                    var error = cmdResult.Exception;
-                    if (error != null)
-                    {
-                        _logger.LogError($"Error: {error.Message}");
-                    }
                 }
                 else if (Status != GolemStatus.Error)
                 {
@@ -220,7 +227,6 @@ namespace Golem
                     Status = GolemStatus.Off;
                 }
             };
-            return exitHandler;
         }
 
         void safeCancel(CancellationTokenSource cancellationTokenSource)
@@ -239,15 +245,20 @@ namespace Golem
         {
             _logger.LogInformation("Stopping Golem");
 
-            _logger.LogInformation("Stopping Golem's Provider");
-            if (!_providerCancellationtokenSource.IsCancellationRequested)
-                _providerCancellationtokenSource?.Cancel();
             await Provider.Stop();
-
-            _logger.LogInformation("Stopping Golem's Yagna");
-            if (!_yagnaCancellationtokenSource.IsCancellationRequested)
-                _yagnaCancellationtokenSource?.Cancel();
             await Yagna.Stop();
+
+            try
+            {
+                if (!_providerCancellationtokenSource.IsCancellationRequested)
+                    _providerCancellationtokenSource.Cancel();
+                if (!_yagnaCancellationtokenSource.IsCancellationRequested)
+                    _yagnaCancellationtokenSource.Cancel();
+            }
+            catch (Exception err)
+            {
+                _logger.LogError($"Failed to cancel Golem process. Err {err}");
+            }
 
             Status = GolemStatus.Off;
 
@@ -282,7 +293,7 @@ namespace Golem
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
 
-            this.Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
+            Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
         }
 
         private void GolemPrice_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
@@ -293,7 +304,7 @@ namespace Golem
             }
         }
 
-        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<Task<CommandResult>> exitHandler, CancellationToken cancellationToken)
+        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
         {
             var success = Yagna.Run(yagnaOptions, exitHandler, cancellationToken);
 
@@ -309,26 +320,26 @@ namespace Golem
 
             try
             {
-                _logger.LogInformation($"Init Payment (node id) {yagnaOptions.Network} {yagnaOptions.PaymentDriver.Id} {account}");
-                Yagna.PaymentService.Init(yagnaOptions.Network, yagnaOptions.PaymentDriver.Id, account ?? "");
+                _logger.LogInformation($"Init Payment (node id) {account}");
+                Yagna.PaymentService.Init(account ?? "");
 
                 var walletAddress = WalletAddress;
                 if (walletAddress != account)
                 {
-                    _logger.LogInformation($"Init Payment (wallet) {yagnaOptions.Network} {yagnaOptions.PaymentDriver.Id} {walletAddress}");
-                    Yagna.PaymentService.Init(yagnaOptions.Network, yagnaOptions.PaymentDriver.Id, walletAddress ?? "");
+                    _logger.LogInformation($"Init Payment (wallet) {walletAddress}");
+                    Yagna.PaymentService.Init(walletAddress ?? "");
                 }
             }
             catch (Exception e)
             {
-                _logger.LogError("Payment init failed: {}", e);
+                _logger.LogError("Payment init failed: {0}", e);
                 return false;
             }
 
             return success;
         }
 
-        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<Task<CommandResult>> exitHandler, CancellationToken cancellationToken)
+        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
         {
             try
             {
@@ -338,7 +349,7 @@ namespace Golem
             }
             catch (Exception e)
             {
-                _logger.LogError("Failed to start provider: {}", e);
+                _logger.LogError("Failed to start provider: {0}", e);
                 return false;
             }
         }
@@ -376,7 +387,7 @@ namespace Golem
                     //sanity check
                     if (meInfo != null)
                     {
-                        if (identity == null || identity.Length == 0)
+                        if (String.IsNullOrEmpty(identity))
                             identity = meInfo.Identity;
                         break;
                     }

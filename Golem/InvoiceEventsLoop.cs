@@ -62,7 +62,7 @@ class InvoiceEventsLoop
                         var result = await invoiceEventsResponse.Content.ReadAsStringAsync();
                         if (result != null)
                         {
-                            _logger.LogInformation("InvoiceEvent: {}", result);
+                            _logger.LogInformation("InvoiceEvent: {0}", result);
                             var invoiceEvents = JsonSerializer.Deserialize<List<InvoiceEvent>>(result, _serializerOptions);
                             if (invoiceEvents != null && invoiceEvents.Count > 0)
                             {
@@ -140,7 +140,7 @@ class InvoiceEventsLoop
                 if (result != null)
                 {
                     invoice = JsonSerializer.Deserialize<Invoice>(result, _serializerOptions);
-                    _logger.LogInformation("Invoice[{}]: {}", id, invoice);
+                    _logger.LogInformation("Invoice[{0}]: {1}", id, invoice);
                 }
             }
         }
@@ -162,7 +162,7 @@ class InvoiceEventsLoop
                 if (result != null)
                 {
                     payments = JsonSerializer.Deserialize<List<Payment>>(result, _serializerOptions);
-                    _logger.LogDebug("payments {}", payments != null ? payments.SelectMany(x => x.AgreementPayments.Select(y => y.AgreementId + ": " + y.Amount)).ToList() : "(null)");
+                    _logger.LogDebug("payments {0}", payments != null ? payments.SelectMany(x => x.AgreementPayments.Select(y => y.AgreementId + ": " + y.Amount)).ToList() : "(null)");
                 }
             }
         }
