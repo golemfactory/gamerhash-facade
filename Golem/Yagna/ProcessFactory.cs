@@ -140,13 +140,13 @@ namespace Golem.Yagna
                 {
                     logger?.LogInformation("Signaled process to stop");
                 }
+
                 CancellationTokenSource stopTimeoutTokenSrc = new CancellationTokenSource();
-                var stopTimeoutToken = stopTimeoutTokenSrc.Token;
                 stopTimeoutTokenSrc.CancelAfter(stopTimeoutMs);
                 try
                 {
                     logger?.LogInformation("Waiting for process to stop.");
-                    cmd.Wait();
+                    await cmd.Process.WaitForExitAsync();
                     logger?.LogInformation("Process stopped.");
                 }
                 catch (TaskCanceledException err)
