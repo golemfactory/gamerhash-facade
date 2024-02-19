@@ -218,14 +218,14 @@ class ActivityLoop
                     }
                     else
                     {
-                        _logger.LogError("Unable to deserialize message: {}", line);
+                        _logger.LogError("Unable to deserialize message: {0}", line);
                     }
                 }
             }
             catch (Exception error)
             {
                 if (!token.IsCancellationRequested)
-                    _logger.LogError("Failed to read message: {}", error);
+                    _logger.LogError("Failed to read message: {0}", error);
                 break;
             }
             yield return messageBuilder.ToString();
