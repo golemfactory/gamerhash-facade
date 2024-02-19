@@ -2,12 +2,15 @@
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+
 using Golem.GolemUI.Src;
 using Golem.Tools;
 using Golem.Yagna;
 using Golem.Yagna.Types;
+
 using GolemLib;
 using GolemLib.Types;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -42,12 +45,17 @@ namespace Golem
             }
             set
             {
-                _golemPrice.StartPrice = value.StartPrice;
-                _golemPrice.GpuPerHour = value.GpuPerHour;
-                _golemPrice.EnvPerHour = value.EnvPerHour;
-                _golemPrice.NumRequests = value.NumRequests;
+                if (!value.Equals(_golemPrice))
+                {
+                    _golemPrice.StartPrice = value.StartPrice;
+                    _golemPrice.GpuPerHour = value.GpuPerHour;
+                    _golemPrice.EnvPerHour = value.EnvPerHour;
+                    _golemPrice.NumRequests = value.NumRequests;
 
-                OnPropertyChanged();
+                    // Golem expresses counters as GLMs per second. Facade API shows GLMs per hour.
+                    this.ProviderConfig.GolemPrice = value.ConvertToSeconds();
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -180,7 +188,8 @@ namespace Golem
         Action<int> providerProcessExitHandler(YagnaStartupOptions yagnaOptions, CancellationToken providerCancellationToken)
         {
             Action<int> exitHandler = (int exitCode) => { throw new Exception("Uninitialized exit handler"); };
-            exitHandler = (int exitCode) => {
+            exitHandler = (int exitCode) =>
+            {
                 _logger.LogInformation("Handling Provider process exit");
                 if (!providerCancellationToken.IsCancellationRequested)
                 {
@@ -197,9 +206,9 @@ namespace Golem
         public async Task Stop()
         {
             _logger.LogInformation("Stopping Golem");
-            
+
             _logger.LogInformation("Stopping Golem's Provider");
-            _providerCancellationtokenSource?.Cancel();            
+            _providerCancellationtokenSource?.Cancel();
             await Provider.Stop();
 
             _logger.LogInformation("Stopping Golem's Yagna");
@@ -237,16 +246,6 @@ namespace Golem
             {
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
-
-            this.Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
-        }
-
-        private void GolemPrice_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
-        {
-            if (sender is GolemPrice price)
-            {
-                ProviderConfig.GolemPrice = price;
-            }
         }
 
         private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
@@ -265,7 +264,7 @@ namespace Golem
 
             try
             {
-                _logger.LogInformation("Init Payment {} {} {}",yagnaOptions.Network, PaymentDriver.ERC20next.Id, account);
+                _logger.LogInformation("Init Payment {} {} {}", yagnaOptions.Network, PaymentDriver.ERC20next.Id, account);
                 Yagna.PaymentService.Init(yagnaOptions.Network, PaymentDriver.ERC20next.Id, account ?? "");
             }
             catch (Exception e)

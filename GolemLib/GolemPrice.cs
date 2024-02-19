@@ -83,6 +83,20 @@ public class GolemPrice : INotifyPropertyChanged, IEquatable<GolemPrice>
         }
     }
 
+    public GolemPrice ConvertToSeconds()
+    {
+        this.EnvPerHour *= 3600;
+        this.GpuPerHour *= 3600;
+        return this;
+    }
+
+    public GolemPrice ConvertToHours()
+    {
+        this.EnvPerHour /= 3600;
+        this.GpuPerHour /= 3600;
+        return this;
+    }
+
     public Dictionary<string, decimal> GolemCounters()
     {
         return new Dictionary<string, decimal>
@@ -91,6 +105,26 @@ public class GolemPrice : INotifyPropertyChanged, IEquatable<GolemPrice>
             { "golem.usage.duration_sec", this.EnvPerHour },
             { "golem.usage.gpu-sec", this.GpuPerHour },
             { "Initial", this.StartPrice }
+        };
+    }
+
+    public static GolemPrice From(decimal? InitialPrice, Dictionary<string, decimal> coeffs)
+    {
+        if (!coeffs.TryGetValue("ai-runtime.requests", out var numRequests))
+            numRequests = 0;
+        if (!coeffs.TryGetValue("golem.usage.duration_sec", out var duration))
+            duration = 0;
+        if (!coeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
+            gpuSec = 0;
+
+        var initPrice = InitialPrice ?? 0m;
+
+        return new GolemPrice
+        {
+            EnvPerHour = duration,
+            StartPrice = initPrice,
+            GpuPerHour = gpuSec,
+            NumRequests = numRequests
         };
     }
 

@@ -35,22 +35,7 @@ namespace Golem.Yagna
 
         public GolemPrice ToPrice()
         {
-            if (!this.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
-                numRequests = 0;
-            if (!this.UsageCoeffs.TryGetValue("golem.usage.duration_sec", out var duration))
-                duration = 0;
-            if (!this.UsageCoeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
-                gpuSec = 0;
-
-            var initPrice = this.InitialPrice ?? 0m;
-
-            return new GolemPrice
-            {
-                EnvPerHour = duration,
-                StartPrice = initPrice,
-                GpuPerHour = gpuSec,
-                NumRequests = numRequests
-            };
+            return GolemPrice.From(this.InitialPrice, this.UsageCoeffs);
         }
     }
 
@@ -92,15 +77,8 @@ namespace Golem.Yagna
                 var presetName = defaultPresetName(exeUnit);
                 if (!presets.ContainsKey(presetName))
                 {
-                    var coeffs = new Dictionary<string, decimal>
-                    {
-                        { "ai-runtime.requests", 0 },
-                        { "golem.usage.duration_sec", 0 },
-                        { "golem.usage.gpu-sec", 0 },
-                        { "Initial", 0 }
-                    };
-
-                    var preset = new Preset(presetName, exeUnit.Name, coeffs);
+                    var coeffs = new GolemPrice { EnvPerHour = 0, GpuPerHour = 0, NumRequests = 0, StartPrice = 0 };
+                    var preset = new Preset(presetName, exeUnit.Name, coeffs.GolemCounters());
 
                     AddPreset(preset);
                 }
