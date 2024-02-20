@@ -87,21 +87,7 @@ namespace Golem.Yagna
 
         internal string ExecToText(params string[] arguments)
         {
-            var args = arguments.ToList();
-            var env = Env.Build();
-            try
-            {
-                var process = ProcessFactory.StartProcess(_yaExePath, args, env, true);
-                var result = process.StandardOutput.ReadToEnd();
-                var err = process.StandardError.ReadToEnd();
-                _logger?.LogInformation("Execution result. StdOut: {0}\nStdErr {1}", result, err);
-                return result;
-            }
-            catch (Exception e)
-            {
-                _logger?.LogError(e, "Failed to execute Provider cmd. Args: {0}", args);
-                throw new GolemProcessException(string.Format("Failed to execute Provider command: {0}", e.Message));
-            }
+            return new ProcessFactory(_yaExePath, _logger).WithEnv(Env.Build()).ExecToText(arguments);
         }
 
         internal async Task<string> ExecToTextAsync(params string[] arguments)
@@ -111,15 +97,12 @@ namespace Golem.Yagna
 
         internal T? Exec<T>(params string[] arguments) where T : class
         {
-            var text = ExecToText(arguments);
-            var options = new JsonSerializerOptionsBuilder()
-                .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
-                .Build();
-            return JsonSerializer.Deserialize<T>(text, options);
+            return new ProcessFactory(_yaExePath, _logger).WithEnv(Env.Build()).Exec<T>(arguments);
         }
 
         internal async Task<T?> ExecAsync<T>(params string[] arguments) where T : class
         {
+            // TODO: This should be funciton in ProcessFactory.
             var text = await ExecToTextAsync(arguments);
             var options = new JsonSerializerOptionsBuilder()
                 .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)

@@ -5,11 +5,14 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 using Medallion.Shell;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Golem.Tools;
 
 namespace Golem.Yagna
 {
@@ -60,6 +63,23 @@ namespace Golem.Yagna
 
     public class ProcessFactory
     {
+        public string Executable { get; set; }
+        public Dictionary<string, string> Env { get; set; }
+        private ILogger? Logger { get; set; }
+
+        public ProcessFactory(string executable, ILogger? logger = null)
+        {
+            Executable = executable;
+            Logger = logger;
+            Env = new Dictionary<string, string>();
+        }
+
+        public ProcessFactory WithEnv(Dictionary<string, string> env)
+        {
+            Env = env;
+            return this;
+        }
+
         public static Process StartProcess(string executable, IEnumerable<object> args, Dictionary<string, string> env, bool redirectOutput = false)
         {
 
@@ -150,7 +170,7 @@ namespace Golem.Yagna
                     await proc.WaitForExitAsync(stopTimeoutToken);
                     logger?.LogInformation("Process stopped.");
                 }
-                catch (TaskCanceledException err)
+                catch (TaskCanceledException)
                 {
                     logger?.LogWarning($"Failed to stop process. Killing it.");
                     cmd.Kill();
@@ -162,6 +182,32 @@ namespace Golem.Yagna
                 proc.Kill();
             }
             return proc.ExitCode;
+        }
+
+        public string ExecToText(IEnumerable<object> args)
+        {
+            try
+            {
+                var process = StartProcess(Executable, args, Env, true);
+                var result = process.StandardOutput.ReadToEnd();
+                var err = process.StandardError.ReadToEnd();
+                Logger?.LogInformation("Execution result. StdOut: {0}\nStdErr {1}", result, err);
+                return result;
+            }
+            catch (Exception e)
+            {
+                Logger?.LogError(e, "Failed to execute cmd. Args: {0}", args);
+                throw new GolemProcessException(string.Format("Failed to execute command: {0}", e.Message));
+            }
+        }
+
+        public T? Exec<T>(IEnumerable<object> args) where T : class
+        {
+            var text = ExecToText(args);
+            var options = new JsonSerializerOptionsBuilder()
+                .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
+                .Build();
+            return JsonSerializer.Deserialize<T>(text, options);
         }
     }
 

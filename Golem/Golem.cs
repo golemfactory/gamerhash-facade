@@ -151,7 +151,7 @@ namespace Golem
         public async Task Start()
         {
             _logger.LogInformation("Starting Golem");
-            if (Status == GolemStatus.Starting)
+            if (IsRunning())
                 return;
 
             Status = GolemStatus.Starting;
