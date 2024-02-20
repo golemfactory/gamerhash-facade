@@ -229,7 +229,7 @@ namespace Golem.Yagna
             process.WaitForExitAsync(cancellationToken)
                 .ContinueWith(result =>
             {
-                var exitCode = ProviderProcess?.ExitCode ?? throw new GolemException("Unable to get Provider process exit code");;
+                var exitCode = ProviderProcess?.ExitCode ?? throw new GolemException("Unable to get Provider process exit code");
                 ClearHandle();
                 exitHandler(exitCode);
             });
@@ -241,7 +241,6 @@ namespace Golem.Yagna
             cancellationToken.Register(async () =>
             {
                 _logger.LogInformation("Canceling Provider process");
-                _logger.LogInformation("Nope");
                 await Stop();
             });
 

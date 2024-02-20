@@ -221,11 +221,6 @@ namespace Golem
                     Status = GolemStatus.Error;
                     _logger.LogError("Provider process failed");
                 }
-                else if (Status != GolemStatus.Error)
-                {
-                    // `Off` only if status was not already set to `Error`.
-                    Status = GolemStatus.Off;
-                }
             };
         }
 
