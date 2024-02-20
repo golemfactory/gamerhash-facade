@@ -152,7 +152,7 @@ namespace Golem.Yagna
                 }
                 catch (TaskCanceledException err)
                 {
-                    logger?.LogWarning($"Failed to stop process. Killing it. Err: {err.Message}");
+                    logger?.LogWarning($"Failed to stop process. Killing it.");
                     cmd.Kill();
                 }
             }

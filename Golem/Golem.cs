@@ -449,5 +449,11 @@ namespace Golem
             _providerCancellationtokenSource = new CancellationTokenSource();
             return (_yagnaCancellationtokenSource, _providerCancellationtokenSource);
         }
+
+        private bool IsRunning()
+        {
+            return Status == GolemStatus.Starting ||
+                Status == GolemStatus.Ready;
+        }
     }
 }
