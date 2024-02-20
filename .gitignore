@@ -38,9 +38,12 @@ Mock/obj/
 /MockGUI/bin/
 /MockGUI/obj/
 /modules/
+/modules-*/
 /package/
 /releases/
 
 /example/ai-requestor/*.log
 /example/ai-requestor/.venv/
 /example/ai-requestor/dist
+
+output.png

@@ -245,8 +245,8 @@ namespace Golem
         {
             _logger.LogInformation("Stopping Golem");
 
-            await Provider.Stop();
-            await Yagna.Stop();
+            await Provider.Stop(5_000);
+            await Yagna.Stop(30_000);
 
             try
             {
