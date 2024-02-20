@@ -31,8 +31,6 @@ namespace Golem
 
         private readonly ILogger _logger;
 
-        private readonly HttpClient _httpClient;
-
         private readonly GolemPrice _golemPrice;
 
         private readonly Jobs _jobs;
@@ -283,11 +281,6 @@ namespace Golem
             _golemPrice = ProviderConfig.GolemPrice;
             _jobs = new Jobs(SetCurrentJob, loggerFactory);
 
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
-            };
-
             Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
         }
 
@@ -306,12 +299,10 @@ namespace Golem
             if (!success)
                 return false;
 
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
+            var account = await Yagna.WaitForIdentityAsync(cancellationToken);
 
-            var account = await WaitForIdentityAsync(cancellationToken);
-
-            _activityLoop = StartActivityLoop(cancellationToken);
-            _invoiceEventsLoop = StartInvoiceEventsLoop(cancellationToken);
+            _activityLoop = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs);
+            _invoiceEventsLoop = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs);
 
             try
             {
@@ -347,70 +338,6 @@ namespace Golem
                 _logger.LogError("Failed to start provider: {0}", e);
                 return false;
             }
-        }
-
-        async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken)
-        {
-            string? identity = null;
-
-            //yagna is starting and /me won't work until all services are running
-            for (int tries = 0; tries < 300; ++tries)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                    return null;
-
-                Thread.Sleep(300);
-
-                if (Yagna.HasExited) // yagna has stopped
-                {
-                    throw new Exception("Failed to start yagna ...");
-                }
-
-                try
-                {
-                    var response = _httpClient.GetAsync($"/me", cancellationToken).Result;
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
-                    }
-                    var txt = await response.Content.ReadAsStringAsync();
-                    var options = new JsonSerializerOptionsBuilder()
-                                    .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
-                                    .Build();
-
-                    MeInfo? meInfo = JsonSerializer.Deserialize<MeInfo>(txt, options) ?? null;
-                    //sanity check
-                    if (meInfo != null)
-                    {
-                        if (String.IsNullOrEmpty(identity))
-                            identity = meInfo.Identity;
-                        break;
-                    }
-                    throw new Exception("Failed to get key");
-
-                }
-                catch (Exception)
-                {
-                    // consciously swallow the exception... presumably REST call error...
-                }
-            }
-            return identity;
-        }
-
-        private Task StartActivityLoop(CancellationToken token)
-        {
-            token.Register(_httpClient.CancelPendingRequests);
-            return new ActivityLoop(_httpClient, token, _logger).Start(
-                SetCurrentJob,
-                _jobs,
-                token
-            );
-        }
-
-        private Task StartInvoiceEventsLoop(CancellationToken token)
-        {
-            token.Register(_httpClient.CancelPendingRequests);
-            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(_jobs.UpdatePaymentStatus, _jobs.UpdatePaymentConfirmation);
         }
 
         private void SetCurrentJob(Job? job)

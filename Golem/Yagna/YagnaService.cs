@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 using System.Data;
+using System.Net.Http.Headers;
 
 namespace Golem.Yagna
 {
@@ -59,6 +60,7 @@ namespace Golem.Yagna
         private readonly string _yaExePath;
         private readonly string? _dataDir;
         private static Process? YagnaProcess { get; set; }
+        private readonly HttpClient _httpClient;
         private readonly ILogger _logger;
 
         private EnvironmentBuilder Env
@@ -83,6 +85,10 @@ namespace Golem.Yagna
             {
                 throw new Exception($"File not found: {_yaExePath}");
             }
+            _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
+            };
         }
 
         internal string ExecToText(params string[] arguments)
@@ -166,6 +172,8 @@ namespace Golem.Yagna
 
         public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
         {
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
+
             if (YagnaProcess != null || cancellationToken.IsCancellationRequested)
             {
                 return false;
@@ -221,6 +229,77 @@ namespace Golem.Yagna
             YagnaProcess = null;
         }
 
+        public async Task<MeInfo?> Me(CancellationToken cancellationToken)
+        {
+            var response = _httpClient.GetAsync($"/me", cancellationToken).Result;
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
+            }
+            var txt = await response.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptionsBuilder()
+                            .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
+                            .Build();
+
+            return JsonSerializer.Deserialize<MeInfo>(txt, options) ?? null;
+        }
+
+        public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken)
+        {
+            string? identity = null;
+
+            //yagna is starting and /me won't work until all services are running
+            for (int tries = 0; tries < 300; ++tries)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    return null;
+
+                Thread.Sleep(300);
+
+                if (HasExited) // yagna has stopped
+                {
+                    throw new Exception("Failed to start yagna ...");
+                }
+
+                try
+                {
+                    MeInfo? meInfo = await Me(cancellationToken);
+                    //sanity check
+                    if (meInfo != null)
+                    {
+                        if (String.IsNullOrEmpty(identity))
+                            identity = meInfo.Identity;
+                        break;
+                    }
+                    throw new Exception("Failed to get key");
+
+                }
+                catch (Exception)
+                {
+                    // consciously swallow the exception... presumably REST call error...
+                }
+            }
+            return identity;
+        }
+
+        /// TODO: Reconsider API of this function.
+        public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobsUpdater jobs)
+        {
+            token.Register(_httpClient.CancelPendingRequests);
+            return new ActivityLoop(_httpClient, token, _logger).Start(
+                setCurrentJob,
+                jobs,
+                token
+            );
+        }
+
+        /// TODO: Reconsider API of this function.
+        public Task StartInvoiceEventsLoop(CancellationToken token, IJobsUpdater jobs)
+        {
+            token.Register(_httpClient.CancelPendingRequests);
+            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(jobs.UpdatePaymentStatus, jobs.UpdatePaymentConfirmation);
+        }
+
         private void BindOutputEventHandlers(Process proc)
         {
             proc.OutputDataReceived += OnOutputDataRecv;
@@ -233,6 +312,7 @@ namespace Golem.Yagna
         {
             _logger.LogInformation($"{e.Data}");
         }
+
         private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
         {
             _logger.LogInformation($"{e.Data}");
