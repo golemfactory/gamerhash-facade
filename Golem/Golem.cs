@@ -49,12 +49,12 @@ namespace Golem
                 {
                     // Set individual values, because we don't want to drop GolemPrice object here.
                     _golemPrice.StartPrice = value.StartPrice;
-                    _golemPrice.GpuPerHour = value.GpuPerHour;
-                    _golemPrice.EnvPerHour = value.EnvPerHour;
+                    _golemPrice.GpuPerSec = value.GpuPerSec;
+                    _golemPrice.EnvPerSec = value.EnvPerSec;
                     _golemPrice.NumRequests = value.NumRequests;
 
                     // Golem expresses counters as GLMs per second. Facade API shows GLMs per hour.
-                    this.ProviderConfig.GolemPrice = value.ConvertToSeconds();
+                    this.ProviderConfig.GolemPrice = value;
                     OnPropertyChanged();
                 }
             }

@@ -111,8 +111,8 @@ namespace Golem.Tests
             var initialValue = new GolemPrice
             {
                 StartPrice = 1,
-                GpuPerHour = 1,
-                EnvPerHour = 1,
+                GpuPerSec = 1,
+                EnvPerSec = 1,
                 NumRequests = 1
             };
             golem.Price = initialValue;
@@ -120,8 +120,8 @@ namespace Golem.Tests
             var property = new GolemPrice
             {
                 StartPrice = 2,
-                GpuPerHour = 2,
-                EnvPerHour = 2,
+                GpuPerSec = 2,
+                EnvPerSec = 2,
                 NumRequests = 2
             };
             Action<GolemPrice?> update = (v) =>
@@ -135,8 +135,8 @@ namespace Golem.Tests
             Assert.Equivalent(new GolemPrice
             {
                 StartPrice = 2,
-                GpuPerHour = 2,
-                EnvPerHour = 2,
+                GpuPerSec = 2,
+                EnvPerSec = 2,
                 NumRequests = 2
             }, property);
 
@@ -144,8 +144,8 @@ namespace Golem.Tests
             var newValue = new GolemPrice
             {
                 StartPrice = 3,
-                GpuPerHour = 3,
-                EnvPerHour = 3,
+                GpuPerSec = 3,
+                EnvPerSec = 3,
                 NumRequests = 3
             };
             golem.Price = newValue;

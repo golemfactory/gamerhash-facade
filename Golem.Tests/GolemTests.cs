@@ -241,7 +241,7 @@ namespace Golem.Tests
             golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
             var price = golem.Price;
 
-            Assert.Equal(copyPresetGpuPriceOriginalValue, price.GpuPerHour);
+            Assert.Equal(copyPresetGpuPriceOriginalValue, price.GpuPerSec);
 
             // Verify if "dummy_copy" gpu price got reverted in preset file.
             copyPresetGpuPriceUpdatedValue = parseGpuPriceFromPreset(presetsPath, presetName);
@@ -270,18 +270,18 @@ namespace Golem.Tests
             Action<decimal> updatePrice = (v) => price = v;
 
             golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.StartPrice), updatePrice, loggerFactory).Subscribe();
-            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.GpuPerHour), updatePrice, loggerFactory).Subscribe();
-            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.EnvPerHour), updatePrice, loggerFactory).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.GpuPerSec), updatePrice, loggerFactory).Subscribe();
+            golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.EnvPerSec), updatePrice, loggerFactory).Subscribe();
             golem.Price.PropertyChanged += new PropertyChangedHandler<GolemPrice, decimal>(nameof(GolemPrice.NumRequests), updatePrice, loggerFactory).Subscribe();
 
             //Assert property changes
             golem.Price.StartPrice = 0.005m;
             Assert.Equal(0.005m, price);
 
-            golem.Price.GpuPerHour = 0.006m;
+            golem.Price.GpuPerSec = 0.006m;
             Assert.Equal(0.006m, price);
 
-            golem.Price.EnvPerHour = 0.007m;
+            golem.Price.EnvPerSec = 0.007m;
             Assert.Equal(0.007m, price);
 
             golem.Price.NumRequests = 0.008m;
@@ -289,8 +289,8 @@ namespace Golem.Tests
 
             //Assert property returns correct value
             Assert.Equal(0.005m, golem.Price.StartPrice);
-            Assert.Equal(0.006m, golem.Price.GpuPerHour);
-            Assert.Equal(0.007m, golem.Price.EnvPerHour);
+            Assert.Equal(0.006m, golem.Price.GpuPerSec);
+            Assert.Equal(0.007m, golem.Price.EnvPerSec);
             Assert.Equal(0.008m, golem.Price.NumRequests);
         }
 

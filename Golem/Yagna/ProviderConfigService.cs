@@ -89,8 +89,8 @@ namespace Golem
                 return new Dictionary<string, decimal>
                     {
                         { "ai-runtime.requests", price.NumRequests },
-                        { "golem.usage.duration_sec", price.EnvPerHour },
-                        { "golem.usage.gpu-sec", price.GpuPerHour },
+                        { "golem.usage.duration_sec", price.EnvPerSec },
+                        { "golem.usage.gpu-sec", price.GpuPerSec },
                         { "Initial", price.StartPrice }
                     };
             }
@@ -108,9 +108,9 @@ namespace Golem
 
                 return new GolemPrice
                 {
-                    EnvPerHour = duration,
+                    EnvPerSec = duration,
                     StartPrice = initPrice,
-                    GpuPerHour = gpuSec,
+                    GpuPerSec = gpuSec,
                     NumRequests = numRequests
                 };
             }

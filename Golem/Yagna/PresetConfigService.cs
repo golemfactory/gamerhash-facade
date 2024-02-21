@@ -77,7 +77,7 @@ namespace Golem.Yagna
                 var presetName = defaultPresetName(exeUnit);
                 if (!presets.ContainsKey(presetName))
                 {
-                    var coeffs = new GolemPrice { EnvPerHour = 0, GpuPerHour = 0, NumRequests = 0, StartPrice = 0 };
+                    var coeffs = new GolemPrice { EnvPerSec = 0, GpuPerSec = 0, NumRequests = 0, StartPrice = 0 };
                     var preset = new Preset(presetName, exeUnit.Name, coeffs.GolemCounters());
 
                     AddPreset(preset);

@@ -15,37 +15,37 @@ public class GolemPrice : INotifyPropertyChanged, IEquatable<GolemPrice>
 {
 
     private decimal startPrice;
-    private decimal gpuPerHour;
-    private decimal envPerHour;
+    private decimal gpuPerSec;
+    private decimal envPerSec;
     private decimal numRequests;
 
-    public decimal GpuPerHour
+    public decimal GpuPerSec
     {
         get
         {
-            return gpuPerHour;
+            return gpuPerSec;
         }
         set
         {
-            if (gpuPerHour != value)
+            if (gpuPerSec != value)
             {
-                gpuPerHour = value;
+                gpuPerSec = value;
                 OnPropertyChanged();
             }
         }
     }
 
-    public decimal EnvPerHour
+    public decimal EnvPerSec
     {
         get
         {
-            return envPerHour;
+            return envPerSec;
         }
         set
         {
-            if (envPerHour != value)
+            if (envPerSec != value)
             {
-                envPerHour = value;
+                envPerSec = value;
                 OnPropertyChanged();
             }
         }
@@ -83,27 +83,13 @@ public class GolemPrice : INotifyPropertyChanged, IEquatable<GolemPrice>
         }
     }
 
-    public GolemPrice ConvertToSeconds()
-    {
-        this.EnvPerHour *= 3600;
-        this.GpuPerHour *= 3600;
-        return this;
-    }
-
-    public GolemPrice ConvertToHours()
-    {
-        this.EnvPerHour /= 3600;
-        this.GpuPerHour /= 3600;
-        return this;
-    }
-
     public Dictionary<string, decimal> GolemCounters()
     {
         return new Dictionary<string, decimal>
         {
             { "ai-runtime.requests", this.NumRequests },
-            { "golem.usage.duration_sec", this.EnvPerHour },
-            { "golem.usage.gpu-sec", this.GpuPerHour },
+            { "golem.usage.duration_sec", this.EnvPerSec },
+            { "golem.usage.gpu-sec", this.GpuPerSec },
             { "Initial", this.StartPrice }
         };
     }
@@ -121,9 +107,9 @@ public class GolemPrice : INotifyPropertyChanged, IEquatable<GolemPrice>
 
         return new GolemPrice
         {
-            EnvPerHour = duration,
+            EnvPerSec = duration,
             StartPrice = initPrice,
-            GpuPerHour = gpuSec,
+            GpuPerSec = gpuSec,
             NumRequests = numRequests
         };
     }
@@ -134,8 +120,8 @@ public class GolemPrice : INotifyPropertyChanged, IEquatable<GolemPrice>
         if (other == null)
             return false;
 
-        return this.EnvPerHour == other.EnvPerHour &&
-            this.GpuPerHour == other.GpuPerHour &&
+        return this.EnvPerSec == other.EnvPerSec &&
+            this.GpuPerSec == other.GpuPerSec &&
             this.NumRequests == other.NumRequests &&
             this.StartPrice == other.StartPrice;
     }
