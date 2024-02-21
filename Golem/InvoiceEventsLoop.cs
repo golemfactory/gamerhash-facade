@@ -74,18 +74,24 @@ class InvoiceEventsLoop
                     }
                     else
                     {
-                        _logger.LogError("got invoiceEvents {0}", invoiceEventsResponse);
+                        _logger.LogError("Got invoiceEvents {0}", invoiceEventsResponse);
+                        await Task.Delay(TimeSpan.FromSeconds(1), _token);
                     }
+                }
+                catch (TaskCanceledException)
+                {
+                    _logger.LogDebug("Payment loop cancelled");
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Activity request failure");
+                    _logger.LogError(e, "Payment request failure");
+                    await Task.Delay(TimeSpan.FromSeconds(1), _token);
                 }
             }
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Activity monitoring loop failure");
+            _logger.LogError(e, "Payment monitoring loop failure");
         }
         finally
         {

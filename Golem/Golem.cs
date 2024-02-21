@@ -239,9 +239,6 @@ namespace Golem
             _logger.LogInformation("Stopping Golem");
             Status = GolemStatus.Stopping;
 
-            await Provider.Stop(5_000);
-            await Yagna.Stop(30_000);
-
             try
             {
                 if (!_providerCancellationtokenSource.IsCancellationRequested)
@@ -253,6 +250,9 @@ namespace Golem
             {
                 _logger.LogError($"Failed to cancel Golem process. Err {err}");
             }
+
+            await Provider.Stop(5_000);
+            await Yagna.Stop(30_000);
 
             Status = GolemStatus.Off;
 

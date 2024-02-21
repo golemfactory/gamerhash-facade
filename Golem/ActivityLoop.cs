@@ -104,9 +104,14 @@ class ActivityLoop
                         }
                     }
                 }
+                catch (TaskCanceledException)
+                {
+                    _logger.LogDebug("Activity loop cancelled");
+                }
                 catch (Exception e)
                 {
                     _logger.LogError(e, "Activity monitoring request failure");
+                    await Task.Delay(TimeSpan.FromSeconds(1), token);
                 }
             }
         }
