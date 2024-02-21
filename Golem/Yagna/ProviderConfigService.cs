@@ -44,11 +44,6 @@ namespace Golem
             {
                 get
                 {
-                    if (!_provider.ClearHandle())
-                    {
-                        _provider.PresetConfig.InitilizeDefaultPresets();
-                    }
-
                     var presets = _provider.PresetConfig.DefaultPresets;
 
                     if (presets.Count == 0)
@@ -76,10 +71,7 @@ namespace Golem
 
                 set
                 {
-                    if (!_provider.ClearHandle())
-                    {
-                        _provider.PresetConfig.InitilizeDefaultPresets();
-                    }
+                    _provider.PresetConfig.InitilizeDefaultPresets();
                     _provider.PresetConfig.UpdateAllPrices(value);
                 }
             }

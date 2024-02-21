@@ -53,8 +53,6 @@ namespace Golem
                     _golemPrice.EnvPerSec = value.EnvPerSec;
                     _golemPrice.NumRequests = value.NumRequests;
 
-                    // Golem expresses counters as GLMs per second. Facade API shows GLMs per hour.
-                    this.ProviderConfig.GolemPrice = value;
                     OnPropertyChanged();
                 }
             }
@@ -289,6 +287,17 @@ namespace Golem
             {
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
+
+            // Listen to property changed event on nested properties to update Provider presets.
+            Price.PropertyChanged += OnGolemPriceChanged;
+        }
+
+        private void OnGolemPriceChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is GolemPrice price)
+            {
+                ProviderConfig.GolemPrice = price;
+            }
         }
 
         private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
