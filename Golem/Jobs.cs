@@ -18,6 +18,8 @@ public interface IJobsUpdater
     Job GetOrCreateJob(string jobId, YagnaAgreement agreement);
     void SetAllJobsFinished();
     void UpdateActivityState(string jobId, ActivityStatePair activityState);
+    void UpdatePaymentStatus(string id, GolemLib.Types.PaymentStatus paymentStatus);
+    void UpdatePaymentConfirmation(string jobId, List<Payment> payments);
 }
 
 class Jobs : IJobsUpdater

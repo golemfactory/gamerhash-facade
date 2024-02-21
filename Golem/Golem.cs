@@ -23,15 +23,10 @@ namespace Golem
         private YagnaService Yagna { get; set; }
         private Provider Provider { get; set; }
         private ProviderConfigService ProviderConfig { get; set; }
-
-        private Task? _activityLoop;
-        private Task? _invoiceEventsLoop;
         private CancellationTokenSource _yagnaCancellationtokenSource;
         private CancellationTokenSource _providerCancellationtokenSource;
 
         private readonly ILogger _logger;
-
-        private readonly HttpClient _httpClient;
 
         private readonly GolemPrice _golemPrice;
 
@@ -151,7 +146,7 @@ namespace Golem
         public async Task Start()
         {
             _logger.LogInformation("Starting Golem");
-            if (Status == GolemStatus.Starting)
+            if (IsRunning())
                 return;
 
             Status = GolemStatus.Starting;
@@ -221,11 +216,6 @@ namespace Golem
                     Status = GolemStatus.Error;
                     _logger.LogError("Provider process failed");
                 }
-                else if (Status != GolemStatus.Error)
-                {
-                    // `Off` only if status was not already set to `Error`.
-                    Status = GolemStatus.Off;
-                }
             };
         }
 
@@ -245,8 +235,8 @@ namespace Golem
         {
             _logger.LogInformation("Stopping Golem");
 
-            await Provider.Stop();
-            await Yagna.Stop();
+            await Provider.Stop(5_000);
+            await Yagna.Stop(30_000);
 
             try
             {
@@ -288,11 +278,6 @@ namespace Golem
             _golemPrice = ProviderConfig.GolemPrice;
             _jobs = new Jobs(SetCurrentJob, loggerFactory);
 
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
-            };
-
             Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
         }
 
@@ -311,12 +296,10 @@ namespace Golem
             if (!success)
                 return false;
 
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", yagnaOptions.AppKey);
+            var account = await Yagna.WaitForIdentityAsync(cancellationToken);
 
-            var account = await WaitForIdentityAsync(cancellationToken);
-
-            _activityLoop = StartActivityLoop(cancellationToken);
-            _invoiceEventsLoop = StartInvoiceEventsLoop(cancellationToken);
+            _ = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs);
+            _ = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs);
 
             try
             {
@@ -354,70 +337,6 @@ namespace Golem
             }
         }
 
-        async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken)
-        {
-            string? identity = null;
-
-            //yagna is starting and /me won't work until all services are running
-            for (int tries = 0; tries < 300; ++tries)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                    return null;
-
-                Thread.Sleep(300);
-
-                if (Yagna.HasExited) // yagna has stopped
-                {
-                    throw new Exception("Failed to start yagna ...");
-                }
-
-                try
-                {
-                    var response = _httpClient.GetAsync($"/me", cancellationToken).Result;
-                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
-                    }
-                    var txt = await response.Content.ReadAsStringAsync();
-                    var options = new JsonSerializerOptionsBuilder()
-                                    .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
-                                    .Build();
-
-                    MeInfo? meInfo = JsonSerializer.Deserialize<MeInfo>(txt, options) ?? null;
-                    //sanity check
-                    if (meInfo != null)
-                    {
-                        if (String.IsNullOrEmpty(identity))
-                            identity = meInfo.Identity;
-                        break;
-                    }
-                    throw new Exception("Failed to get key");
-
-                }
-                catch (Exception)
-                {
-                    // consciously swallow the exception... presumably REST call error...
-                }
-            }
-            return identity;
-        }
-
-        private Task StartActivityLoop(CancellationToken token)
-        {
-            token.Register(_httpClient.CancelPendingRequests);
-            return new ActivityLoop(_httpClient, token, _logger).Start(
-                SetCurrentJob,
-                _jobs,
-                token
-            );
-        }
-
-        private Task StartInvoiceEventsLoop(CancellationToken token)
-        {
-            token.Register(_httpClient.CancelPendingRequests);
-            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(_jobs.UpdatePaymentStatus, _jobs.UpdatePaymentConfirmation);
-        }
-
         private void SetCurrentJob(Job? job)
         {
             if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
@@ -453,6 +372,12 @@ namespace Golem
             _yagnaCancellationtokenSource = new CancellationTokenSource();
             _providerCancellationtokenSource = new CancellationTokenSource();
             return (_yagnaCancellationtokenSource, _providerCancellationtokenSource);
+        }
+
+        private bool IsRunning()
+        {
+            return Status == GolemStatus.Starting ||
+                Status == GolemStatus.Ready;
         }
     }
 }
