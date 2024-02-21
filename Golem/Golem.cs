@@ -237,6 +237,7 @@ namespace Golem
         public async Task Stop()
         {
             _logger.LogInformation("Stopping Golem");
+            Status = GolemStatus.Stopping;
 
             await Provider.Stop(5_000);
             await Yagna.Stop(30_000);
@@ -380,7 +381,8 @@ namespace Golem
         private bool IsRunning()
         {
             return Status == GolemStatus.Starting ||
-                Status == GolemStatus.Ready;
+                Status == GolemStatus.Ready ||
+                Status == GolemStatus.Stopping;
         }
     }
 }

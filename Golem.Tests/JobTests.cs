@@ -174,6 +174,9 @@ namespace Golem.Tests
             _logger.LogInformation("Stopping Golem");
             await golem.Stop();
 
+            var stoppingStatus = await SkipMatching(golemStatusChannel, (GolemStatus status) => { return status == GolemStatus.Ready; });
+            Assert.Equal(GolemStatus.Stopping, stoppingStatus);
+
             var offStatus = await SkipMatching(golemStatusChannel, (GolemStatus status) => { return status == GolemStatus.Ready; });
             Assert.Equal(GolemStatus.Off, offStatus);
         }
