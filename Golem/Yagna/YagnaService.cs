@@ -263,7 +263,7 @@ namespace Golem.Yagna
             return Deserialize<T>(messageBuilder.ToString());
         }
 
-        internal T Deserialize<T>(string text) where T : class
+        internal static T Deserialize<T>(string text) where T : class
         {
             var options = new JsonSerializerOptionsBuilder()
                             .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
@@ -298,10 +298,8 @@ namespace Golem.Yagna
 
         public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken = default)
         {
-            string? identity = null;
-
             //yagna is starting and /me won't work until all services are running
-            for (int tries = 0; tries < 300; ++tries)
+            for (int tries = 0; tries < 200; ++tries)
             {
                 if (cancellationToken.IsCancellationRequested)
                     return null;
@@ -316,22 +314,14 @@ namespace Golem.Yagna
                 try
                 {
                     MeInfo meInfo = await Me(cancellationToken);
-                    //sanity check
-                    if (meInfo != null)
-                    {
-                        if (String.IsNullOrEmpty(identity))
-                            identity = meInfo.Identity;
-                        break;
-                    }
-                    throw new Exception("Failed to get key");
-
+                    return meInfo.Identity;
                 }
                 catch (Exception)
                 {
                     // consciously swallow the exception... presumably REST call error...
                 }
             }
-            return identity;
+            return null;
         }
 
         /// TODO: Reconsider API of this function.
