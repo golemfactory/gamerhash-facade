@@ -47,28 +47,22 @@ class ActivityLoop
         {
             while (!token.IsCancellationRequested)
             {
-                _logger.LogInformation("Monitoring activities");
+                _logger.LogDebug("Monitoring activities");
                 var now = DateTime.Now;
                 if (newReconnect > now)
                 {
                     await Task.Delay(newReconnect - now);
                 }
                 newReconnect = now + s_reconnectDelay;
-                if (token.IsCancellationRequested)
-                {
-                    token.ThrowIfCancellationRequested();
-                }
+                token.ThrowIfCancellationRequested();
 
                 try
                 {
-                    var stream = await _httpClient.GetStreamAsync("/activity-api/v1/_monitor");
+                    var stream = await _httpClient.GetStreamAsync("/activity-api/v1/_monitor", token);
                     using StreamReader reader = new StreamReader(stream);
 
-                    await foreach (string json in EnumerateMessages(reader, token).WithCancellation(token))
+                    await foreach (var activityStates in EnumerateMessages(reader, token).WithCancellation(token))
                     {
-                        _logger.LogInformation("got json {0}", json);
-                        var activityStates = parseActivityStates(json);
-
                         List<Job> currentJobs = await updateJobs(activityStates, jobs);
 
                         if (currentJobs.Count == 0)
@@ -202,35 +196,48 @@ class ActivityLoop
         }
     }
 
-    private async IAsyncEnumerable<String> EnumerateMessages(StreamReader reader, [EnumeratorCancellation] CancellationToken token)
+    private async Task<string> NextLine(StreamReader reader, CancellationToken token)
     {
         StringBuilder messageBuilder = new StringBuilder();
+
+        string? line;
+        while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(token)))
+        {
+            if (line.StartsWith(_dataPrefix))
+            {
+                messageBuilder.Append(line.Substring(_dataPrefix.Length).TrimStart());
+                _logger.LogDebug("got line {0}", line);
+            }
+            else
+            {
+                _logger.LogError("Unable to deserialize message: {0}", line);
+            }
+        }
+
+        return messageBuilder.ToString();
+    }
+
+    private async IAsyncEnumerable<List<ActivityState>> EnumerateMessages(StreamReader reader, [EnumeratorCancellation] CancellationToken token)
+    {
         while (true)
         {
+            List<ActivityState> acitvities;
             try
             {
-                string? line;
-                while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(token)))
-                {
-                    if (line.StartsWith(_dataPrefix))
-                    {
-                        messageBuilder.Append(line.Substring(_dataPrefix.Length).TrimStart());
-                        _logger.LogInformation("got line {0}", line);
-                    }
-                    else
-                    {
-                        _logger.LogError("Unable to deserialize message: {0}", line);
-                    }
-                }
+                string line = await NextLine(reader, token);
+                _logger.LogInformation("got json {0}", line);
+                acitvities = parseActivityStates(line);
+            }
+            catch (OperationCanceledException e)
+            {
+                throw e;
             }
             catch (Exception error)
             {
-                if (!token.IsCancellationRequested)
-                    _logger.LogError("Failed to read message: {0}", error);
+                _logger.LogError("Failed to read message: {0}", error);
                 break;
             }
-            yield return messageBuilder.ToString();
-            messageBuilder.Clear();
+            yield return acitvities;
         }
         yield break;
     }
