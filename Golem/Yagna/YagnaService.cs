@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Net.Http.Headers;
+using Golem.Model;
 
 namespace Golem.Yagna
 {
@@ -201,22 +202,38 @@ namespace Golem.Yagna
             YagnaProcess = null;
         }
 
-        public async Task<MeInfo?> Me(CancellationToken cancellationToken)
+        public async Task<T> RestCall<T>(string path, CancellationToken token = default) where T : class
         {
-            var response = _httpClient.GetAsync($"/me", cancellationToken).Result;
+            var response = _httpClient.GetAsync(path, token).Result;
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
                 throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
             }
-            var txt = await response.Content.ReadAsStringAsync();
+            var txt = await response.Content.ReadAsStringAsync(token);
             var options = new JsonSerializerOptionsBuilder()
                             .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
                             .Build();
 
-            return JsonSerializer.Deserialize<MeInfo>(txt, options) ?? null;
+            return JsonSerializer.Deserialize<T>(txt, options)
+                ?? throw new Exception($"Failed to deserialize REST call reponse to type: {typeof(T).Name}");
         }
 
-        public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken)
+        public async Task<MeInfo> Me(CancellationToken token)
+        {
+            return await RestCall<MeInfo>("/me", token);
+        }
+
+        public async Task<YagnaAgreement> GetAgreement(string agreementId, CancellationToken token = default)
+        {
+            return await RestCall<YagnaAgreement>($"/market-api/v1/agreements/{agreementId}", token);
+        }
+
+        public async Task<ActivityStatePair> GetState(string activityId, CancellationToken token = default)
+        {
+            return await RestCall<ActivityStatePair>($"/activity-api/v1/activity/{activityId}/state", token);
+        }
+
+        public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken = default)
         {
             string? identity = null;
 
@@ -235,7 +252,7 @@ namespace Golem.Yagna
 
                 try
                 {
-                    MeInfo? meInfo = await Me(cancellationToken);
+                    MeInfo meInfo = await Me(cancellationToken);
                     //sanity check
                     if (meInfo != null)
                     {
