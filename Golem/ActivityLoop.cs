@@ -156,7 +156,7 @@ class ActivityLoop
         if (usage != null)
             job.CurrentUsage = usage;
         if (state != null)
-            jobs.UpdateActivityState(jobId, state);
+            job.UpdateActivityState(state);
 
         if (job.Status == JobStatus.Finished)
             return null;

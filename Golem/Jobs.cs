@@ -17,7 +17,6 @@ public interface IJobsUpdater
 {
     Job GetOrCreateJob(string jobId, YagnaAgreement agreement);
     void SetAllJobsFinished();
-    void UpdateActivityState(string jobId, ActivityStatePair activityState);
     void UpdatePaymentStatus(string id, GolemLib.Types.PaymentStatus paymentStatus);
     void UpdatePaymentConfirmation(string jobId, List<Payment> payments);
 }
@@ -58,14 +57,6 @@ class Jobs : IJobsUpdater
         var price = GetPriceFromAgreement(agreement);
         job.Price = price ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
         return job;
-    }
-
-    public void UpdateActivityState(string jobId, ActivityStatePair activityState)
-    {
-        var job = _jobs[jobId] ?? throw new Exception($"Unable to find job {jobId}");
-        var currentState = activityState.currentState();
-        var nextState = activityState.nextState();
-        job.Status = ResolveStatus(currentState, nextState);
     }
 
     public void SetAllJobsFinished()
@@ -117,24 +108,6 @@ class Jobs : IJobsUpdater
         {
             _logger.LogWarning($"Failed to update payment confirmation. Job not found: {jobId}");
         }
-    }
-
-    private JobStatus ResolveStatus(StateType currentState, StateType? nextState)
-    {
-        switch (currentState)
-        {
-            case StateType.Initialized:
-                if (nextState == StateType.Deployed)
-                    return JobStatus.DownloadingModel;
-                break;
-            case StateType.Deployed:
-                return JobStatus.Computing;
-            case StateType.Ready:
-                return JobStatus.Computing;
-            case StateType.Terminated:
-                return JobStatus.Finished;
-        }
-        return JobStatus.Idle;
     }
 
     public Task<List<IJob>> List()
