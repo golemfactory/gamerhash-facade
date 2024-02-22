@@ -130,7 +130,6 @@ class ActivityLoop
     }
 
     /// <param name="activityState"></param>
-    /// <param name="setCurrentJob"></param>
     /// <param name="jobs"></param>
     /// <returns>optional current job</returns>
     private async Task<Job?> updateJob(
@@ -156,6 +155,10 @@ class ActivityLoop
             job.CurrentUsage = usage;
         if (state != null)
             job.UpdateActivityState(state);
+
+        // In case activity state wasn't properly updated by Provider or ExeUnit.
+        if (agreement.State == "Terminated")
+            job.Status = JobStatus.Finished;
 
         if (job.Status == JobStatus.Finished)
             return null;
@@ -183,43 +186,23 @@ class ActivityLoop
 
     public async Task<(YagnaAgreement?, ActivityStatePair?)> getAgreementAndState(string agreementId, string activityId)
     {
-        var getAgreementTask = GetAgreement(agreementId);
-        var getStateTask = GetState(activityId);
-        await Task.WhenAll(getAgreementTask, getStateTask);
-        var agreement = await getAgreementTask;
-        var state = await getStateTask;
-        return (agreement, state);
-    }
-
-    /// TODO: Consider removing this function
-    public async Task<YagnaAgreement?> GetAgreement(string agreementId)
-    {
         try
         {
-            var agreement = await _yagna.GetAgreement(agreementId);
-            _logger.LogInformation("got agreement {0}", agreement);
-            return agreement;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Failed GetAgreement: " + ex.Message);
-            return null;
-        }
-    }
+            var getAgreementTask = _yagna.GetAgreement(agreementId);
+            var getStateTask = _yagna.GetState(activityId);
+            await Task.WhenAll(getAgreementTask, getStateTask);
+            var agreement = await getAgreementTask;
+            var state = await getStateTask;
 
-    /// TODO: Consider removing this function
-    public async Task<ActivityStatePair?> GetState(string activityId)
-    {
-        try
-        {
-            var activityStatePair = await _yagna.GetState(activityId);
-            _logger.LogInformation("got activity state {0}", activityStatePair);
-            return activityStatePair;
+            _logger.LogInformation($"Got agreement {agreement}");
+            _logger.LogInformation($"Got activity state {state}");
+
+            return (agreement, state);
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            _logger.LogError("Failed GetState: " + ex.Message);
-            return null;
+            _logger.LogError($"Failed get Agreement {agreementId} or Acitviy {activityId} information. {e}");
+            return (null, null);
         }
     }
 }
