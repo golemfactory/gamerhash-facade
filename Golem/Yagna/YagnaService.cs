@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Net.Http.Headers;
 using Golem.Model;
+using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Golem.Yagna
 {
@@ -142,6 +144,7 @@ namespace Golem.Yagna
         public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
         {
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
+            cancellationToken.Register(_httpClient.CancelPendingRequests);
 
             if (YagnaProcess != null || cancellationToken.IsCancellationRequested)
             {
@@ -210,11 +213,63 @@ namespace Golem.Yagna
                 throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
             }
             var txt = await response.Content.ReadAsStringAsync(token);
+            return Deserialize<T>(txt);
+        }
+
+        public async IAsyncEnumerable<T> RestStream<T>(string path, [EnumeratorCancellation] CancellationToken token = default) where T : class
+        {
+            var stream = await _httpClient.GetStreamAsync(path, token);
+            using StreamReader reader = new StreamReader(stream);
+
+            while (true)
+            {
+                T result;
+                try
+                {
+                    result = await Next<T>(reader, "data:", token);
+                }
+                catch (OperationCanceledException e)
+                {
+                    throw e;
+                }
+                catch (Exception error)
+                {
+                    _logger.LogError("Failed to get next stream event: {0}", error);
+                    break;
+                }
+                yield return result;
+            }
+            yield break;
+        }
+
+        private async Task<T> Next<T>(StreamReader reader, string dataPrefix = "data:", CancellationToken token = default) where T : class
+        {
+            StringBuilder messageBuilder = new StringBuilder();
+
+            string? line;
+            while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(token)))
+            {
+                if (line.StartsWith(dataPrefix))
+                {
+                    messageBuilder.Append(line.Substring(dataPrefix.Length).TrimStart());
+                    _logger.LogDebug("got line {0}", line);
+                }
+                else
+                {
+                    _logger.LogError("Unable to deserialize message: {0}", line);
+                }
+            }
+
+            return Deserialize<T>(messageBuilder.ToString());
+        }
+
+        internal T Deserialize<T>(string text) where T : class
+        {
             var options = new JsonSerializerOptionsBuilder()
                             .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
                             .Build();
 
-            return JsonSerializer.Deserialize<T>(txt, options)
+            return JsonSerializer.Deserialize<T>(text, options)
                 ?? throw new Exception($"Failed to deserialize REST call reponse to type: {typeof(T).Name}");
         }
 
@@ -231,6 +286,14 @@ namespace Golem.Yagna
         public async Task<ActivityStatePair> GetState(string activityId, CancellationToken token = default)
         {
             return await RestCall<ActivityStatePair>($"/activity-api/v1/activity/{activityId}/state", token);
+        }
+
+        public async IAsyncEnumerable<TrackingEvent> ActivityMonitorStream([EnumeratorCancellation] CancellationToken token = default)
+        {
+            await foreach (var item in RestStream<TrackingEvent>($"/activity-api/v1/_monitor", token))
+            {
+                yield return item;
+            }
         }
 
         public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken = default)
@@ -274,8 +337,7 @@ namespace Golem.Yagna
         /// TODO: Reconsider API of this function.
         public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobsUpdater jobs)
         {
-            token.Register(_httpClient.CancelPendingRequests);
-            return new ActivityLoop(_httpClient, token, _logger).Start(
+            return new ActivityLoop(this, token, _logger).Start(
                 setCurrentJob,
                 jobs,
                 token

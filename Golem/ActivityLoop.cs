@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Golem.Model;
+using Golem.Yagna;
 using Golem.Yagna.Types;
 
 using GolemLib.Types;
@@ -23,13 +24,13 @@ class ActivityLoop
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
-    private readonly HttpClient _httpClient;
+    private readonly YagnaService _yagna;
     private readonly CancellationToken _token;
     private readonly ILogger _logger;
 
-    public ActivityLoop(HttpClient httpClient, CancellationToken token, ILogger logger)
+    public ActivityLoop(YagnaService yagna, CancellationToken token, ILogger logger)
     {
-        _httpClient = httpClient;
+        _yagna = yagna;
         _token = token;
         _logger = logger;
     }
@@ -58,12 +59,10 @@ class ActivityLoop
 
                 try
                 {
-                    var stream = await _httpClient.GetStreamAsync("/activity-api/v1/_monitor", token);
-                    using StreamReader reader = new StreamReader(stream);
-
-                    await foreach (var activityStates in EnumerateMessages(reader, token).WithCancellation(token))
+                    await foreach (var trackingEvent in _yagna.ActivityMonitorStream(token).WithCancellation(token))
                     {
-                        List<Job> currentJobs = await updateJobs(activityStates, jobs);
+                        var activities = trackingEvent?.Activities ?? new List<ActivityState>();
+                        List<Job> currentJobs = await updateJobs(activities, jobs);
 
                         if (currentJobs.Count == 0)
                         {
@@ -164,6 +163,8 @@ class ActivityLoop
         return job;
     }
 
+    /// TODO: replcae with GolemPrice::From after https://github.com/golemfactory/gamerhash-facade/pull/70
+    /// will be merged.
     private GolemUsage? GetUsage(Dictionary<string, decimal>? usageDict)
     {
         if (usageDict != null)
@@ -180,68 +181,6 @@ class ActivityLoop
         return null;
     }
 
-    private List<ActivityState> parseActivityStates(string message)
-    {
-        try
-        {
-            var trackingEvent = JsonSerializer.Deserialize<TrackingEvent>(message, s_serializerOptions);
-            var activities = trackingEvent?.Activities ?? new List<ActivityState>();
-            _logger.LogDebug("Received {0} activities", activities.Count);
-            return activities;
-        }
-        catch (JsonException e)
-        {
-            _logger.LogError(e, "Invalid monitoring event: {0}", message);
-            throw;
-        }
-    }
-
-    private async Task<string> NextLine(StreamReader reader, CancellationToken token)
-    {
-        StringBuilder messageBuilder = new StringBuilder();
-
-        string? line;
-        while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(token)))
-        {
-            if (line.StartsWith(_dataPrefix))
-            {
-                messageBuilder.Append(line.Substring(_dataPrefix.Length).TrimStart());
-                _logger.LogDebug("got line {0}", line);
-            }
-            else
-            {
-                _logger.LogError("Unable to deserialize message: {0}", line);
-            }
-        }
-
-        return messageBuilder.ToString();
-    }
-
-    private async IAsyncEnumerable<List<ActivityState>> EnumerateMessages(StreamReader reader, [EnumeratorCancellation] CancellationToken token)
-    {
-        while (true)
-        {
-            List<ActivityState> acitvities;
-            try
-            {
-                string line = await NextLine(reader, token);
-                _logger.LogInformation("got json {0}", line);
-                acitvities = parseActivityStates(line);
-            }
-            catch (OperationCanceledException e)
-            {
-                throw e;
-            }
-            catch (Exception error)
-            {
-                _logger.LogError("Failed to read message: {0}", error);
-                break;
-            }
-            yield return acitvities;
-        }
-        yield break;
-    }
-
     public async Task<(YagnaAgreement?, ActivityStatePair?)> getAgreementAndState(string agreementId, string activityId)
     {
         var getAgreementTask = GetAgreement(agreementId);
@@ -252,13 +191,13 @@ class ActivityLoop
         return (agreement, state);
     }
 
+    /// TODO: Consider removing this function
     public async Task<YagnaAgreement?> GetAgreement(string agreementId)
     {
         try
         {
-            var response = await _httpClient.GetStringAsync($"/market-api/v1/agreements/{agreementId}");
-            _logger.LogInformation("got agreement {0}", response);
-            YagnaAgreement? agreement = JsonSerializer.Deserialize<YagnaAgreement>(response, s_serializerOptions) ?? null;
+            var agreement = await _yagna.GetAgreement(agreementId);
+            _logger.LogInformation("got agreement {0}", agreement);
             return agreement;
         }
         catch (Exception ex)
@@ -268,13 +207,13 @@ class ActivityLoop
         }
     }
 
+    /// TODO: Consider removing this function
     public async Task<ActivityStatePair?> GetState(string activityId)
     {
         try
         {
-            var response = await _httpClient.GetStringAsync($"/activity-api/v1/activity/{activityId}/state");
-            _logger.LogInformation("got activity state {0}", response);
-            ActivityStatePair? activityStatePair = JsonSerializer.Deserialize<ActivityStatePair>(response, s_serializerOptions) ?? null;
+            var activityStatePair = await _yagna.GetState(activityId);
+            _logger.LogInformation("got activity state {0}", activityStatePair);
             return activityStatePair;
         }
         catch (Exception ex)
