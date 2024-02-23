@@ -151,8 +151,8 @@ class ProviderOnceStrategy(MarketStrategy):
 
 # App
 
-RUNTIME_NAME = "automatic" 
-# RUNTIME_NAME = "dummy"
+# RUNTIME_NAME = "automatic" 
+RUNTIME_NAME = "dummy"
 
 @dataclass
 class AiPayload(Payload):

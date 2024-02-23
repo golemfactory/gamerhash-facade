@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "ai_runtime",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "ai_runtime.py",
+            "console": "integratedTerminal",
+            "redirectOutput": true,
+            "justMyCode": false,
+            "stopOnEntry": false,
+            "args": [
+                "--network",
+                "goerli",
+                "--driver",
+                "erc20"
+            ]
+        }
+    ]
+}

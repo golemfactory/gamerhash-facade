@@ -9,7 +9,7 @@ namespace Golem.Yagna
             { "YA_PAYMENT_NETWORK_GROUP", "testnet" },
             { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
             { "YA_NET_BROADCAST_SIZE", "12" },
-            { "YA_NET_RELAY_HOST", "yacn2.dev.golem.network:7477" },
+            //{ "YA_NET_RELAY_HOST", "yacn2.dev.golem.network:7477" },
             { "EXE_UNIT_FILE_LOG_LEVEL", "debug,h2=info" },
             { "BCAST_NODE_BAN_TIMEOUT", "5s" },
         };
