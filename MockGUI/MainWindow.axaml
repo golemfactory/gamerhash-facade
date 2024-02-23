@@ -33,6 +33,7 @@
 
     <Window.Resources>
         <view:HexBytesConverter x:Key="hexConverter"/>
+        <view:Base64Converter x:Key="unBase64"/>
     </Window.Resources>
 
     <Window.DataTemplates>
@@ -101,17 +102,22 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Classes="Label">Amount</TextBlock>
-                        <TextBlock VerticalAlignment="Center" Text="{Binding Amount}"/>
+                        <TextBlock VerticalAlignment="Stretch" Text="{Binding Amount}"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Classes="Label">Details</TextBlock>
+                        <TextBlock VerticalAlignment="Stretch" Text="{Binding Details, Converter={StaticResource unBase64}}"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Classes="Label">Signature</TextBlock>
-                        <TextBlock VerticalAlignment="Center" Text="{Binding Signature, Converter={StaticResource hexConverter}}"/>
+                        <TextBlock VerticalAlignment="Stretch" Text="{Binding Signature, Converter={StaticResource hexConverter}}"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Classes="Label">Signed Bytes</TextBlock>
-                        <TextBlock VerticalAlignment="Center" Text="{Binding SignedBytes, Converter={StaticResource hexConverter}}"/>
+                        <TextBlock VerticalAlignment="Stretch" Text="{Binding SignedBytes}"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

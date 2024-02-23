@@ -80,6 +80,7 @@ class InvoiceEventsLoop
                 catch (Exception e)
                 {
                     _logger.LogError(e, "Activity request failure");
+                    await Task.Delay(TimeSpan.FromSeconds(5), _token);
                 }
             }
         }
@@ -95,7 +96,7 @@ class InvoiceEventsLoop
 
     private async Task UpdatesForInvoice(InvoiceEvent invoiceEvent, Action<string, PaymentStatus> UpdatePaymentStatus, Action<string, List<Payment>> updatePaymentConfirmation)
     {
-        
+
         var invoice = await GetInvoice(invoiceEvent.InvoiceId);
         if (invoice != null)
         {
@@ -106,12 +107,13 @@ class InvoiceEventsLoop
                 var payments = await GetPayments();
                 var signedPayments = payments.Where(p => p.Signature is not null).ToList();
 
-                foreach(var p in signedPayments)
+                foreach (var p in signedPayments)
                 {
-                    if(p.SignedBytes != null)
+                    if (p.SignedBytes != null && p.Signature != null)
                     {
                         var str = System.Text.Encoding.UTF8.GetString(p.SignedBytes.ToArray());
-                        Console.WriteLine("[SignedPayment]: {0} {1}\n{2}", p.Amount, p.Signature, str);
+                        var sig = System.Convert.ToHexString(p.Signature.ToArray());
+                        Console.WriteLine("[SignedPayment]: {0} {1}\n{2}", p.Amount, sig, str);
                     }
                 }
 
@@ -120,7 +122,7 @@ class InvoiceEventsLoop
                     .ToList();
                 updatePaymentConfirmation(invoice.AgreementId, paymentsForRecentJob);
             }
-        }        
+        }
     }
 
     private GolemLib.Types.PaymentStatus GetPaymentStatus(InvoiceStatus status)
@@ -178,7 +180,7 @@ class InvoiceEventsLoop
                 }
             }
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             _logger.LogError("GetPayments error: {msg}", e.Message);
         }
