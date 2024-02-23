@@ -29,6 +29,8 @@ class InvoiceEventsLoop
         "CANCELLED"
     };
 
+    private static int _lockFlag = 0;
+
     public InvoiceEventsLoop(HttpClient httpClient, CancellationToken token, ILogger logger)
     {
         _httpClient = httpClient;
@@ -95,20 +97,40 @@ class InvoiceEventsLoop
 
     private async Task UpdatesForInvoice(InvoiceEvent invoiceEvent, Action<string, PaymentStatus> UpdatePaymentStatus, Action<string, List<Payment>> updatePaymentConfirmation)
     {
-        var invoice = await GetInvoice(invoiceEvent.InvoiceId);
-        if (invoice != null)
-        {
-            var paymentStatus = GetPaymentStatus(invoice.Status);
-            UpdatePaymentStatus(invoice.AgreementId, paymentStatus);
-            if (paymentStatus == PaymentStatus.Settled)
+        
+        if (Interlocked.CompareExchange(ref _lockFlag, 1, 0) == 0){
+            // only 1 thread will enter here
+
+            var invoice = await GetInvoice(invoiceEvent.InvoiceId);
+            if (invoice != null)
             {
-                var payments = await GetPayments();
-                var paymentsForRecentJob = payments
-                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
-                    .ToList();
-                updatePaymentConfirmation(invoice.AgreementId, payments);
+                var paymentStatus = GetPaymentStatus(invoice.Status);
+                UpdatePaymentStatus(invoice.AgreementId, paymentStatus);
+                if (paymentStatus == PaymentStatus.Settled)
+                {
+                    var payments = await GetPayments();
+                    var signedPayments = payments.Where(p => p.Signature is not null).ToList();
+
+                    foreach(var p in signedPayments)
+                    {
+                        if(p.SignedBytes != null)
+                        {
+                            var str = System.Text.Encoding.UTF8.GetString(p.SignedBytes.ToArray());
+                            Console.WriteLine("[SignedPayment]: {0} {1}\n{2}", p.Amount, p.Signature, str);
+                        }
+                    }
+
+                    var paymentsForRecentJob = payments
+                        .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
+                        .ToList();
+                    updatePaymentConfirmation(invoice.AgreementId, paymentsForRecentJob);
+                }
             }
+
+            // free the lock.
+            Interlocked.Decrement(ref _lockFlag);
         }
+        
     }
 
     private GolemLib.Types.PaymentStatus GetPaymentStatus(InvoiceStatus status)
@@ -166,7 +188,10 @@ class InvoiceEventsLoop
                 }
             }
         }
-        catch { }
+        catch(Exception e)
+        {
+            _logger.LogError("GetPayments error: {msg}", e.Message);
+        }
 
         return payments ?? new List<Payment>();
     }

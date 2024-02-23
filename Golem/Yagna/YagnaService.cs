@@ -20,7 +20,7 @@ namespace Golem.Yagna
 
         public string YagnaApiUrl { get; set; } = "";
         public Network Network { get; set; } = Network.Holesky;
-        public PaymentDriver PaymentDriver { get; set; } = PaymentDriver.ERC20next;
+        public PaymentDriver PaymentDriver { get; set; } = PaymentDriver.ERC20;
     }
 
 
@@ -193,17 +193,21 @@ namespace Golem.Yagna
             var args = $"service run {debugFlag}".Split();
             var process = ProcessFactory.StartProcess(_yaExePath, args, environment.Build());
 
+            YagnaProcess = process;
+
             process.WaitForExitAsync(cancellationToken)
                 .ContinueWith(result =>
                 {
-                    var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
-                    YagnaProcess = null;
-                    exitHandler(exitCode);
+                    if(YagnaProcess != null)
+                    {
+                        var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
+                        YagnaProcess = null;
+                        exitHandler(exitCode);
+                    }
                 });
 
             ChildProcessTracker.AddProcess(process);
-
-            YagnaProcess = process;
+           
 
             cancellationToken.Register(async () =>
             {

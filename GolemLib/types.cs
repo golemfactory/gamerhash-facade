@@ -143,7 +143,8 @@ public class Payment
 
     public required string Details { get; init; }
     // public required string TransactionId { get; init; }
-    // public required byte[] Signature { get; init; }
+    public List<byte>? Signature { get; init; }
+    public List<byte>? SignedBytes { get; init; }
 
 
     public override int GetHashCode()
