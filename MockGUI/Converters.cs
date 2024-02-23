@@ -8,20 +8,34 @@ using Avalonia.Data.Converters;
 
 using CommandLine;
 
+using Newtonsoft.Json;
+
 namespace MockGUI.View
 {
-    public class HexBytesConverter : IValueConverter
+    public class BytesListConverter : IValueConverter
     {
-        public static readonly HexBytesConverter Instance = new();
+        public static readonly BytesListConverter Instance = new();
 
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             if (value != null
                 && value.GetType() == typeof(List<byte>)
+                && parameter is string target
                 && targetType.IsAssignableTo(typeof(string)))
             {
                 var list = (List<byte>)value;
-                return System.Convert.ToHexString(list.ToArray());
+                switch (target)
+                {
+                    case "hex":
+                        return "0x" + System.Convert.ToHexString(list.ToArray());
+                    case "string":
+                        return System.Text.Encoding.UTF8.GetString(list.ToArray());
+                    case "json":
+                        var jsonString = System.Text.Encoding.UTF8.GetString(list.ToArray());
+                        return JsonConvert.SerializeObject(jsonString, Formatting.Indented);
+                    default:
+                        return "0x" + System.Convert.ToHexString(list.ToArray());
+                }
             }
 
             // Converter used for the wrong type
@@ -46,7 +60,7 @@ namespace MockGUI.View
                 && targetType.IsAssignableTo(typeof(string)))
             {
                 var bytes = System.Convert.FromBase64String((string)value);
-                return System.Convert.ToHexString(bytes);
+                return "0x" + System.Convert.ToHexString(bytes);
             }
 
             // Converter used for the wrong type
