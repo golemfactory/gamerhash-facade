@@ -6,6 +6,8 @@
         Width="1900" Height="900"
         x:Class="MockGUI.MainWindow"
         xmlns:facade="using:GolemLib"
+        xmlns:types="using:GolemLib.Types"
+        xmlns:view="using:MockGUI.View"
         Title="Facade tester">
     <Window.Styles>
         <Style Selector="TextBlock.Label">
@@ -29,6 +31,10 @@
         </Style>
     </Window.Styles>
 
+    <Window.Resources>
+        <view:HexBytesConverter x:Key="hexConverter"/>
+    </Window.Resources>
+
     <Window.DataTemplates>
         <DataTemplate DataType="{x:Type facade:IJob}">
             <Border Classes="Panel">
@@ -41,7 +47,7 @@
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Job Status</TextBlock>
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Status}"/>
-
+                    
                     <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Payment Status</TextBlock>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PaymentStatus}"/>
 
@@ -80,6 +86,34 @@
                     <TextBlock Grid.Row="5" Grid.Column="0" Classes="Label">Current Reward</TextBlock>
                     <TextBlock Grid.Row="5" Grid.Column="1" VerticalAlignment="Center" Text="{Binding CurrentReward}"/>
                 </Grid>
+                <ToolTip.Tip>
+                    <StackPanel>
+                        <TextBlock Classes="Label">Payment Confirmations</TextBlock>
+                        <ListBox ItemsSource="{Binding PaymentConfirmation}"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"/>
+                    </StackPanel>
+                </ToolTip.Tip>
+            </Border>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type types:Payment}">
+            <Border Classes="Panel">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Classes="Label">Amount</TextBlock>
+                        <TextBlock VerticalAlignment="Center" Text="{Binding Amount}"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Classes="Label">Signature</TextBlock>
+                        <TextBlock VerticalAlignment="Center" Text="{Binding Signature, Converter={StaticResource hexConverter}}"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Classes="Label">Signed Bytes</TextBlock>
+                        <TextBlock VerticalAlignment="Center" Text="{Binding SignedBytes, Converter={StaticResource hexConverter}}"/>
+                    </StackPanel>
+                </StackPanel>
             </Border>
         </DataTemplate>
     </Window.DataTemplates>
