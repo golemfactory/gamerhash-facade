@@ -1,12 +1,10 @@
 using System.Globalization;
-using System.Linq;
 using System.Text.Json;
 
 using Golem.Tools;
-
 using GolemLib.Types;
-
 using Microsoft.Extensions.Logging;
+
 
 class InvoiceEventsLoop
 {
@@ -80,6 +78,7 @@ class InvoiceEventsLoop
                 catch (Exception e)
                 {
                     _logger.LogError(e, "Activity request failure");
+                    await Task.Delay(TimeSpan.FromSeconds(5), _token);
                 }
             }
         }
@@ -95,7 +94,7 @@ class InvoiceEventsLoop
 
     private async Task UpdatesForInvoice(InvoiceEvent invoiceEvent, Action<string, PaymentStatus> UpdatePaymentStatus, Action<string, List<Payment>> updatePaymentConfirmation)
     {
-        
+
         var invoice = await GetInvoice(invoiceEvent.InvoiceId);
         if (invoice != null)
         {
@@ -104,23 +103,12 @@ class InvoiceEventsLoop
             if (paymentStatus == PaymentStatus.Settled)
             {
                 var payments = await GetPayments();
-                var signedPayments = payments.Where(p => p.Signature is not null).ToList();
-
-                foreach(var p in signedPayments)
-                {
-                    if(p.SignedBytes != null)
-                    {
-                        var str = System.Text.Encoding.UTF8.GetString(p.SignedBytes.ToArray());
-                        Console.WriteLine("[SignedPayment]: {0} {1}\n{2}", p.Amount, p.Signature, str);
-                    }
-                }
-
                 var paymentsForRecentJob = payments
                     .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
                     .ToList();
                 updatePaymentConfirmation(invoice.AgreementId, paymentsForRecentJob);
             }
-        }        
+        }
     }
 
     private GolemLib.Types.PaymentStatus GetPaymentStatus(InvoiceStatus status)
@@ -178,7 +166,7 @@ class InvoiceEventsLoop
                 }
             }
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             _logger.LogError("GetPayments error: {msg}", e.Message);
         }
