@@ -61,7 +61,7 @@ namespace Golem.Tools
             var system = System();
             BuildDirectoryStructure(dir);
 
-            await DownloadExtractPackage(BinariesDir(dir), "golem-provider", "pwalski/yagna", CURRENT_GOLEM_VERSION);
+            await DownloadExtractPackage(BinariesDir(dir), "golem-provider", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
 
             var exeUnitDir = ExeUnitsDir(dir);
             await DownloadExtractPackage(exeUnitDir, "runtime", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION);
@@ -105,7 +105,7 @@ namespace Golem.Tools
             Directory.CreateDirectory(YagnaDataDir(dir));
 
             if (!File.Exists(Path.Combine(BinariesDir(dir), "yagna")))
-                await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "pwalski/yagna", CURRENT_GOLEM_VERSION);
+                await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
 
             return dir;
         }
