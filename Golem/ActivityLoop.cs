@@ -62,7 +62,7 @@ class ActivityLoop
                     await foreach (var trackingEvent in _yagna.ActivityMonitorStream(token).WithCancellation(token))
                     {
                         var activities = trackingEvent?.Activities ?? new List<ActivityState>();
-                        List<Job> currentJobs = await updateJobs(activities, jobs);
+                        List<Job> currentJobs = await jobs.UpdateJobs(activities);
 
                         if (currentJobs.Count == 0)
                         {
@@ -113,96 +113,6 @@ class ActivityLoop
             _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
             jobs.SetAllJobsFinished();
             setCurrentJob(null);
-        }
-    }
-
-    private Task<List<Job>> updateJobs(
-        List<ActivityState> activityStates,
-        IJobsUpdater jobs
-    )
-    {
-        return Task.FromResult(activityStates
-            .Select(async state => await updateJob(state, jobs))
-                .Select(task => task.Result)
-                .Where(job => job != null)
-                .Cast<Job>()
-                .ToList());
-    }
-
-    /// <param name="activityState"></param>
-    /// <param name="jobs"></param>
-    /// <returns>optional current job</returns>
-    private async Task<Job?> updateJob(
-        ActivityState activityState,
-        IJobsUpdater jobs
-    )
-    {
-        if (activityState.AgreementId == null || activityState.Id == null)
-            return null;
-        var (agreement, state) = await getAgreementAndState(activityState.AgreementId, activityState.Id);
-
-        if (agreement?.Demand?.RequestorId == null)
-        {
-            _logger.LogDebug($"No agreement for activity: {activityState.Id} (agreement: {activityState.AgreementId})");
-            return null;
-        }
-
-        var jobId = activityState.AgreementId;
-        var job = jobs.GetOrCreateJob(jobId, agreement);
-
-        var usage = GetUsage(activityState.Usage);
-        if (usage != null)
-            job.CurrentUsage = usage;
-        if (state != null)
-            job.UpdateActivityState(state);
-
-        // In case activity state wasn't properly updated by Provider or ExeUnit.
-        if (agreement.State == "Terminated")
-            job.Status = JobStatus.Finished;
-
-        if (job.Status == JobStatus.Finished)
-            return null;
-
-        return job;
-    }
-
-    /// TODO: replcae with GolemPrice::From after https://github.com/golemfactory/gamerhash-facade/pull/70
-    /// will be merged.
-    private GolemUsage? GetUsage(Dictionary<string, decimal>? usageDict)
-    {
-        if (usageDict != null)
-        {
-            var usage = new GolemUsage
-            {
-                StartPrice = 1,
-                GpuPerHour = usageDict["golem.usage.gpu-sec"],
-                EnvPerHour = usageDict["golem.usage.duration_sec"],
-                NumRequests = usageDict["ai-runtime.requests"],
-            };
-            return usage;
-        }
-        return null;
-    }
-
-    public async Task<(YagnaAgreement?, ActivityStatePair?)> getAgreementAndState(string agreementId, string activityId)
-    {
-        try
-        {
-            var getAgreementTask = _yagna.GetAgreement(agreementId);
-            var getStateTask = _yagna.GetState(activityId);
-            await Task.WhenAll(getAgreementTask, getStateTask);
-            var agreement = await getAgreementTask;
-            var state = await getStateTask;
-
-            _logger.LogInformation($"Got agreement {agreement}");
-            _logger.LogInformation($"Got activity state {state}");
-
-            return (agreement, state);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError($"Failed get Agreement {agreementId} or Acitviy {activityId} information. {e}");
-            return (null, null);
         }
     }
 }

@@ -273,7 +273,7 @@ namespace Golem
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork, loggerFactory);
             _golemPrice = ProviderConfig.GolemPrice;
-            _jobs = new Jobs(SetCurrentJob, loggerFactory);
+            _jobs = new Jobs(Yagna, SetCurrentJob, loggerFactory);
 
             Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
         }

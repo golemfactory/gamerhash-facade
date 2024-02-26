@@ -3,6 +3,7 @@
 using System.Text.Json;
 
 using Golem.Model;
+using Golem.Yagna;
 using Golem.Yagna.Types;
 
 using GolemLib;
@@ -19,11 +20,13 @@ public interface IJobsUpdater
     void SetAllJobsFinished();
     void UpdatePaymentStatus(string id, GolemLib.Types.PaymentStatus paymentStatus);
     void UpdatePaymentConfirmation(string jobId, List<Payment> payments);
+    Task<List<Job>> UpdateJobs(List<ActivityState> activityStates);
 }
 
 class Jobs : IJobsUpdater
 {
     private readonly Action<Job?> _setCurrentJob;
+    private readonly YagnaService _yagna;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -31,8 +34,9 @@ class Jobs : IJobsUpdater
     /// </summary>
     private readonly Dictionary<string, Job> _jobs = new();
 
-    public Jobs(Action<Job?> setCurrentJob, ILoggerFactory loggerFactory)
+    public Jobs(YagnaService yagna, Action<Job?> setCurrentJob, ILoggerFactory loggerFactory)
     {
+        _yagna = yagna;
         _setCurrentJob = setCurrentJob;
         _logger = loggerFactory.CreateLogger(nameof(Jobs));
     }
@@ -154,5 +158,89 @@ class Jobs : IJobsUpdater
             }
         }
         return null;
+    }
+
+    public Task<List<Job>> UpdateJobs(List<ActivityState> activityStates)
+    {
+        return Task.FromResult(activityStates
+            .Select(async state => await updateJob(state))
+                .Select(task => task.Result)
+                .Where(job => job != null)
+                .Cast<Job>()
+                .ToList());
+    }
+
+    /// <param name="activityState"></param>
+    /// <param name="jobs"></param>
+    /// <returns>optional current job</returns>
+    private async Task<Job?> updateJob(ActivityState activityState)
+    {
+        if (activityState.AgreementId == null || activityState.Id == null)
+            return null;
+        var (agreement, state) = await getAgreementAndState(activityState.AgreementId, activityState.Id);
+
+        if (agreement?.Demand?.RequestorId == null)
+        {
+            _logger.LogDebug($"No agreement for activity: {activityState.Id} (agreement: {activityState.AgreementId})");
+            return null;
+        }
+
+        var jobId = activityState.AgreementId;
+        var job = this.GetOrCreateJob(jobId, agreement);
+
+        var usage = GetUsage(activityState.Usage);
+        if (usage != null)
+            job.CurrentUsage = usage;
+        if (state != null)
+            job.UpdateActivityState(state);
+
+        // In case activity state wasn't properly updated by Provider or ExeUnit.
+        if (agreement.State == "Terminated")
+            job.Status = JobStatus.Finished;
+
+        if (job.Status == JobStatus.Finished)
+            return null;
+
+        return job;
+    }
+
+    /// TODO: replcae with GolemPrice::From after https://github.com/golemfactory/gamerhash-facade/pull/70
+    /// will be merged.
+    private GolemUsage? GetUsage(Dictionary<string, decimal>? usageDict)
+    {
+        if (usageDict != null)
+        {
+            var usage = new GolemUsage
+            {
+                StartPrice = 1,
+                GpuPerHour = usageDict["golem.usage.gpu-sec"],
+                EnvPerHour = usageDict["golem.usage.duration_sec"],
+                NumRequests = usageDict["ai-runtime.requests"],
+            };
+            return usage;
+        }
+        return null;
+    }
+
+    public async Task<(YagnaAgreement?, ActivityStatePair?)> getAgreementAndState(string agreementId, string activityId)
+    {
+        try
+        {
+            var getAgreementTask = _yagna.GetAgreement(agreementId);
+            var getStateTask = _yagna.GetState(activityId);
+            await Task.WhenAll(getAgreementTask, getStateTask);
+            var agreement = await getAgreementTask;
+            var state = await getStateTask;
+
+            _logger.LogInformation($"Got agreement: {agreement}");
+            _logger.LogInformation($"Got activity state: {state}");
+
+            return (agreement, state);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError($"Failed get Agreement {agreementId} or Acitviy {activityId} information. {e}");
+            return (null, null);
+        }
     }
 }
