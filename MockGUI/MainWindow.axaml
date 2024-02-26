@@ -6,6 +6,8 @@
         Width="1900" Height="900"
         x:Class="MockGUI.MainWindow"
         xmlns:facade="using:GolemLib"
+        xmlns:types="using:GolemLib.Types"
+        xmlns:view="using:MockGUI.View"
         Title="Facade tester">
     <Window.Styles>
         <Style Selector="TextBlock.Label">
@@ -27,11 +29,24 @@
             <Setter Property="Padding" Value="4"/>
             <Setter Property="Margin" Value="5"/>
         </Style>
+        <Style Selector="ToolTip">
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="MaxWidth" Value="Infinity"/>
+            <Setter Property="MaxHeight" Value="Infinity"/>
+        </Style>
     </Window.Styles>
+
+    <Window.Resources>
+        <view:BytesListConverter x:Key="listConverter"/>
+        <view:SignatureVerificationConverter x:Key="signatureVerificationConverter"/>
+    </Window.Resources>
 
     <Window.DataTemplates>
         <DataTemplate DataType="{x:Type facade:IJob}">
-            <Border Classes="Panel">
+            <Border Classes="Panel" ToolTip.ShowDelay="600">
                 <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
                     <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Id</TextBlock>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Id}"/>
@@ -41,7 +56,7 @@
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Job Status</TextBlock>
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Status}"/>
-
+                    
                     <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Payment Status</TextBlock>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PaymentStatus}"/>
 
@@ -79,6 +94,42 @@
 
                     <TextBlock Grid.Row="5" Grid.Column="0" Classes="Label">Current Reward</TextBlock>
                     <TextBlock Grid.Row="5" Grid.Column="1" VerticalAlignment="Center" Text="{Binding CurrentReward}"/>
+                </Grid>
+                <ToolTip.Tip>
+                    <StackPanel>
+                        <TextBlock Classes="Label">Payment Confirmations</TextBlock>
+                        <ItemsControl ItemsSource="{Binding PaymentConfirmation}"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"/>
+                    </StackPanel>
+                </ToolTip.Tip>
+            </Border>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type types:Payment}">
+            <Border Classes="Panel">
+                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Amount</TextBlock>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Amount}"/>
+                
+                    <TextBlock Grid.Row="1" Grid.Column="0" Classes="Label">Transaction Id</TextBlock>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TransactionId}"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Signature</TextBlock>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Signature, Converter={StaticResource listConverter}, ConverterParameter=hex}"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Signed Bytes</TextBlock>
+                    <TextBlock Grid.Row="3" Grid.Column="1"
+                        HorizontalAlignment="Left"
+                        MaxWidth="970"
+                        TextWrapping="Wrap"
+                        Text="{Binding SignedBytes, Converter={StaticResource listConverter}, ConverterParameter=string}"/>
+                    
+                    <TextBlock Grid.Row="4" Grid.Column="0" Classes="Label">Verified</TextBlock>
+                    <TextBlock Grid.Row="4" Grid.Column="1"
+                        HorizontalAlignment="Left"
+                        MaxWidth="970"
+                        TextWrapping="Wrap"
+                        Text="{Binding, Converter={StaticResource signatureVerificationConverter}}"/>
                 </Grid>
             </Border>
         </DataTemplate>
