@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 using System.Data;
+using System.Net.Http.Headers;
 
 namespace Golem.Yagna
 {
@@ -19,7 +20,7 @@ namespace Golem.Yagna
 
         public string YagnaApiUrl { get; set; } = "";
         public Network Network { get; set; } = Network.Holesky;
-        public PaymentDriver PaymentDriver { get; set; } = PaymentDriver.ERC20next;
+        public PaymentDriver PaymentDriver { get; set; } = PaymentDriver.ERC20;
     }
 
 
@@ -59,6 +60,7 @@ namespace Golem.Yagna
         private readonly string _yaExePath;
         private readonly string? _dataDir;
         private static Process? YagnaProcess { get; set; }
+        private readonly HttpClient _httpClient;
         private readonly ILogger _logger;
 
         private EnvironmentBuilder Env
@@ -83,25 +85,15 @@ namespace Golem.Yagna
             {
                 throw new Exception($"File not found: {_yaExePath}");
             }
+            _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
+            };
         }
 
         internal string ExecToText(params string[] arguments)
         {
-            var args = arguments.ToList();
-            var env = Env.Build();
-            try
-            {
-                var process = ProcessFactory.StartProcess(_yaExePath, args, env, true);
-                var result = process.StandardOutput.ReadToEnd();
-                var err = process.StandardError.ReadToEnd();
-                _logger?.LogInformation("Execution result. StdOut: {0}\nStdErr {1}", result, err);
-                return result;
-            }
-            catch (Exception e)
-            {
-                _logger?.LogError(e, "Failed to execute Provider cmd. Args: {0}", args);
-                throw new GolemProcessException(string.Format("Failed to execute Provider command: {0}", e.Message));
-            }
+            return new ProcessFactory(_yaExePath, _logger).WithEnv(Env.Build()).ExecToText(arguments);
         }
 
         internal async Task<string> ExecToTextAsync(params string[] arguments)
@@ -111,15 +103,12 @@ namespace Golem.Yagna
 
         internal T? Exec<T>(params string[] arguments) where T : class
         {
-            var text = ExecToText(arguments);
-            var options = new JsonSerializerOptionsBuilder()
-                .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
-                .Build();
-            return JsonSerializer.Deserialize<T>(text, options);
+            return new ProcessFactory(_yaExePath, _logger).WithEnv(Env.Build()).Exec<T>(arguments);
         }
 
         internal async Task<T?> ExecAsync<T>(params string[] arguments) where T : class
         {
+            // TODO: This should be funciton in ProcessFactory.
             var text = await ExecToTextAsync(arguments);
             var options = new JsonSerializerOptionsBuilder()
                 .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
@@ -183,6 +172,8 @@ namespace Golem.Yagna
 
         public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
         {
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
+
             if (YagnaProcess != null || cancellationToken.IsCancellationRequested)
             {
                 return false;
@@ -202,17 +193,21 @@ namespace Golem.Yagna
             var args = $"service run {debugFlag}".Split();
             var process = ProcessFactory.StartProcess(_yaExePath, args, environment.Build());
 
+            YagnaProcess = process;
+
             process.WaitForExitAsync(cancellationToken)
                 .ContinueWith(result =>
                 {
-                    var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
-                    YagnaProcess = null;
-                    exitHandler(exitCode);
+                    if(YagnaProcess != null)
+                    {
+                        var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
+                        YagnaProcess = null;
+                        exitHandler(exitCode);
+                    }
                 });
 
             ChildProcessTracker.AddProcess(process);
-
-            YagnaProcess = process;
+           
 
             cancellationToken.Register(async () =>
             {
@@ -238,6 +233,77 @@ namespace Golem.Yagna
             YagnaProcess = null;
         }
 
+        public async Task<MeInfo?> Me(CancellationToken cancellationToken)
+        {
+            var response = _httpClient.GetAsync($"/me", cancellationToken).Result;
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
+            }
+            var txt = await response.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptionsBuilder()
+                            .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
+                            .Build();
+
+            return JsonSerializer.Deserialize<MeInfo>(txt, options) ?? null;
+        }
+
+        public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken)
+        {
+            string? identity = null;
+
+            //yagna is starting and /me won't work until all services are running
+            for (int tries = 0; tries < 300; ++tries)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    return null;
+
+                Thread.Sleep(300);
+
+                if (HasExited) // yagna has stopped
+                {
+                    throw new Exception("Failed to start yagna ...");
+                }
+
+                try
+                {
+                    MeInfo? meInfo = await Me(cancellationToken);
+                    //sanity check
+                    if (meInfo != null)
+                    {
+                        if (String.IsNullOrEmpty(identity))
+                            identity = meInfo.Identity;
+                        break;
+                    }
+                    throw new Exception("Failed to get key");
+
+                }
+                catch (Exception)
+                {
+                    // consciously swallow the exception... presumably REST call error...
+                }
+            }
+            return identity;
+        }
+
+        /// TODO: Reconsider API of this function.
+        public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobsUpdater jobs)
+        {
+            token.Register(_httpClient.CancelPendingRequests);
+            return new ActivityLoop(_httpClient, token, _logger).Start(
+                setCurrentJob,
+                jobs,
+                token
+            );
+        }
+
+        /// TODO: Reconsider API of this function.
+        public Task StartInvoiceEventsLoop(CancellationToken token, IJobsUpdater jobs)
+        {
+            token.Register(_httpClient.CancelPendingRequests);
+            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(jobs.UpdatePaymentStatus, jobs.UpdatePaymentConfirmation);
+        }
+
         private void BindOutputEventHandlers(Process proc)
         {
             proc.OutputDataReceived += OnOutputDataRecv;
@@ -250,6 +316,7 @@ namespace Golem.Yagna
         {
             _logger.LogInformation($"{e.Data}");
         }
+
         private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
         {
             _logger.LogInformation($"{e.Data}");

@@ -135,28 +135,12 @@ namespace Golem.Yagna
 
         public T? Exec<T>(IEnumerable<object> args) where T : class
         {
-            var text = ExecToText(args);
-            var options = new JsonSerializerOptionsBuilder()
-                .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
-                .Build();
-            return JsonSerializer.Deserialize<T>(text, options);
+            return new ProcessFactory(_yaProviderPath, _logger).WithEnv(Env).Exec<T>(args);
         }
 
         public string ExecToText(IEnumerable<object> args)
         {
-            try
-            {
-                var process = ProcessFactory.StartProcess(_yaProviderPath, args, Env, true);
-                var result = process.StandardOutput.ReadToEnd();
-                var err = process.StandardError.ReadToEnd();
-                _logger?.LogInformation("Execution result. StdOut: {0}\nStdErr {1}", result, err);
-                return result;
-            }
-            catch (Exception e)
-            {
-                _logger?.LogError(e, "Failed to execute Provider cmd. Args: {0}", args);
-                throw new GolemProcessException(string.Format("Failed to execute Provider command: {0}", e.Message));
-            }
+            return new ProcessFactory(_yaProviderPath, _logger).WithEnv(Env).ExecToText(args);
         }
 
         public List<ExeUnitDesc> ExeUnitList()
@@ -229,7 +213,7 @@ namespace Golem.Yagna
             process.WaitForExitAsync(cancellationToken)
                 .ContinueWith(result =>
             {
-                var exitCode = ProviderProcess?.ExitCode ?? throw new GolemException("Unable to get Provider process exit code");;
+                var exitCode = ProviderProcess?.ExitCode ?? throw new GolemException("Unable to get Provider process exit code");
                 ClearHandle();
                 exitHandler(exitCode);
             });
@@ -241,7 +225,6 @@ namespace Golem.Yagna
             cancellationToken.Register(async () =>
             {
                 _logger.LogInformation("Canceling Provider process");
-                _logger.LogInformation("Nope");
                 await Stop();
             });
 
