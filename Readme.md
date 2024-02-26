@@ -6,7 +6,7 @@ Inside `gamerhash-facade` project directory run in command line:
 ```
 dotnet run --project Golem.Package -- download --target modules
 dotnet run --project MockGUI --golem modules --use-dll
-dotnet run --project ExampleRunner --golem modules
+dotnet run --project ExampleRunner -- --golem modules --framework Dummy
 ```
 
 In `MockGUI` click Start button to run Golem and wait for tasks.
@@ -100,8 +100,8 @@ dotnet run --project ExampleRunner --golem modules --relay Devnet
 If this is not enough you can use local relay setup, by running:
 
 ```
-dotnet run --project MockGUI --golem modules --use-dll --relay Local
-dotnet run --project ExampleRunner --golem modules --relay Local
+dotnet run --project MockGUI -- --golem modules --use-dll --relay Local
+dotnet run --project ExampleRunner -- --golem modules --framework Dummy --relay Local
 ```
 
 ### Other Providers stealing your jobs

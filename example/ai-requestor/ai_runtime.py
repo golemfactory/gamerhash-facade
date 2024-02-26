@@ -151,8 +151,8 @@ class ProviderOnceStrategy(MarketStrategy):
 
 # App
 
-RUNTIME_NAME = "automatic" 
-# RUNTIME_NAME = "dummy"
+# RUNTIME_NAME = "automatic" 
+RUNTIME_NAME = "dummy"
 
 @dataclass
 class AiPayload(Payload):
@@ -184,6 +184,7 @@ class AiRuntimeService(Service):
         super().__init__()
         self.strategy = strategy
 
+
 async def trigger(activity: RequestorControlApi, token, prompt, output_file):
 
     custom_url = "/sdapi/v1/txt2img"
@@ -192,7 +193,7 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
 
     payload = {
         'prompt': prompt,
-        'steps': 10
+        'steps': 250
     }
 
     print('Sending request:')
@@ -214,7 +215,7 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
 async def main(subnet_tag, driver=None, network=None):
     strategy = ProviderOnceStrategy()
     async with Golem(
-        budget=1.0,
+        budget=10.0,
         subnet_tag=subnet_tag,
         strategy=strategy,
         payment_driver=driver,
@@ -250,7 +251,6 @@ async def main(subnet_tag, driver=None, network=None):
 
                 if s._ctx != None:
                     for id in [s._ctx._activity.id ]:
-                        print(f'trigger activity {id}')
                         activity = await golem._engine._activity_api.use_activity(id)
                         await trigger(
                             activity,
@@ -269,20 +269,16 @@ async def main(subnet_tag, driver=None, network=None):
             
             print(f"""instances: {[f"{r['name']}: {r['state']}" for r in i]}""")
 
-            if len(running) > 0:
-                print('Starting')
-                
+            if len(running) > 0:             
                 print('Please type your prompt:')
                 prompt = input()
-                print('Got it')
+                print('Sending to automatic')
                 await get_image(
                     prompt,
                     'output.png'
                 )
-                print('Done')
+                print('Response received. Check output.png')
 
-                # Closing
-                break
             
             await asyncio.sleep(3)
         # End 

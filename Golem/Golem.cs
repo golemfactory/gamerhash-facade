@@ -1,10 +1,7 @@
 ﻿using System.ComponentModel;
-using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 
 using Golem.GolemUI.Src;
-using Golem.Tools;
 using Golem.Yagna;
 using Golem.Yagna.Types;
 
@@ -23,9 +20,6 @@ namespace Golem
         private YagnaService Yagna { get; set; }
         private Provider Provider { get; set; }
         private ProviderConfigService ProviderConfig { get; set; }
-
-        private Task? _activityLoop;
-        private Task? _invoiceEventsLoop;
         private CancellationTokenSource _yagnaCancellationtokenSource;
         private CancellationTokenSource _providerCancellationtokenSource;
 
@@ -302,8 +296,8 @@ namespace Golem
 
             var account = await Yagna.WaitForIdentityAsync(cancellationToken);
 
-            _activityLoop = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs);
-            _invoiceEventsLoop = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs);
+            _ = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs);
+            _ = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs);
 
             try
             {

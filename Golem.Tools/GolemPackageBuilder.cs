@@ -17,8 +17,8 @@ namespace Golem.Tools
 {
     public class PackageBuilder
     {
-        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.15.0-rc16_gsb_proxy";
-        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.1.0-rc29";
+        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.16.0-ai-rc6";
+        public static string CURRENT_RUNTIME_VERSION = "v0.1.0";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
@@ -61,7 +61,7 @@ namespace Golem.Tools
             var system = System();
             BuildDirectoryStructure(dir);
 
-            await DownloadExtractPackage(BinariesDir(dir), "golem-provider", "pwalski/yagna", CURRENT_GOLEM_VERSION);
+            await DownloadExtractPackage(BinariesDir(dir), "golem-provider", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
 
             var exeUnitDir = ExeUnitsDir(dir);
             await DownloadExtractPackage(exeUnitDir, "runtime", "golemfactory/ya-runtime-ai", CURRENT_RUNTIME_VERSION);
@@ -105,7 +105,7 @@ namespace Golem.Tools
             Directory.CreateDirectory(YagnaDataDir(dir));
 
             if (!File.Exists(Path.Combine(BinariesDir(dir), "yagna")))
-                await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "pwalski/yagna", CURRENT_GOLEM_VERSION);
+                await DownloadExtractPackage(BinariesDir(dir), "golem-requestor", "golemfactory/yagna", CURRENT_GOLEM_VERSION);
 
             return dir;
         }
@@ -115,7 +115,8 @@ namespace Golem.Tools
             var downloaded_artifact = await DownloadArchiveArtifact(artifact, tag, repo);
 
             var extract_dir = Path.Combine(dir, "unpack");
-            if (Path.Exists(extract_dir)) {
+            if (Path.Exists(extract_dir))
+            {
                 Directory.Delete(extract_dir, true);
                 Directory.CreateDirectory(extract_dir);
             }

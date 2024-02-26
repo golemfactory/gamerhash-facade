@@ -111,7 +111,7 @@ class ActivityLoop
                 catch (Exception e)
                 {
                     _logger.LogError(e, "Activity monitoring request failure");
-                    await Task.Delay(TimeSpan.FromSeconds(1), token);
+                    await Task.Delay(TimeSpan.FromSeconds(5), token);
                 }
             }
         }

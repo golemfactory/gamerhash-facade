@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Linq;
 using System.Text.Json;
 
 using Golem.Tools;
@@ -7,6 +6,7 @@ using Golem.Tools;
 using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
+
 
 class InvoiceEventsLoop
 {
@@ -85,7 +85,7 @@ class InvoiceEventsLoop
                 catch (Exception e)
                 {
                     _logger.LogError(e, "Payment request failure");
-                    await Task.Delay(TimeSpan.FromSeconds(1), _token);
+                    await Task.Delay(TimeSpan.FromSeconds(5), _token);
                 }
             }
         }
@@ -101,6 +101,7 @@ class InvoiceEventsLoop
 
     private async Task UpdatesForInvoice(InvoiceEvent invoiceEvent, Action<string, PaymentStatus> UpdatePaymentStatus, Action<string, List<Payment>> updatePaymentConfirmation)
     {
+
         var invoice = await GetInvoice(invoiceEvent.InvoiceId);
         if (invoice != null)
         {
@@ -112,7 +113,7 @@ class InvoiceEventsLoop
                 var paymentsForRecentJob = payments
                     .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
                     .ToList();
-                updatePaymentConfirmation(invoice.AgreementId, payments);
+                updatePaymentConfirmation(invoice.AgreementId, paymentsForRecentJob);
             }
         }
     }
@@ -172,7 +173,10 @@ class InvoiceEventsLoop
                 }
             }
         }
-        catch { }
+        catch (Exception e)
+        {
+            _logger.LogError("GetPayments error: {msg}", e.Message);
+        }
 
         return payments ?? new List<Payment>();
     }
