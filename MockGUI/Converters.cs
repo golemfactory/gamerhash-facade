@@ -53,33 +53,7 @@ namespace MockGUI.View
         }
     }
 
-
-    public class Base64Converter : IValueConverter
-    {
-        public static readonly Base64Converter Instance = new();
-
-        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        {
-            if (value != null
-                && value.GetType() == typeof(string)
-                && targetType.IsAssignableTo(typeof(string)))
-            {
-                var bytes = System.Convert.FromBase64String((string)value);
-                return "0x" + System.Convert.ToHexString(bytes);
-            }
-
-            // Converter used for the wrong type
-            return new BindingNotification(new InvalidCastException(), BindingErrorType.Error);
-        }
-
-
-        public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        {
-            throw new NotSupportedException();
-        }
-    }
-
-    public class SignatureVerificationConverter: IValueConverter
+    public class SignatureVerificationConverter : IValueConverter
     {
         public static readonly SignatureVerificationConverter Instance = new();
 
@@ -90,7 +64,7 @@ namespace MockGUI.View
 
             var v = signatureArray[0];
             if ((v == 0) || (v == 1))
-                v = (byte) (v + 27);
+                v = (byte)(v + 27);
             Array.Copy(signatureArray, 1, r, 0, 32);
             Array.Copy(signatureArray, 33, s, 0, 32);
 
@@ -115,7 +89,7 @@ namespace MockGUI.View
             {
                 var payment = (Payment)value;
 
-                return payment.Signature!=null && payment.SignedBytes!=null
+                return payment.Signature != null && payment.SignedBytes != null
                     ? VerifySignature(payment.Signature.ToArray(), payment.SignedBytes.ToArray()) ? "true" : "false"
                     : (object)false;
             }

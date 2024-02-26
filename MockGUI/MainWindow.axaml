@@ -41,7 +41,6 @@
 
     <Window.Resources>
         <view:BytesListConverter x:Key="listConverter"/>
-        <view:Base64Converter x:Key="unBase64"/>
         <view:SignatureVerificationConverter x:Key="signatureVerificationConverter"/>
     </Window.Resources>
 
@@ -113,7 +112,7 @@
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Amount}"/>
                 
                     <TextBlock Grid.Row="1" Grid.Column="0" Classes="Label">Transaction Id</TextBlock>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Details, Converter={StaticResource unBase64}}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TransactionId}"/>
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Signature</TextBlock>
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Signature, Converter={StaticResource listConverter}, ConverterParameter=hex}"/>

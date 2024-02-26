@@ -142,10 +142,16 @@ public class Payment
     public required List<AgreementPayment> AgreementPayments { get; init; }
 
     public required string Details { get; init; }
-    // public required string TransactionId { get; init; }
     public List<byte>? Signature { get; init; }
     public List<byte>? SignedBytes { get; init; }
 
+    public string TransactionId
+    {
+        get
+        {
+            return "0x" + Convert.ToHexString(Convert.FromBase64String(Details));
+        }
+    }
 
     public override int GetHashCode()
     {
