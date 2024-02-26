@@ -1,12 +1,10 @@
 using System.Globalization;
-using System.Linq;
 using System.Text.Json;
 
 using Golem.Tools;
-
 using GolemLib.Types;
-
 using Microsoft.Extensions.Logging;
+
 
 class InvoiceEventsLoop
 {
@@ -105,18 +103,6 @@ class InvoiceEventsLoop
             if (paymentStatus == PaymentStatus.Settled)
             {
                 var payments = await GetPayments();
-                var signedPayments = payments.Where(p => p.Signature is not null).ToList();
-
-                foreach (var p in signedPayments)
-                {
-                    if (p.SignedBytes != null && p.Signature != null)
-                    {
-                        var str = System.Text.Encoding.UTF8.GetString(p.SignedBytes.ToArray());
-                        var sig = System.Convert.ToHexString(p.Signature.ToArray());
-                        Console.WriteLine("[SignedPayment]: {0} {1}\n{2}", p.Amount, sig, str);
-                    }
-                }
-
                 var paymentsForRecentJob = payments
                     .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
                     .ToList();
