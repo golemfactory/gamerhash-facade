@@ -147,8 +147,8 @@ class Jobs : IJobsUpdater
                                 return new GolemPrice
                                 {
                                     StartPrice = initialPrice,
-                                    GpuPerHour = gpuSec,
-                                    EnvPerHour = durationSec,
+                                    GpuPerSec = gpuSec,
+                                    EnvPerSec = durationSec,
                                     NumRequests = requests,
                                 };
                             }
@@ -188,9 +188,8 @@ class Jobs : IJobsUpdater
         var jobId = activityState.AgreementId;
         var job = this.GetOrCreateJob(jobId, agreement);
 
-        var usage = GetUsage(activityState.Usage);
-        if (usage != null)
-            job.CurrentUsage = usage;
+        if (activityState.Usage != null)
+            job.CurrentUsage = GolemUsage.From(activityState.Usage);
         if (state != null)
             job.UpdateActivityState(state);
 
@@ -202,24 +201,6 @@ class Jobs : IJobsUpdater
             return null;
 
         return job;
-    }
-
-    /// TODO: replcae with GolemPrice::From after https://github.com/golemfactory/gamerhash-facade/pull/70
-    /// will be merged.
-    private GolemUsage? GetUsage(Dictionary<string, decimal>? usageDict)
-    {
-        if (usageDict != null)
-        {
-            var usage = new GolemUsage
-            {
-                StartPrice = 1,
-                GpuPerHour = usageDict["golem.usage.gpu-sec"],
-                EnvPerHour = usageDict["golem.usage.duration_sec"],
-                NumRequests = usageDict["ai-runtime.requests"],
-            };
-            return usage;
-        }
-        return null;
     }
 
     public async Task<(YagnaAgreement?, ActivityStatePair?)> getAgreementAndState(string agreementId, string activityId)

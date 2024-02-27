@@ -75,14 +75,14 @@
 
                         <StackPanel>
                             <TextBlock FontSize="12" FontWeight="Bold">Price per second</TextBlock>
-                            <TextBlock Text="{Binding Price.EnvPerHour, Mode=TwoWay}" Width="120" />
-                            <TextBlock Text="{Binding CurrentUsage.EnvPerHour, Mode=TwoWay}" Width="120" />
+                            <TextBlock Text="{Binding Price.EnvPerSec, Mode=TwoWay}" Width="120" />
+                            <TextBlock Text="{Binding CurrentUsage.EnvPerSec, Mode=TwoWay}" Width="120" />
                         </StackPanel>
 
                         <StackPanel>
                             <TextBlock FontSize="12" FontWeight="Bold">GPU usage</TextBlock>
-                            <TextBlock Text="{Binding Price.GpuPerHour, Mode=TwoWay}" Width="120" />
-                            <TextBlock Text="{Binding CurrentUsage.GpuPerHour, Mode=TwoWay}" Width="120" />
+                            <TextBlock Text="{Binding Price.GpuPerSec, Mode=TwoWay}" Width="120" />
+                            <TextBlock Text="{Binding CurrentUsage.GpuPerSec, Mode=TwoWay}" Width="120" />
                         </StackPanel>
 
                         <StackPanel>
@@ -165,12 +165,12 @@
                                 
                                 <StackPanel>
                                     <TextBlock FontSize="12" FontWeight="Bold">Price per hour</TextBlock>
-                                    <NumericUpDown Value="{Binding Golem.Price.EnvPerHour, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
+                                    <NumericUpDown Value="{Binding Golem.Price.EnvPerSec, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
                                 </StackPanel>
                                 
                                 <StackPanel>
                                     <TextBlock FontSize="12" FontWeight="Bold">GPU usage</TextBlock>
-                                    <NumericUpDown Value="{Binding Golem.Price.GpuPerHour, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
+                                    <NumericUpDown Value="{Binding Golem.Price.GpuPerSec, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
                                 </StackPanel>
 
                                 <StackPanel>

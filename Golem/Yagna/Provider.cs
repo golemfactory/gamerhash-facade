@@ -208,19 +208,19 @@ namespace Golem.Yagna
             env["MIN_AGREEMENT_EXPIRATION"] = "30s";
             env["YAGNA_APPKEY"] = appKey;
 
-            var process = ProcessFactory.StartProcess(_yaProviderPath, arguments, env);
+            ProviderProcess = ProcessFactory.StartProcess(_yaProviderPath, arguments, env);
+            ChildProcessTracker.AddProcess(ProviderProcess);
 
-            process.WaitForExitAsync(cancellationToken)
+            ProviderProcess.WaitForExitAsync(cancellationToken)
                 .ContinueWith(result =>
             {
-                var exitCode = ProviderProcess?.ExitCode ?? throw new GolemException("Unable to get Provider process exit code");
+                if(ProviderProcess != null && ProviderProcess.HasExited)
+                {
+                    var exitCode = ProviderProcess?.ExitCode ?? throw new GolemException("Unable to get Provider process exit code");
+                    exitHandler(exitCode);
+                }
                 ClearHandle();
-                exitHandler(exitCode);
             });
-
-            ChildProcessTracker.AddProcess(process);
-
-            ProviderProcess = process;
 
             cancellationToken.Register(async () =>
             {
