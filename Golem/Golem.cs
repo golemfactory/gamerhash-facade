@@ -226,9 +226,7 @@ namespace Golem
         public async Task Stop()
         {
             _logger.LogInformation("Stopping Golem");
-
-            await Provider.Stop(5_000);
-            await Yagna.Stop(30_000);
+            Status = GolemStatus.Stopping;
 
             try
             {
@@ -241,6 +239,9 @@ namespace Golem
             {
                 _logger.LogError($"Failed to cancel Golem process. Err {err}");
             }
+
+            await Provider.Stop(5_000);
+            await Yagna.Stop(30_000);
 
             Status = GolemStatus.Off;
 
@@ -370,7 +371,8 @@ namespace Golem
         private bool IsRunning()
         {
             return Status == GolemStatus.Starting ||
-                Status == GolemStatus.Ready;
+                Status == GolemStatus.Ready ||
+                Status == GolemStatus.Stopping;
         }
     }
 }

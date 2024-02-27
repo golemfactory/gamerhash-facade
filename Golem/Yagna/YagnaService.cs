@@ -191,23 +191,19 @@ namespace Golem.Yagna
             environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
 
             var args = $"service run {debugFlag}".Split();
-            var process = ProcessFactory.StartProcess(_yaExePath, args, environment.Build());
+            YagnaProcess = ProcessFactory.StartProcess(_yaExePath, args, environment.Build());
+            ChildProcessTracker.AddProcess(YagnaProcess);
 
-            YagnaProcess = process;
-
-            process.WaitForExitAsync(cancellationToken)
+            YagnaProcess.WaitForExitAsync(cancellationToken)
                 .ContinueWith(result =>
                 {
-                    if(YagnaProcess != null)
+                    if(YagnaProcess!=null && YagnaProcess.HasExited)
                     {
                         var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
-                        YagnaProcess = null;
                         exitHandler(exitCode);
                     }
+                    YagnaProcess = null;
                 });
-
-            ChildProcessTracker.AddProcess(process);
-           
 
             cancellationToken.Register(async () =>
             {

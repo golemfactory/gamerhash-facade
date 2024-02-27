@@ -79,6 +79,7 @@ public enum GolemStatus
     /// (That can be implemented as `ya-provider` not running)
     /// </summary>
     Suspended,
+    Stopping,
     Error,
 }
 
