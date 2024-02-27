@@ -12,9 +12,9 @@ public class GolemUsage : GolemPrice
     public decimal Reward(GolemPrice prices)
     {
         return prices.StartPrice * this.StartPrice
-            + prices.GpuPerHour * this.GpuPerHour
+            + prices.GpuPerSec * this.GpuPerSec
             + prices.NumRequests * this.NumRequests
-            + prices.EnvPerHour * this.EnvPerHour;
+            + prices.EnvPerSec * this.EnvPerSec;
     }
 }
 

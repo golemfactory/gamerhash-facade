@@ -6,52 +6,64 @@ using System.Runtime.CompilerServices;
 /// Represents price settings in Golem pricing model.
 /// TODO: We will find out later which of these options make the most sense.
 /// </summary>
-public class NotInitializedGolemPrice: GolemPrice
+public class NotInitializedGolemPrice : GolemPrice
 {
 
 }
 
-public class GolemPrice: INotifyPropertyChanged
+public class GolemPrice : INotifyPropertyChanged, IEquatable<GolemPrice>
 {
 
     private decimal startPrice;
-    private decimal gpuPerHour;
-    private decimal envPerHour;
+    private decimal gpuPerSec;
+    private decimal envPerSec;
     private decimal numRequests;
 
-    public decimal GpuPerHour
-    { 
+    public decimal GpuPerSec
+    {
         get
         {
-            return gpuPerHour;
-        } set
+            return gpuPerSec;
+        }
+        set
         {
-            gpuPerHour = value;
-            OnPropertyChanged();
+            if (gpuPerSec != value)
+            {
+                gpuPerSec = value;
+                OnPropertyChanged();
+            }
         }
     }
 
-    public decimal EnvPerHour
-    { 
+    public decimal EnvPerSec
+    {
         get
         {
-            return envPerHour;
-        } set
+            return envPerSec;
+        }
+        set
         {
-            envPerHour = value;
-            OnPropertyChanged();
+            if (envPerSec != value)
+            {
+                envPerSec = value;
+                OnPropertyChanged();
+            }
         }
     }
 
     public decimal NumRequests
-    { 
+    {
         get
         {
             return numRequests;
-        } set
+        }
+        set
         {
-            numRequests = value;
-            OnPropertyChanged();
+            if (numRequests != value)
+            {
+                numRequests = value;
+                OnPropertyChanged();
+            }
         }
     }
 
@@ -63,9 +75,55 @@ public class GolemPrice: INotifyPropertyChanged
         }
         set
         {
-            startPrice = value;
-            OnPropertyChanged();
+            if (startPrice != value)
+            {
+                startPrice = value;
+                OnPropertyChanged();
+            }
         }
+    }
+
+    public Dictionary<string, decimal> GolemCounters()
+    {
+        return new Dictionary<string, decimal>
+        {
+            { "ai-runtime.requests", this.NumRequests },
+            { "golem.usage.duration_sec", this.EnvPerSec },
+            { "golem.usage.gpu-sec", this.GpuPerSec },
+            { "Initial", this.StartPrice }
+        };
+    }
+
+    public static GolemPrice From(decimal? InitialPrice, Dictionary<string, decimal> coeffs)
+    {
+        if (!coeffs.TryGetValue("ai-runtime.requests", out var numRequests))
+            numRequests = 0;
+        if (!coeffs.TryGetValue("golem.usage.duration_sec", out var duration))
+            duration = 0;
+        if (!coeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
+            gpuSec = 0;
+
+        var initPrice = InitialPrice ?? 0m;
+
+        return new GolemPrice
+        {
+            EnvPerSec = duration,
+            StartPrice = initPrice,
+            GpuPerSec = gpuSec,
+            NumRequests = numRequests
+        };
+    }
+
+
+    public bool Equals(GolemPrice? other)
+    {
+        if (other == null)
+            return false;
+
+        return this.EnvPerSec == other.EnvPerSec &&
+            this.GpuPerSec == other.GpuPerSec &&
+            this.NumRequests == other.NumRequests &&
+            this.StartPrice == other.StartPrice;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

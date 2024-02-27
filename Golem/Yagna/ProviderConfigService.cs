@@ -44,32 +44,25 @@ namespace Golem
             {
                 get
                 {
-                    if (!_provider.ClearHandle())
-                    {
-                        _provider.PresetConfig.InitilizeDefaultPresets();
-                    }
-
                     var presets = _provider.PresetConfig.DefaultPresets;
 
                     if (presets.Count == 0)
                         return new GolemPrice();
 
-                    var golemPrice = presetIntoPrice(presets[0]);
+                    var golemPrice = presets[0].ToPrice();
 
                     if (presets.Count == 1)
                         return golemPrice;
 
-                    var golemPriceDict = golemPriceToDict(golemPrice);
-                    // Unify Preset prices
+                    // All preset prices should have the same value. Unify if they don't.
                     for (int i = 1; i < presets.Count; i++)
                     {
                         var otherPreset = presets[i];
-                        var otherPrice = presetIntoPrice(otherPreset);
-                        var otherPriceDict = golemPriceToDict(otherPrice);
-                        if (!golemPriceDict.Equals(otherPriceDict))
+                        var otherPrice = otherPreset.ToPrice();
+
+                        if (!golemPrice.Equals(otherPrice))
                         {
-                            var args = _provider.PresetConfig.PriceDictToPriceArgs(golemPriceDict);
-                            _provider.PresetConfig.UpdatePrices(otherPreset.Name, args);
+                            _provider.PresetConfig.UpdatePrice(otherPreset.Name, golemPrice);
                         }
                     }
 
@@ -78,12 +71,8 @@ namespace Golem
 
                 set
                 {
-                    if (!_provider.ClearHandle())
-                    {
-                        _provider.PresetConfig.InitilizeDefaultPresets();
-                    }
-                    var priceDict = golemPriceToDict(value);
-                    _provider.PresetConfig.UpdatePrices(priceDict);
+                    _provider.PresetConfig.InitilizeDefaultPresets();
+                    _provider.PresetConfig.UpdateAllPrices(value);
                 }
             }
 
@@ -92,8 +81,8 @@ namespace Golem
                 return new Dictionary<string, decimal>
                     {
                         { "ai-runtime.requests", price.NumRequests },
-                        { "golem.usage.duration_sec", price.EnvPerHour },
-                        { "golem.usage.gpu-sec", price.GpuPerHour },
+                        { "golem.usage.duration_sec", price.EnvPerSec },
+                        { "golem.usage.gpu-sec", price.GpuPerSec },
                         { "Initial", price.StartPrice }
                     };
             }
@@ -111,9 +100,9 @@ namespace Golem
 
                 return new GolemPrice
                 {
-                    EnvPerHour = duration,
+                    EnvPerSec = duration,
                     StartPrice = initPrice,
-                    GpuPerHour = gpuSec,
+                    GpuPerSec = gpuSec,
                     NumRequests = numRequests
                 };
             }

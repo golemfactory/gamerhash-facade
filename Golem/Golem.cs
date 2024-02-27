@@ -37,17 +37,12 @@ namespace Golem
             }
             set
             {
-                if (
-                    _golemPrice.StartPrice != value.StartPrice
-                    || _golemPrice.GpuPerHour != value.GpuPerHour
-                    || _golemPrice.EnvPerHour != value.EnvPerHour
-                    || _golemPrice.NumRequests != value.NumRequests
-                )
+                if (!value.Equals(_golemPrice))
                 {
                     // Set individual values, because we don't want to drop GolemPrice object here.
                     _golemPrice.StartPrice = value.StartPrice;
-                    _golemPrice.GpuPerHour = value.GpuPerHour;
-                    _golemPrice.EnvPerHour = value.EnvPerHour;
+                    _golemPrice.GpuPerSec = value.GpuPerSec;
+                    _golemPrice.EnvPerSec = value.EnvPerSec;
                     _golemPrice.NumRequests = value.NumRequests;
 
                     OnPropertyChanged();
@@ -275,10 +270,11 @@ namespace Golem
             _golemPrice = ProviderConfig.GolemPrice;
             _jobs = new Jobs(SetCurrentJob, loggerFactory);
 
-            Price.PropertyChanged += GolemPrice_PropertyChangedHandler;
+            // Listen to property changed event on nested properties to update Provider presets.
+            Price.PropertyChanged += OnGolemPriceChanged;
         }
 
-        private void GolemPrice_PropertyChangedHandler(object? sender, PropertyChangedEventArgs e)
+        private void OnGolemPriceChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (sender is GolemPrice price)
             {

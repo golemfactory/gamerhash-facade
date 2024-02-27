@@ -177,8 +177,8 @@ class ActivityLoop
             var usage = new GolemUsage
             {
                 StartPrice = 1,
-                GpuPerHour = usageDict["golem.usage.gpu-sec"],
-                EnvPerHour = usageDict["golem.usage.duration_sec"],
+                GpuPerSec = usageDict["golem.usage.gpu-sec"],
+                EnvPerSec = usageDict["golem.usage.duration_sec"],
                 NumRequests = usageDict["ai-runtime.requests"],
             };
             return usage;

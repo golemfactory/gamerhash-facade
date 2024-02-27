@@ -170,8 +170,8 @@ class Jobs : IJobsUpdater
                                 return new GolemPrice
                                 {
                                     StartPrice = initialPrice,
-                                    GpuPerHour = gpuSec,
-                                    EnvPerHour = durationSec,
+                                    GpuPerSec = gpuSec,
+                                    EnvPerSec = durationSec,
                                     NumRequests = requests,
                                 };
                             }
