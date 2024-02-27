@@ -197,7 +197,7 @@ namespace Golem.Yagna
             YagnaProcess.WaitForExitAsync(cancellationToken)
                 .ContinueWith(result =>
                 {
-                    if(YagnaProcess!=null && YagnaProcess.HasExited)
+                    if (YagnaProcess != null && YagnaProcess.HasExited)
                     {
                         var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
                         exitHandler(exitCode);

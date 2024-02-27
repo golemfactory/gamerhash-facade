@@ -183,16 +183,16 @@ namespace Golem
             return (int exitCode) =>
             {
                 _logger.LogInformation("Handling Yagna process shutdown");
-                if (exitCode != 0)
+                if (exitCode == 0 || yagnaCancellationTokenSource.IsCancellationRequested)
+                {
+                    Status = GolemStatus.Off;
+                }
+                else
                 {
                     Status = GolemStatus.Error;
                     _logger.LogError("Yagna process failed");
                 }
-                else if (Status != GolemStatus.Error)
-                {
-                    // `Off` only if status was not already set to `Error`.
-                    Status = GolemStatus.Off;
-                }
+
                 safeCancel(yagnaCancellationTokenSource);
                 safeCancel(providerCancellationTokenSource);
             };
@@ -203,7 +203,12 @@ namespace Golem
             return (int exitCode) =>
             {
                 _logger.LogInformation("Handling Provider process shutdown");
-                if (exitCode != 0)
+
+                if (exitCode == 0 || providerCancellationToken.IsCancellationRequested)
+                {
+                    Status = GolemStatus.Off;
+                }
+                else
                 {
                     Status = GolemStatus.Error;
                     _logger.LogError("Provider process failed");

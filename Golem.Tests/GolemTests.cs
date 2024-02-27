@@ -95,7 +95,10 @@ namespace Golem.Tests
             await startTask;
 
             Assert.Equal(GolemStatus.Ready, status);
-            await golem.Stop();
+            var stopTask = golem.Stop();
+
+            Assert.Equal(GolemStatus.Stopping, status);
+            await stopTask;
 
             Assert.Equal(GolemStatus.Off, status);
         }
