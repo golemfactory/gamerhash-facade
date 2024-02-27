@@ -208,10 +208,10 @@ namespace Golem.Yagna
             env["MIN_AGREEMENT_EXPIRATION"] = "30s";
             env["YAGNA_APPKEY"] = appKey;
 
-            var process = ProcessFactory.StartProcess(_yaProviderPath, arguments, env);
-            ProviderProcess = process;
+            ProviderProcess = ProcessFactory.StartProcess(_yaProviderPath, arguments, env);
+            ChildProcessTracker.AddProcess(ProviderProcess);
 
-            process.WaitForExitAsync(cancellationToken)
+            ProviderProcess.WaitForExitAsync(cancellationToken)
                 .ContinueWith(result =>
             {
                 if(ProviderProcess!=null && ProviderProcess.HasExited)
@@ -221,9 +221,6 @@ namespace Golem.Yagna
                 }
                 ClearHandle();
             });
-
-            ChildProcessTracker.AddProcess(process);
-          
 
             cancellationToken.Register(async () =>
             {
