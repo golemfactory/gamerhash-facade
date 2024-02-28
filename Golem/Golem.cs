@@ -239,12 +239,12 @@ namespace Golem
             }
         }
 
-        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int, string> exitHandler, CancellationToken cancellationToken)
+        public void StartupProvider(YagnaStartupOptions yagnaOptions, Action<int, string> exitHandler, CancellationToken cancellationToken)
         {
             try
             {
                 Provider.PresetConfig.InitilizeDefaultPresets();
-                return Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
+                Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
             }
             catch (Exception e)
             {

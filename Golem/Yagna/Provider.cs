@@ -195,7 +195,7 @@ namespace Golem.Yagna
             ExecToText($"profile update {param} {value} default".Split());
         }
 
-        public bool Run(string appKey, Network network, Action<int, string> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
+        public void Run(string appKey, Network network, Action<int, string> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -223,8 +223,6 @@ namespace Golem.Yagna
                 }
                 ClearHandle();
             });
-
-            return ClearHandle();
         }
 
         public async Task Stop(int stopTimeoutMs = 30_000)
