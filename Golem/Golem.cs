@@ -149,23 +149,22 @@ namespace Golem
             _logger.LogInformation("Starting Golem");
 
             Status = GolemStatus.Starting;
+
             var (yagnaCancellationTokenSource, providerCancellationTokenSource) = ResetTokens();
+            var exitHandler = ExitCleanupHandler(yagnaCancellationTokenSource, providerCancellationTokenSource);
 
             try
             {
                 await Task.Yield();
 
                 var yagnaOptions = Yagna.StartupOptions();
-                var exitHandler = ExitHandler(yagnaCancellationTokenSource, providerCancellationTokenSource);
+
                 await StartupYagna(yagnaOptions, exitHandler, yagnaCancellationTokenSource.Token);
 
                 var defaultKey = (Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured"))
                     ?? throw new Exception("Can't get app-key, neither 'default' nor 'autoconfigured'");
 
                 StartupProvider(yagnaOptions, exitHandler, providerCancellationTokenSource.Token);
-
-                OnPropertyChanged(nameof(WalletAddress));
-                OnPropertyChanged(nameof(NodeId));
 
                 Status = GolemStatus.Ready;
             }
@@ -177,7 +176,9 @@ namespace Golem
             catch (Exception e)
             {
                 _logger.LogError("Failed to start Golem: {0}", e);
-                ExitHandler(yagnaCancellationTokenSource, providerCancellationTokenSource)(0, "");
+
+                // Cleanup to avoid leaving processes running.
+                exitHandler(1, "Golem");
                 Status = GolemStatus.Error;
             }
         }
@@ -232,6 +233,9 @@ namespace Golem
                     _logger.LogInformation($"Init Payment (wallet) {walletAddress}");
                     Yagna.PaymentService.Init(walletAddress ?? "");
                 }
+
+                OnPropertyChanged(nameof(WalletAddress));
+                OnPropertyChanged(nameof(NodeId));
             }
             catch (Exception e)
             {
@@ -253,13 +257,13 @@ namespace Golem
             }
         }
 
-        Action<int, string> ExitHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
+        Action<int, string> ExitCleanupHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
         {
             return async (int exitCode, string which) =>
             {
                 if (Status != GolemStatus.Stopping)
                 {
-                    _logger.LogError($"Unexpected {which} process shutdown. Exit code: {exitCode}");
+                    _logger.LogError($"Unexpected {which} shutdown. Exit code: {exitCode}");
 
                     if (!providerCancellationTokenSource.IsCancellationRequested || !Provider.HasExited)
                     {
