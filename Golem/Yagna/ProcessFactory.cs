@@ -116,25 +116,6 @@ namespace Golem.Yagna
                 process : throw new GolemProcessException($"Failed to start Golem process: {process}");
         }
 
-        private static void BindOutputEventHandlers(Process proc)
-        {
-            proc.OutputDataReceived += OnOutputDataRecv;
-            proc.ErrorDataReceived += OnErrorDataRecv;
-            proc.BeginErrorReadLine();
-            proc.BeginOutputReadLine();
-        }
-
-        private static void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            // _logger.LogInformation($"{e.Data}");
-            Console.WriteLine($">>> {e.Data}");
-        }
-        private static void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            // _logger.LogInformation($"{e.Data}");
-            Console.WriteLine($">>> {e.Data}");
-        }
-
         public static string BinName(string name)
         {
             return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?

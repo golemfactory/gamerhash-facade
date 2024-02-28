@@ -253,22 +253,5 @@ namespace Golem.Yagna
             }
             return true;
         }
-
-        private void BindOutputEventHandlers(Process proc)
-        {
-            proc.OutputDataReceived += OnOutputDataRecv;
-            proc.ErrorDataReceived += OnErrorDataRecv;
-            proc.BeginErrorReadLine();
-            proc.BeginOutputReadLine();
-        }
-
-        private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            _logger.LogInformation($"{e.Data}");
-        }
-        private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            _logger.LogInformation($"{e.Data}");
-        }
     }
 }
