@@ -166,6 +166,8 @@ namespace Golem
 
                 OnPropertyChanged(nameof(WalletAddress));
                 OnPropertyChanged(nameof(NodeId));
+
+                Status = GolemStatus.Ready;
             }
             catch (OperationCanceledException)
             {
@@ -258,57 +260,19 @@ namespace Golem
                 {
                     _logger.LogError($"Unexpected {which} process shutdown. Exit code: {exitCode}");
 
-                    if (!providerCancellationTokenSource.IsCancellationRequested)
+                    if (!providerCancellationTokenSource.IsCancellationRequested || !Provider.HasExited)
                     {
-                        providerCancellationTokenSource.Cancel();
+                        safeCancel(providerCancellationTokenSource);
                         await Provider.Stop();
                     }
 
-                    if (!yagnaCancellationTokenSource.IsCancellationRequested)
+                    if (!yagnaCancellationTokenSource.IsCancellationRequested || !Yagna.HasExited)
                     {
-                        yagnaCancellationTokenSource.Cancel();
+                        safeCancel(yagnaCancellationTokenSource);
                         await Yagna.Stop();
                     }
 
                     Status = GolemStatus.Error;
-                }
-            };
-        }
-
-        Action<int> yagnaProcessExitHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
-        {
-            return (int exitCode) =>
-            {
-                _logger.LogInformation("Handling Yagna process shutdown");
-                if (exitCode == 0 || yagnaCancellationTokenSource.IsCancellationRequested)
-                {
-                    Status = GolemStatus.Off;
-                }
-                else
-                {
-                    Status = GolemStatus.Error;
-                    _logger.LogError("Yagna process failed");
-                }
-
-                safeCancel(yagnaCancellationTokenSource);
-                safeCancel(providerCancellationTokenSource);
-            };
-        }
-
-        Action<int> providerProcessExitHandler(CancellationToken providerCancellationToken)
-        {
-            return (int exitCode) =>
-            {
-                _logger.LogInformation("Handling Provider process shutdown");
-
-                if (exitCode == 0 || providerCancellationToken.IsCancellationRequested)
-                {
-                    Status = GolemStatus.Off;
-                }
-                else
-                {
-                    Status = GolemStatus.Error;
-                    _logger.LogError("Provider process failed");
                 }
             };
         }

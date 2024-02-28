@@ -187,6 +187,9 @@ namespace Golem.Yagna
                 return profiles?["default"];
             }
         }
+
+        public bool HasExited => ProviderProcess?.HasExited ?? true;
+
         public void UpdateDefaultProfile(String param, String value)
         {
             ExecToText($"profile update {param} {value} default".Split());
