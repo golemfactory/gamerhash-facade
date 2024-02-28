@@ -192,10 +192,9 @@ namespace Golem.Yagna
             ExecToText($"profile update {param} {value} default".Split());
         }
 
-        public bool Run(string appKey, Network network, Action<int> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
+        public bool Run(string appKey, Network network, Action<int, string> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
-            if (cancellationToken.IsCancellationRequested)
-                return false;
+            cancellationToken.ThrowIfCancellationRequested();
 
             string debugSwitch = "";
             if (enableDebugLogs)
@@ -211,21 +210,15 @@ namespace Golem.Yagna
             ProviderProcess = ProcessFactory.StartProcess(_yaProviderPath, arguments, env);
             ChildProcessTracker.AddProcess(ProviderProcess);
 
-            ProviderProcess.WaitForExitAsync(cancellationToken)
+            ProviderProcess.WaitForExitAsync()
                 .ContinueWith(result =>
             {
-                if(ProviderProcess != null && ProviderProcess.HasExited)
+                if (ProviderProcess != null && ProviderProcess.HasExited)
                 {
                     var exitCode = ProviderProcess?.ExitCode ?? throw new GolemException("Unable to get Provider process exit code");
-                    exitHandler(exitCode);
+                    exitHandler(exitCode, "Provider");
                 }
                 ClearHandle();
-            });
-
-            cancellationToken.Register(async () =>
-            {
-                _logger.LogInformation("Canceling Provider process");
-                await Stop();
             });
 
             return ClearHandle();

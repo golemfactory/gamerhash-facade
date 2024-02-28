@@ -170,7 +170,7 @@ namespace Golem.Yagna
                     await proc.WaitForExitAsync(stopTimeoutToken);
                     logger?.LogInformation("Process stopped.");
                 }
-                catch (TaskCanceledException)
+                catch (OperationCanceledException)
                 {
                     logger?.LogWarning($"Failed to stop process. Killing it.");
                     cmd.Kill();
@@ -181,6 +181,9 @@ namespace Golem.Yagna
                 logger?.LogError("Failed to attach to process. Killing.");
                 proc.Kill();
             }
+
+            // Wait for process exiting after kill.
+            await proc.WaitForExitAsync();
             return proc.ExitCode;
         }
 

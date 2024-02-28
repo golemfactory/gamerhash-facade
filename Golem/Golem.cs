@@ -135,47 +135,144 @@ namespace Golem
             await Start();
         }
 
+        public async Task<bool> Suspend()
+        {
+            await Stop();
+            return false;
+        }
+
         public async Task Start()
         {
-            _logger.LogInformation("Starting Golem");
             if (IsRunning())
                 return;
 
-            Status = GolemStatus.Starting;
-            await Task.Yield();
-
-            var (yagnaCancellationTokenSource, providerCancellationTokenSource) = resetTokens();
-
-            var yagnaOptions = Yagna.StartupOptions();
-
-            _logger.LogInformation("Starting Golem's Yagna");
-            var success = await StartupYagnaAsync(yagnaOptions, yagnaProcessExitHandler(yagnaCancellationTokenSource, providerCancellationTokenSource), yagnaCancellationTokenSource.Token);
-
-            if (success)
+            try
             {
-                var defaultKey = Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured");
-                if (defaultKey is not null)
-                {
-                    HandleStartupProvider(yagnaOptions, providerProcessExitHandler(yagnaCancellationTokenSource.Token), providerCancellationTokenSource.Token);
-                }
+                _logger.LogInformation("Starting Golem");
+
+                Status = GolemStatus.Starting;
+                var (yagnaCancellationTokenSource, providerCancellationTokenSource) = ResetTokens();
+
+                await Task.Yield();
+
+                var yagnaOptions = Yagna.StartupOptions();
+                var exitHandler = ExitHandler(yagnaCancellationTokenSource, providerCancellationTokenSource);
+                await StartupYagna(yagnaOptions, exitHandler, yagnaCancellationTokenSource.Token);
+
+                var defaultKey = (Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured"))
+                    ?? throw new Exception("Can't get app-key, neither 'default' nor 'autoconfigured'");
+
+                StartupProvider(yagnaOptions, exitHandler, providerCancellationTokenSource.Token);
+
+                OnPropertyChanged(nameof(WalletAddress));
+                OnPropertyChanged(nameof(NodeId));
             }
-            else
+            catch (OperationCanceledException)
             {
-                Status = yagnaCancellationTokenSource.Token.IsCancellationRequested ? GolemStatus.Off : GolemStatus.Error;
+                _logger.LogInformation("Golem startup canceled");
+                // Stopping function is responsible for setting the status.
             }
+            catch (Exception e)
+            {
+                _logger.LogError("Failed to start Golem: {0}", e);
+                Status = GolemStatus.Error;
+            }
+        }
+
+        /// <summary>
+        /// Stops Golem. This function can be called multiple times. Second call will try to kill
+        /// the processes faster.
+        /// </summary>
+        public async Task Stop()
+        {
+            if (!IsRunning())
+                return;
+
+            _logger.LogInformation("Stopping Golem");
+            Status = GolemStatus.Stopping;
+
+            // Timeout is shorter when Stop was already called earlier.
+            int yagnaTimeout = Status == GolemStatus.Stopping ? 200 : 30_000;
+            int providerTimeout = Status == GolemStatus.Stopping ? 200 : 5_000;
+
+            safeCancel(_providerCancellationtokenSource);
+            safeCancel(_yagnaCancellationtokenSource);
+
+            await Provider.Stop(providerTimeout);
+            await Yagna.Stop(yagnaTimeout);
+
+            Status = GolemStatus.Off;
 
             OnPropertyChanged(nameof(WalletAddress));
             OnPropertyChanged(nameof(NodeId));
         }
 
-        void HandleStartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken providerCancellationToken)
+        private async Task StartupYagna(YagnaStartupOptions yagnaOptions, Action<int, string> exitHandler, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting Golem's Provider");
-            Status = StartupProvider(yagnaOptions, exitHandler, providerCancellationToken)
-                ? GolemStatus.Ready
-                : providerCancellationToken.IsCancellationRequested
-                    ? GolemStatus.Off
-                    : GolemStatus.Error;
+            _logger.LogInformation("Starting Golem's Yagna");
+
+            Yagna.Run(yagnaOptions, exitHandler, cancellationToken);
+
+            var account = await Yagna.WaitForIdentityAsync(cancellationToken);
+
+            _ = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs);
+            _ = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs);
+
+            try
+            {
+                _logger.LogInformation($"Init Payment (node id) {account}");
+                Yagna.PaymentService.Init(account ?? "");
+
+                var walletAddress = WalletAddress;
+                if (walletAddress != account)
+                {
+                    _logger.LogInformation($"Init Payment (wallet) {walletAddress}");
+                    Yagna.PaymentService.Init(walletAddress ?? "");
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Payment init failed: {0}", e);
+                throw new Exception("Payment init failed {0}", e);
+            }
+        }
+
+        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int, string> exitHandler, CancellationToken cancellationToken)
+        {
+            try
+            {
+                Provider.PresetConfig.InitilizeDefaultPresets();
+                return Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"Failed to start provider: {e}");
+            }
+        }
+
+        Action<int, string> ExitHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
+        {
+            return async (int exitCode, string which) =>
+            {
+                if (Status != GolemStatus.Stopping)
+                {
+                    _logger.LogError($"Unexpected {which} process shutdown. Exit code: {exitCode}");
+
+                    if (!providerCancellationTokenSource.IsCancellationRequested)
+                    {
+                        providerCancellationTokenSource.Cancel();
+                        await Provider.Stop();
+                    }
+
+                    if (!yagnaCancellationTokenSource.IsCancellationRequested)
+                    {
+                        yagnaCancellationTokenSource.Cancel();
+                        await Yagna.Stop();
+                    }
+
+                    Status = GolemStatus.Error;
+                }
+            };
         }
 
         Action<int> yagnaProcessExitHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
@@ -224,40 +321,8 @@ namespace Golem
             }
             else
             {
-                _logger.LogWarning("Cancellation already requested");
+                _logger.LogDebug("Cancellation already requested");
             }
-        }
-
-        public async Task Stop()
-        {
-            _logger.LogInformation("Stopping Golem");
-            Status = GolemStatus.Stopping;
-
-            try
-            {
-                if (!_providerCancellationtokenSource.IsCancellationRequested)
-                    _providerCancellationtokenSource.Cancel();
-                if (!_yagnaCancellationtokenSource.IsCancellationRequested)
-                    _yagnaCancellationtokenSource.Cancel();
-            }
-            catch (Exception err)
-            {
-                _logger.LogError($"Failed to cancel Golem process. Err {err}");
-            }
-
-            await Provider.Stop(5_000);
-            await Yagna.Stop(30_000);
-
-            Status = GolemStatus.Off;
-
-            OnPropertyChanged(nameof(WalletAddress));
-            OnPropertyChanged(nameof(NodeId));
-        }
-
-        public async Task<bool> Suspend()
-        {
-            await Stop();
-            return false;
         }
 
         public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
@@ -288,54 +353,6 @@ namespace Golem
             }
         }
 
-        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
-        {
-            var success = Yagna.Run(yagnaOptions, exitHandler, cancellationToken);
-
-            if (!success)
-                return false;
-
-            var account = await Yagna.WaitForIdentityAsync(cancellationToken);
-
-            _ = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs);
-            _ = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs);
-
-            try
-            {
-                _logger.LogInformation($"Init Payment (node id) {account}");
-                Yagna.PaymentService.Init(account ?? "");
-
-                var walletAddress = WalletAddress;
-                if (walletAddress != account)
-                {
-                    _logger.LogInformation($"Init Payment (wallet) {walletAddress}");
-                    Yagna.PaymentService.Init(walletAddress ?? "");
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("Payment init failed: {0}", e);
-                return false;
-            }
-
-            return success;
-        }
-
-        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
-        {
-            try
-            {
-                Provider.PresetConfig.InitilizeDefaultPresets();
-
-                return Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("Failed to start provider: {0}", e);
-                return false;
-            }
-        }
-
         private void SetCurrentJob(Job? job)
         {
             if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
@@ -355,19 +372,10 @@ namespace Golem
             await (this as IGolem).Stop();
         }
 
-        private (CancellationTokenSource, CancellationTokenSource) resetTokens()
+        private (CancellationTokenSource, CancellationTokenSource) ResetTokens()
         {
-            if (_yagnaCancellationtokenSource != null && !_yagnaCancellationtokenSource.IsCancellationRequested)
-            {
-                try
-                {
-                    _yagnaCancellationtokenSource?.Cancel();
-                }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e, "Failed to cancel token.");
-                }
-            }
+            safeCancel(_yagnaCancellationtokenSource);
+            safeCancel(_providerCancellationtokenSource);
             _yagnaCancellationtokenSource = new CancellationTokenSource();
             _providerCancellationtokenSource = new CancellationTokenSource();
             return (_yagnaCancellationtokenSource, _providerCancellationtokenSource);

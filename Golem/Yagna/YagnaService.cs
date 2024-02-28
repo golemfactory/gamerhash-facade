@@ -170,14 +170,15 @@ namespace Golem.Yagna
 
         public bool HasExited => YagnaProcess?.HasExited ?? true;
 
-        public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
+        public void Run(YagnaStartupOptions options, Action<int, string> exitHandler, CancellationToken cancellationToken)
         {
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
-
-            if (YagnaProcess != null || cancellationToken.IsCancellationRequested)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (YagnaProcess != null)
             {
-                return false;
+                throw new GolemException("Yagna process is already running");
             }
+
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
 
             string debugFlag = "";
             if (options.Debug)
@@ -194,24 +195,16 @@ namespace Golem.Yagna
             YagnaProcess = ProcessFactory.StartProcess(_yaExePath, args, environment.Build());
             ChildProcessTracker.AddProcess(YagnaProcess);
 
-            YagnaProcess.WaitForExitAsync(cancellationToken)
+            YagnaProcess.WaitForExitAsync()
                 .ContinueWith(result =>
                 {
                     if (YagnaProcess != null && YagnaProcess.HasExited)
                     {
                         var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
-                        exitHandler(exitCode);
+                        exitHandler(exitCode, "Yagna");
                     }
                     YagnaProcess = null;
                 });
-
-            cancellationToken.Register(async () =>
-            {
-                _logger.LogInformation("Canceling Yagna process");
-                await Stop();
-            });
-
-            return !YagnaProcess.HasExited;
         }
 
         public async Task Stop(int stopTimeoutMs = 30_000)
@@ -224,8 +217,7 @@ namespace Golem.Yagna
                 return;
             }
             _logger.LogInformation("Stopping Yagna process");
-            var cmd = YagnaProcess;
-            await ProcessFactory.StopProcess(cmd, stopTimeoutMs, _logger);
+            await ProcessFactory.StopProcess(YagnaProcess, stopTimeoutMs, _logger);
             YagnaProcess = null;
         }
 
@@ -251,10 +243,8 @@ namespace Golem.Yagna
             //yagna is starting and /me won't work until all services are running
             for (int tries = 0; tries < 300; ++tries)
             {
-                if (cancellationToken.IsCancellationRequested)
-                    return null;
-
                 Thread.Sleep(300);
+                cancellationToken.ThrowIfCancellationRequested();
 
                 if (HasExited) // yagna has stopped
                 {
