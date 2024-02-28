@@ -146,13 +146,13 @@ namespace Golem
             if (IsRunning())
                 return;
 
+            _logger.LogInformation("Starting Golem");
+
+            Status = GolemStatus.Starting;
+            var (yagnaCancellationTokenSource, providerCancellationTokenSource) = ResetTokens();
+
             try
             {
-                _logger.LogInformation("Starting Golem");
-
-                Status = GolemStatus.Starting;
-                var (yagnaCancellationTokenSource, providerCancellationTokenSource) = ResetTokens();
-
                 await Task.Yield();
 
                 var yagnaOptions = Yagna.StartupOptions();
@@ -177,6 +177,7 @@ namespace Golem
             catch (Exception e)
             {
                 _logger.LogError("Failed to start Golem: {0}", e);
+                ExitHandler(yagnaCancellationTokenSource, providerCancellationTokenSource)(0, "");
                 Status = GolemStatus.Error;
             }
         }
