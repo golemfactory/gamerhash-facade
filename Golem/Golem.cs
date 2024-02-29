@@ -178,7 +178,7 @@ namespace Golem
                 _logger.LogError("Failed to start Golem: {0}", e);
 
                 // Cleanup to avoid leaving processes running.
-                exitHandler(1, "Golem");
+                await exitHandler(1, "Golem");
                 Status = GolemStatus.Error;
             }
         }
@@ -193,11 +193,12 @@ namespace Golem
                 return;
 
             _logger.LogInformation("Stopping Golem");
-            Status = GolemStatus.Stopping;
 
             // Timeout is shorter when Stop was already called earlier.
             int yagnaTimeout = Status == GolemStatus.Stopping ? 200 : 30_000;
             int providerTimeout = Status == GolemStatus.Stopping ? 200 : 5_000;
+
+            Status = GolemStatus.Stopping;
 
             safeCancel(_providerCancellationtokenSource);
             safeCancel(_yagnaCancellationtokenSource);
@@ -211,7 +212,7 @@ namespace Golem
             OnPropertyChanged(nameof(NodeId));
         }
 
-        private async Task StartupYagna(YagnaStartupOptions yagnaOptions, Action<int, string> exitHandler, CancellationToken cancellationToken)
+        private async Task StartupYagna(YagnaStartupOptions yagnaOptions, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Starting Golem's Yagna");
 
@@ -244,7 +245,7 @@ namespace Golem
             }
         }
 
-        public void StartupProvider(YagnaStartupOptions yagnaOptions, Action<int, string> exitHandler, CancellationToken cancellationToken)
+        public void StartupProvider(YagnaStartupOptions yagnaOptions, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
             try
             {
@@ -257,7 +258,7 @@ namespace Golem
             }
         }
 
-        Action<int, string> ExitCleanupHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
+        Func<int, string, Task> ExitCleanupHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
         {
             return async (int exitCode, string which) =>
             {

@@ -195,7 +195,7 @@ namespace Golem.Yagna
             ExecToText($"profile update {param} {value} default".Split());
         }
 
-        public void Run(string appKey, Network network, Action<int, string> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
+        public void Run(string appKey, Network network, Func<int, string, Task> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
             cancellationToken.ThrowIfCancellationRequested();
 

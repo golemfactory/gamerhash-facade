@@ -170,7 +170,7 @@ namespace Golem.Yagna
 
         public bool HasExited => YagnaProcess?.HasExited ?? true;
 
-        public void Run(YagnaStartupOptions options, Action<int, string> exitHandler, CancellationToken cancellationToken)
+        public void Run(YagnaStartupOptions options, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (YagnaProcess != null)
