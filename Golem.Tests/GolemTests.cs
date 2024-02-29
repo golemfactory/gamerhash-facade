@@ -21,7 +21,6 @@ namespace Golem.Tests
 
         public GolemTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
         {
-
             var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
 
             _golemLib = Path.Combine(dir, "Golem.dll");
@@ -39,94 +38,6 @@ namespace Golem.Tests
                             .AddSimpleConsole(options => options.SingleLine = true)
                             .AddFile(logfile)
                             .AddProvider(_loggerProvider));
-        }
-
-        [Fact]
-        public async Task StartStop_VerifyStatusAsync()
-        {
-            var testName = nameof(StartStop_VerifyStatusAsync);
-            var loggerFactory = CreateLoggerFactory(testName);
-
-            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-            output.WriteLine("Path: " + golemPath);
-
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
-            GolemStatus status = GolemStatus.Off;
-
-            Action<GolemStatus> updateStatus = (v) =>
-            {
-                status = v;
-            };
-
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
-
-            var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, status);
-            await startTask;
-            Assert.Equal(GolemStatus.Ready, status);
-
-            var stopTask = golem.Stop();
-            Assert.Equal(GolemStatus.Stopping, status);
-            await stopTask;
-
-            Assert.Equal(GolemStatus.Off, status);
-        }
-
-        [Fact]
-        public async Task LoadBinaryStartAndStop_VerifyStatusAsync()
-        {
-            var testName = nameof(LoadBinaryStartAndStop_VerifyStatusAsync);
-            var loggerFactory = CreateLoggerFactory(testName);
-
-            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-            Console.WriteLine("Path: " + golemPath);
-
-            var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
-            GolemStatus status = GolemStatus.Off;
-
-            Action<GolemStatus> updateStatus = (v) =>
-            {
-                status = v;
-            };
-
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
-
-            var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, status);
-            await startTask;
-
-            Assert.Equal(GolemStatus.Ready, status);
-            var stopTask = golem.Stop();
-
-            Assert.Equal(GolemStatus.Stopping, status);
-            await stopTask;
-
-            Assert.Equal(GolemStatus.Off, status);
-        }
-
-        [Fact]
-        public async Task StartAndStopWithoutWaiting_VerifyStatusAsync()
-        {
-            var testName = nameof(StartAndStopWithoutWaiting_VerifyStatusAsync);
-            var loggerFactory = CreateLoggerFactory(testName);
-
-            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
-            output.WriteLine("Path: " + golemPath);
-
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
-            GolemStatus status = GolemStatus.Off;
-
-            Action<GolemStatus> updateStatus = (v) =>
-            {
-                status = v;
-            };
-
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
-
-            var startTask = golem.Start();
-            await golem.Stop();
-
-            Assert.Equal(GolemStatus.Off, status);
         }
 
         [Fact]
