@@ -1,4 +1,5 @@
 using System.ComponentModel;
+
 using GolemLib.Types;
 
 namespace GolemLib;
@@ -26,13 +27,12 @@ public interface IJob : INotifyPropertyChanged
     public PaymentStatus? PaymentStatus { get; }
 
     /// <summary>
-    /// Calling this function in other state than `PaymentStatus.Settled`, will
-    /// result in exception.
+    /// The list will be complete, when PaymentStatus is `Settled`.
     /// 
-    /// TODO: We can have multiple `Payment` confirmation structs.
+    /// In case of long running tasks new `Payment` objects can be added
+    /// during execution.
     /// </summary>
-    /// <returns></returns>
-    // public Task<Payment> PaymentConfirmation();
+    /// <returns>List of payments made for this Job.</returns>
     public List<Payment> PaymentConfirmation { get; }
     /// <summary>
     /// Get usage counters during task execution, what allows to estimate
