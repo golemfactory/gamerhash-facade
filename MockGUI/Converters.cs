@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
+using System.Linq;
 
 using Avalonia.Data;
 using Avalonia.Data.Converters;
-
-using CommandLine;
 
 using GolemLib.Types;
 
@@ -14,6 +12,8 @@ using Nethereum.Signer;
 using Nethereum.Util;
 
 using Newtonsoft.Json;
+
+using SHA3.Net;
 
 namespace MockGUI.View
 {
@@ -72,33 +72,60 @@ namespace MockGUI.View
             return ecdaSignature;
         }
 
-        private bool VerifySignature(byte[] signature, byte[] signedBytes)
+        private static byte[] Sha3_256(byte[] signedBytes)
         {
-            byte[] msgHash = new Sha3Keccack().CalculateHash(signedBytes);
+            using var hasher = Sha3.Sha3256();
+            return hasher.ComputeHash(signedBytes);
+        }
 
-            EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
-            EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
-            bool verified = key.Verify(msgHash, ethSignature);
+        private bool VerifySignature(byte[] signature, byte[] signedBytes, byte[] address)
+        {
+            try
+            {
+                byte[] msgHash = Sha3_256(signedBytes);
 
-            return verified;
+                EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
+                EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
+                bool verified = key.Verify(msgHash, ethSignature);
+
+                return verified && address == key.GetPublicAddressAsBytes();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         private string RecoverNodeId(byte[] signature, byte[] signedBytes)
         {
-            byte[] msgHash = new Sha3Keccack().CalculateHash(signedBytes);
+            try
+            {
+                byte[] msgHash = Sha3_256(signedBytes);
 
-            EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
-            EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
-            return key.GetPublicAddress();
+                EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
+                EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
+                return key.GetPublicAddress();
+            }
+            catch (Exception e)
+            {
+                return $"Failed to recover: {e}";
+            }
         }
 
         private string RecoverPubKey(byte[] signature, byte[] signedBytes)
         {
-            byte[] msgHash = new Sha3Keccack().CalculateHash(signedBytes);
+            try
+            {
+                byte[] msgHash = Sha3_256(signedBytes);
 
-            EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
-            EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
-            return "0x" + System.Convert.ToHexString(key.GetPubKey());
+                EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
+                EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
+                return "0x" + System.Convert.ToHexString(key.GetPubKey());
+            }
+            catch (Exception e)
+            {
+                return $"Failed to recover: {e}";
+            }
         }
 
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -111,6 +138,7 @@ namespace MockGUI.View
                     return (object)false;
                 }
 
+                var senderAddress = System.Convert.FromHexString(payment.PayerId);
                 var signature = payment.Signature.ToArray();
                 var signed = payment.SignedBytes.ToArray();
 
@@ -118,8 +146,8 @@ namespace MockGUI.View
                 {
                     "RetrieveNodeId" => RecoverNodeId(signature, signed),
                     "RetrievePubKey" => RecoverPubKey(signature, signed),
-                    "Validate" => VerifySignature(signature, signed) ? "true" : "false",
-                    _ => VerifySignature(signature, signed) ? "true" : "false",
+                    "Validate" => VerifySignature(signature, signed, senderAddress) ? "true" : "false",
+                    _ => VerifySignature(signature, signed, senderAddress) ? "true" : "false",
                 };
             }
             return new BindingNotification(new InvalidCastException(), BindingErrorType.Error);
