@@ -78,7 +78,7 @@ namespace MockGUI.View
             return hasher.ComputeHash(signedBytes);
         }
 
-        private bool VerifySignature(byte[] signature, byte[] signedBytes, byte[] address)
+        private bool VerifySignature(byte[] signature, byte[] signedBytes, string address)
         {
             try
             {
@@ -88,7 +88,7 @@ namespace MockGUI.View
                 EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
                 bool verified = key.Verify(msgHash, ethSignature);
 
-                return verified && address == key.GetPublicAddressAsBytes();
+                return verified && address == key.GetPublicAddress().ToLower();
             }
             catch (Exception)
             {
@@ -135,20 +135,26 @@ namespace MockGUI.View
                 var payment = (Payment)value;
                 if (payment.Signature == null || payment.SignedBytes == null)
                 {
-                    return (object)false;
+                    return "No signature";
                 }
 
-                var senderAddress = System.Convert.FromHexString(payment.PayerId);
-                var signature = payment.Signature.ToArray();
-                var signed = payment.SignedBytes.ToArray();
-
-                return target switch
+                try
                 {
-                    "RetrieveNodeId" => RecoverNodeId(signature, signed),
-                    "RetrievePubKey" => RecoverPubKey(signature, signed),
-                    "Validate" => VerifySignature(signature, signed, senderAddress) ? "true" : "false",
-                    _ => VerifySignature(signature, signed, senderAddress) ? "true" : "false",
-                };
+                    var signature = payment.Signature.ToArray();
+                    var signed = payment.SignedBytes.ToArray();
+
+                    return target switch
+                    {
+                        "RetrieveNodeId" => RecoverNodeId(signature, signed),
+                        "RetrievePubKey" => RecoverPubKey(signature, signed),
+                        "Validate" => VerifySignature(signature, signed, payment.PayerId) ? "true" : "false",
+                        _ => VerifySignature(signature, signed, payment.PayerId) ? "true" : "false",
+                    };
+                }
+                catch (Exception e)
+                {
+                    return $"Failed: {e}";
+                }
             }
             return new BindingNotification(new InvalidCastException(), BindingErrorType.Error);
         }
