@@ -53,9 +53,9 @@ namespace MockGUI.View
         }
     }
 
-    public class SignatureVerificationConverter : IValueConverter
+    public class SignatureConverter : IValueConverter
     {
-        public static readonly SignatureVerificationConverter Instance = new();
+        public static readonly SignatureConverter Instance = new();
 
         public EthECDSASignature ExtractEcdsaSignature(byte[] signatureArray)
         {
@@ -83,18 +83,45 @@ namespace MockGUI.View
             return verified;
         }
 
+        private string RecoverNodeId(byte[] signature, byte[] signedBytes)
+        {
+            byte[] msgHash = new Sha3Keccack().CalculateHash(signedBytes);
+
+            EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
+            EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
+            return key.GetPublicAddress();
+        }
+
+        private string RecoverPubKey(byte[] signature, byte[] signedBytes)
+        {
+            byte[] msgHash = new Sha3Keccack().CalculateHash(signedBytes);
+
+            EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
+            EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
+            return "0x" + System.Convert.ToHexString(key.GetPubKey());
+        }
+
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            if (value is not null and Payment)
+            if (value is not null and Payment && parameter is string target)
             {
                 var payment = (Payment)value;
+                if (payment.Signature == null || payment.SignedBytes == null)
+                {
+                    return (object)false;
+                }
 
-                return payment.Signature != null && payment.SignedBytes != null
-                    ? VerifySignature(payment.Signature.ToArray(), payment.SignedBytes.ToArray()) ? "true" : "false"
-                    : (object)false;
+                var signature = payment.Signature.ToArray();
+                var signed = payment.SignedBytes.ToArray();
+
+                return target switch
+                {
+                    "RetrieveNodeId" => RecoverNodeId(signature, signed),
+                    "RetrievePubKey" => RecoverPubKey(signature, signed),
+                    "Validate" => VerifySignature(signature, signed) ? "true" : "false",
+                    _ => VerifySignature(signature, signed) ? "true" : "false",
+                };
             }
-
-            // Converter used for the wrong type
             return new BindingNotification(new InvalidCastException(), BindingErrorType.Error);
         }
 
