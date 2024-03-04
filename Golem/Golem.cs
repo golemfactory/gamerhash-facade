@@ -256,6 +256,10 @@ namespace Golem
             }
         }
 
+        /// <summary>
+        /// Function restores the state of the Golem after cancellation or process exit.
+        /// It can happen either during startup or in case of unexpected shutdown of one of the processes.
+        /// </summary>
         Func<int, string, Task> ExitCleanupHandler(CancellationTokenSource yagnaCancellationTokenSource, CancellationTokenSource providerCancellationTokenSource)
         {
             return async (int exitCode, string which) =>
