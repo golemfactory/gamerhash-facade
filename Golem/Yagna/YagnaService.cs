@@ -238,7 +238,7 @@ namespace Golem.Yagna
             await ProcLock.WaitAsync();
             try
             {
-                if (YagnaProcess != null && !HasExited)
+                if (YagnaProcess != null)
                 {
                     _logger.LogInformation("Stopping Yagna process");
 
