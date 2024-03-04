@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 using Golem.Tools;
 
@@ -29,7 +30,7 @@ namespace Golem.Tests
             _loggerProvider = new TestLoggerProvider(golemFixture.Sink);
         }
 
-        ILoggerFactory CreateLoggerFactory(string testName)
+        ILoggerFactory CreateLoggerFactory([CallerMemberName] string testName = "test")
         {
             var logfile = Path.Combine(PackageBuilder.TestDir(testName), testName + "-{Date}.log");
             return LoggerFactory.Create(builder => builder
@@ -37,6 +38,7 @@ namespace Golem.Tests
                             .AddFile(logfile)
                             .AddProvider(_loggerProvider));
         }
+
         public void Dispose()
         {
             XunitContext.Flush();
@@ -45,10 +47,8 @@ namespace Golem.Tests
         [Fact]
         public async Task StartStop_VerifyStatusAsync()
         {
-            var testName = nameof(StartStop_VerifyStatusAsync);
-            var loggerFactory = CreateLoggerFactory(testName);
-
-            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
             output.WriteLine("Path: " + golemPath);
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
@@ -76,10 +76,8 @@ namespace Golem.Tests
         [Fact]
         public async Task LoadBinaryStartAndStop_VerifyStatusAsync()
         {
-            var testName = nameof(LoadBinaryStartAndStop_VerifyStatusAsync);
-            var loggerFactory = CreateLoggerFactory(testName);
-
-            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
             Console.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
@@ -108,10 +106,8 @@ namespace Golem.Tests
         [Fact]
         public async Task StartAndStopWithoutWaiting_VerifyStatusAsync()
         {
-            var testName = nameof(StartAndStopWithoutWaiting_VerifyStatusAsync);
-            var loggerFactory = CreateLoggerFactory(testName);
-
-            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
             output.WriteLine("Path: " + golemPath);
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
