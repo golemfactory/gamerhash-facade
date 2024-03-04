@@ -41,7 +41,7 @@
 
     <Window.Resources>
         <view:BytesListConverter x:Key="listConverter"/>
-        <view:SignatureVerificationConverter x:Key="signatureVerificationConverter"/>
+        <view:SignatureConverter x:Key="signatureConverter"/>
     </Window.Resources>
 
     <Window.DataTemplates>
@@ -107,7 +107,7 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type types:Payment}">
             <Border Classes="Panel">
-                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                     <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Amount</TextBlock>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Amount}"/>
                 
@@ -125,11 +125,13 @@
                         Text="{Binding SignedBytes, Converter={StaticResource listConverter}, ConverterParameter=string}"/>
                     
                     <TextBlock Grid.Row="4" Grid.Column="0" Classes="Label">Verified</TextBlock>
-                    <TextBlock Grid.Row="4" Grid.Column="1"
-                        HorizontalAlignment="Left"
-                        MaxWidth="970"
-                        TextWrapping="Wrap"
-                        Text="{Binding, Converter={StaticResource signatureVerificationConverter}}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding, Converter={StaticResource signatureConverter}, ConverterParameter=Validate}"/>
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Classes="Label">Recovered NodeId</TextBlock>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding, Converter={StaticResource signatureConverter}, ConverterParameter=RetrieveNodeId}"/>
+
+                    <TextBlock Grid.Row="6" Grid.Column="0" Classes="Label">Recovered Public Key</TextBlock>
+                    <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding, Converter={StaticResource signatureConverter}, ConverterParameter=RetrievePubKey}"/>
                 </Grid>
             </Border>
         </DataTemplate>
