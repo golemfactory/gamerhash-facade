@@ -60,6 +60,8 @@ namespace Golem.Yagna
         private readonly string _yaExePath;
         private readonly string? _dataDir;
         private Process? YagnaProcess { get; set; }
+        private SemaphoreSlim ProcLock { get; } = new SemaphoreSlim(1, 1);
+
         private readonly HttpClient _httpClient;
         private readonly ILogger _logger;
 
@@ -170,55 +172,84 @@ namespace Golem.Yagna
 
         public bool HasExited => YagnaProcess?.HasExited ?? true;
 
-        public void Run(YagnaStartupOptions options, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
+        public async void Run(YagnaStartupOptions options, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (YagnaProcess != null)
+            // Synchronizing of process creation is necessary to avoid scenario, when `YagnaSerice::Stop` is called
+            // during `YagnaSerice::Run` execution. There is race condition possible, when `YagnaProcess`
+            // is still null, but will be created in a moment and at the same time `YagnaSerice::Stop` will
+            // check that `YagnaProcess` is null and will not stop the process.
+            await ProcLock.WaitAsync(cancellationToken);
+            try
             {
-                throw new GolemException("Yagna process is already running");
-            }
-
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
-
-            string debugFlag = "";
-            if (options.Debug)
-            {
-                debugFlag = "--debug";
-            }
-
-            EnvironmentBuilder environment = Env;
-            environment = options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(options.YagnaApiUrl) : environment;
-            environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
-            environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
-
-            var args = $"service run {debugFlag}".Split();
-            YagnaProcess = ProcessFactory.StartProcess(_yaExePath, args, environment.Build());
-            ChildProcessTracker.AddProcess(YagnaProcess);
-
-            YagnaProcess.WaitForExitAsync()
-                .ContinueWith(result =>
+                cancellationToken.ThrowIfCancellationRequested();
+                if (YagnaProcess != null)
                 {
-                    if (YagnaProcess != null && YagnaProcess.HasExited)
+                    throw new GolemException("Yagna process is already running");
+                }
+
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
+
+                string debugFlag = "";
+                if (options.Debug)
+                {
+                    debugFlag = "--debug";
+                }
+
+                EnvironmentBuilder environment = Env;
+                environment = options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(options.YagnaApiUrl) : environment;
+                environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
+                environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
+                var args = $"service run {debugFlag}".Split();
+
+                YagnaProcess = await Task.Run(() => ProcessFactory.StartProcess(_yaExePath, args, environment.Build()));
+                ChildProcessTracker.AddProcess(YagnaProcess);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                _ = YagnaProcess.WaitForExitAsync()
+                    .ContinueWith(result =>
                     {
-                        var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
-                        exitHandler(exitCode, "Yagna");
-                    }
-                    YagnaProcess = null;
-                });
+                        // This code is not synchronized, to avoid deadlocks in case exitHandler will call any
+                        // functions on YagnaService.
+                        if (YagnaProcess != null && YagnaProcess.HasExited)
+                        {
+                            // If we can't acquire exitCode it is better to send any code to exiHandler,
+                            // than to throw an exception here. Otherwise exitHandler won't be called.
+                            var exitCode = YagnaProcess?.ExitCode ?? 1;
+                            exitHandler(exitCode, "Yagna");
+                        }
+                        YagnaProcess = null;
+                    });
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                ProcLock.Release();
+            }
         }
 
         public async Task Stop(int stopTimeoutMs = 30_000)
         {
-            if (YagnaProcess == null)
-                return;
-            if (YagnaProcess.HasExited)
+            // No cancel token is passed, because we lock only for short period of time.
+            // Canceling the token could lead to unclosed processes.
+            await ProcLock.WaitAsync();
+            try
             {
-                YagnaProcess = null;
-                return;
+                if (YagnaProcess != null && !HasExited)
+                {
+                    _logger.LogInformation("Stopping Yagna process");
+
+                    await ProcessFactory.StopProcess(YagnaProcess, stopTimeoutMs, _logger);
+                    YagnaProcess = null;
+                }
             }
-            _logger.LogInformation("Stopping Yagna process");
-            await ProcessFactory.StopProcess(YagnaProcess, stopTimeoutMs, _logger);
-            YagnaProcess = null;
+            finally
+            {
+                ProcLock.Release();
+            }
         }
 
         public async Task<MeInfo?> Me(CancellationToken cancellationToken)
