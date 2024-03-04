@@ -172,7 +172,7 @@ namespace Golem.Yagna
 
         public bool HasExited => YagnaProcess?.HasExited ?? true;
 
-        public async void Run(YagnaStartupOptions options, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
+        public async Task Run(YagnaStartupOptions options, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
             // Synchronizing of process creation is necessary to avoid scenario, when `YagnaSerice::Stop` is called
             // during `YagnaSerice::Run` execution. There is race condition possible, when `YagnaProcess`
@@ -199,12 +199,11 @@ namespace Golem.Yagna
                 environment = options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(options.YagnaApiUrl) : environment;
                 environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
                 environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
+
                 var args = $"service run {debugFlag}".Split();
 
                 YagnaProcess = await Task.Run(() => ProcessFactory.StartProcess(_yaExePath, args, environment.Build()));
                 ChildProcessTracker.AddProcess(YagnaProcess);
-
-                cancellationToken.ThrowIfCancellationRequested();
 
                 _ = YagnaProcess.WaitForExitAsync()
                     .ContinueWith(result =>

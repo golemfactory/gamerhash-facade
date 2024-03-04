@@ -216,7 +216,7 @@ namespace Golem
         {
             _logger.LogInformation("Starting Golem's Yagna");
 
-            Yagna.Run(yagnaOptions, exitHandler, cancellationToken);
+            await Yagna.Run(yagnaOptions, exitHandler, cancellationToken);
 
             var account = await Yagna.WaitForIdentityAsync(cancellationToken);
 
