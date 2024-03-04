@@ -160,12 +160,10 @@ namespace Golem
                 var yagnaOptions = Yagna.StartupOptions();
 
                 await StartupYagna(yagnaOptions, exitHandler, yagnaCancellationTokenSource.Token);
-
                 var defaultKey = (Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured"))
                     ?? throw new Exception("Can't get app-key, neither 'default' nor 'autoconfigured'");
 
-                StartupProvider(yagnaOptions, exitHandler, providerCancellationTokenSource.Token);
-
+                await StartupProvider(yagnaOptions, exitHandler, providerCancellationTokenSource.Token);
                 Status = GolemStatus.Ready;
             }
             catch (OperationCanceledException)
@@ -245,12 +243,12 @@ namespace Golem
             }
         }
 
-        public void StartupProvider(YagnaStartupOptions yagnaOptions, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
+        public async Task StartupProvider(YagnaStartupOptions yagnaOptions, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
             try
             {
                 Provider.PresetConfig.InitilizeDefaultPresets();
-                Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
+                await Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
             }
             catch (Exception e)
             {

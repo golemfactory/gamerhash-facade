@@ -232,23 +232,23 @@ namespace Golem.Yagna
 
         public async Task Stop(int stopTimeoutMs = 30_000)
         {
-            // No cancel token is passed, because we lock only for short period of time.
-            // Canceling the token could lead to unclosed processes.
+            // There is no symmetry in synchronization of `Run` and `Stop` methods. It is possible to call
+            // `YagnaService::Stop` multiple times, but `YagnaService::Run` can be called only once.
+            // We can't lock here for entire duration of `StopProcess`, because we would block another `Stop`.
+            //
+            // Spawning process and setting YagnaProcess should be atomic operation, but stopping process
+            // doesn't need to happen under the lock.
             await ProcLock.WaitAsync();
-            try
-            {
-                if (YagnaProcess != null)
-                {
-                    _logger.LogInformation("Stopping Yagna process");
+            // Save reference to YagnaProcess under lock, because it can change before we will reach StopProcess.
+            var proc = YagnaProcess;
+            if (proc == null)
+                return;
+            ProcLock.Release();
 
-                    await ProcessFactory.StopProcess(YagnaProcess, stopTimeoutMs, _logger);
-                    YagnaProcess = null;
-                }
-            }
-            finally
-            {
-                ProcLock.Release();
-            }
+            _logger.LogInformation("Stopping Yagna process");
+
+            await ProcessFactory.StopProcess(proc, stopTimeoutMs, _logger);
+            YagnaProcess = null;
         }
 
         public async Task<MeInfo?> Me(CancellationToken cancellationToken)
