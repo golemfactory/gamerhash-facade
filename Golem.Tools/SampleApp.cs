@@ -86,6 +86,7 @@ namespace App
                 _logger.LogInformation("Starting Requestor daemon: " + Name);
                 Message = "Starting Daemon";
 
+                //TODO: configurable network
                 Requestor = await Task.Run(async () => await GolemRequestor.BuildRelative(WorkDir, _logger, false));
                 await Task.Run(() => Requestor.Start());
 

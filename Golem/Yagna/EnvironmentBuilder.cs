@@ -6,6 +6,7 @@ namespace Golem.Yagna
         {
             { "GSB_URL", "tcp://127.0.0.1:12501" },
             { "YAGNA_API_URL", "http://127.0.0.1:12502" },
+            //TODO: change to "mainnet" on mainnet network
             { "YA_PAYMENT_NETWORK_GROUP", "testnet" },
             { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
             { "YA_NET_BROADCAST_SIZE", "12" },

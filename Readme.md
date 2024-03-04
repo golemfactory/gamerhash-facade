@@ -115,7 +115,7 @@ To create Golem Package with Automatic runtime run:
 
 ```ps1
 dotnet publish --configuration Release
-dotnet run --project Golem.Package --configuration Release build --dont-clean --dll-file-patterns "*.dll" --dll-dir "$(Get-Location)\Golem\bin\Debug\net7.0\publish"
+dotnet run --project Golem.Package --configuration Release build --dont-clean --dll-file-patterns "*.dll" --dll-dir "$(Get-Location)\Golem\bin\Release\net7.0\publish"
 # use `-cleanup 0` to avoid downloading and unpacking again `bin\automatic_runtime_package.zip` archive
 # use `-compress 0` to skip archiving `package` dir into `bin\dist_package.zip`
  .\scripts\automatic.ps1 -compress 1 -cleanup 1

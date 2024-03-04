@@ -32,6 +32,7 @@ namespace Golem.Tools
 
         private GolemRequestor(string dir, ILogger logger) : base(dir, logger)
         {
+            //TODO configurable network
             var envBuilder = new EnvironmentBuilder();
             envBuilder.WithYagnaDataDir(Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")));
             envBuilder.WithYagnaApiUrl("http://127.0.0.1:7465");

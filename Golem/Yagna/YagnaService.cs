@@ -116,11 +116,6 @@ namespace Golem.Yagna
             return JsonSerializer.Deserialize<T>(text, options);
         }
 
-        internal YagnaStartupOptions StartupOptions()
-        {
-            return YagnaOptionsFactory.CreateStartupOptions();
-        }
-
         public IdService Ids
         {
             get
@@ -482,9 +477,8 @@ namespace Golem.Yagna
             _yagna = yagna;
         }
 
-        public void Init(string account)
+        public void Init(string account, YagnaStartupOptions yagnaOptions)
         {
-            var yagnaOptions = _yagna.StartupOptions();
             _yagna.ExecToText("payment", "init", "--receiver", "--network", yagnaOptions.Network.Id, "--driver", yagnaOptions.PaymentDriver.Id, "--account", account);
         }
 

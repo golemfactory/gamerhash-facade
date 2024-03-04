@@ -29,6 +29,8 @@ namespace Golem
 
         private readonly Jobs _jobs;
 
+        private readonly Network _network;
+
         public GolemPrice Price
         {
             get
@@ -107,7 +109,8 @@ namespace Golem
                 if (Status == GolemStatus.Ready)
                 {
                     _logger.LogInformation($"Init Payment (wallet changed) {value}");
-                    Yagna.PaymentService.Init(value);
+                    var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(_network);
+                    Yagna.PaymentService.Init(value, yagnaOptions);
                 }
                 ProviderConfig.UpdateAccount(value, () => OnPropertyChanged(nameof(WalletAddress)));
             }
@@ -146,7 +149,7 @@ namespace Golem
 
             var (yagnaCancellationTokenSource, providerCancellationTokenSource) = resetTokens();
 
-            var yagnaOptions = Yagna.StartupOptions();
+            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(_network);
 
             _logger.LogInformation("Starting Golem's Yagna");
             var success = await StartupYagnaAsync(yagnaOptions, yagnaProcessExitHandler(yagnaCancellationTokenSource, providerCancellationTokenSource), yagnaCancellationTokenSource.Token);
@@ -255,10 +258,13 @@ namespace Golem
             return false;
         }
 
-        public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
+        public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory, bool mainnet = true)
         {
             var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : "./provider";
             var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : "./yagna";
+
+            _network = mainnet ? Network.Mainnet : Network.Goerli;
+
             loggerFactory ??= NullLoggerFactory.Instance;
 
             _logger = loggerFactory.CreateLogger<Golem>();
@@ -267,7 +273,7 @@ namespace Golem
 
             Yagna = new YagnaService(golemPath, yagna_datadir, loggerFactory);
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
-            ProviderConfig = new ProviderConfigService(Provider, YagnaOptionsFactory.DefaultNetwork, loggerFactory);
+            ProviderConfig = new ProviderConfigService(Provider, _network, loggerFactory);
             _golemPrice = ProviderConfig.GolemPrice;
             _jobs = new Jobs(SetCurrentJob, loggerFactory);
 
@@ -298,13 +304,13 @@ namespace Golem
             try
             {
                 _logger.LogInformation($"Init Payment (node id) {account}");
-                Yagna.PaymentService.Init(account ?? "");
+                Yagna.PaymentService.Init(account ?? "", yagnaOptions);
 
                 var walletAddress = WalletAddress;
                 if (walletAddress != account)
                 {
                     _logger.LogInformation($"Init Payment (wallet) {walletAddress}");
-                    Yagna.PaymentService.Init(walletAddress ?? "");
+                    Yagna.PaymentService.Init(walletAddress ?? "", yagnaOptions);
                 }
             }
             catch (Exception e)
@@ -322,7 +328,7 @@ namespace Golem
             {
                 Provider.PresetConfig.InitilizeDefaultPresets();
 
-                return Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
+                return Provider.Run(yagnaOptions.AppKey, _network, exitHandler, cancellationToken, true);
             }
             catch (Exception e)
             {

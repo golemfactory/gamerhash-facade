@@ -56,7 +56,7 @@ namespace Golem.Tests
 
             string golemPath = await PackageBuilder.BuildTestDirectory(nameof(JobTests));
             _logger.LogInformation($"Path: {golemPath}");
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), _loggerFactory);
+            var golem = TestUtils.golem(golemPath, loggerFactory);
 
             Channel<GolemStatus> golemStatusChannel = PropertyChangeChannel(golem, nameof(IGolem.Status),
                 (GolemStatus v) => _logger.LogInformation($"Golem status update: {v}"));
