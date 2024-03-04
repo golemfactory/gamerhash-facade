@@ -106,7 +106,7 @@ namespace Golem.Yagna
         private readonly ILogger _logger;
 
 
-        private static Process? ProviderProcess { get; set; }
+        private Process? ProviderProcess { get; set; }
 
         public Provider(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {

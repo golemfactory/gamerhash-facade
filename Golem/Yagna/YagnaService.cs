@@ -59,7 +59,7 @@ namespace Golem.Yagna
     {
         private readonly string _yaExePath;
         private readonly string? _dataDir;
-        private static Process? YagnaProcess { get; set; }
+        private Process? YagnaProcess { get; set; }
         private readonly HttpClient _httpClient;
         private readonly ILogger _logger;
 
