@@ -198,8 +198,8 @@ namespace Golem
 
             Status = GolemStatus.Stopping;
 
-            safeCancel(_providerCancellationtokenSource);
-            safeCancel(_yagnaCancellationtokenSource);
+            SafeCancel(_providerCancellationtokenSource);
+            SafeCancel(_yagnaCancellationtokenSource);
 
             await Provider.Stop(providerTimeout);
             await Yagna.Stop(yagnaTimeout);
@@ -270,13 +270,13 @@ namespace Golem
 
                     if (!providerCancellationTokenSource.IsCancellationRequested || !Provider.HasExited)
                     {
-                        safeCancel(providerCancellationTokenSource);
+                        SafeCancel(providerCancellationTokenSource);
                         await Provider.Stop();
                     }
 
                     if (!yagnaCancellationTokenSource.IsCancellationRequested || !Yagna.HasExited)
                     {
-                        safeCancel(yagnaCancellationTokenSource);
+                        SafeCancel(yagnaCancellationTokenSource);
                         await Yagna.Stop();
                     }
 
@@ -285,7 +285,7 @@ namespace Golem
             };
         }
 
-        void safeCancel(CancellationTokenSource cancellationTokenSource)
+        void SafeCancel(CancellationTokenSource cancellationTokenSource)
         {
             if (!cancellationTokenSource.IsCancellationRequested)
             {
@@ -346,8 +346,8 @@ namespace Golem
 
         private (CancellationTokenSource, CancellationTokenSource) ResetTokens()
         {
-            safeCancel(_yagnaCancellationtokenSource);
-            safeCancel(_providerCancellationtokenSource);
+            SafeCancel(_yagnaCancellationtokenSource);
+            SafeCancel(_providerCancellationtokenSource);
             _yagnaCancellationtokenSource = new CancellationTokenSource();
             _providerCancellationtokenSource = new CancellationTokenSource();
             return (_yagnaCancellationtokenSource, _providerCancellationtokenSource);
