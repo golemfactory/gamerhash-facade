@@ -11,10 +11,23 @@ namespace Golem.Tools
         private string PropertyName { get; set; }
         private readonly ILogger _logger;
 
+        public V? Value { get; private set; }
+
         public PropertyChangedHandler(string propertyName, Action<V?> handler, ILoggerFactory? loggerFactory = null)
         {
             Handler = handler;
             PropertyName = propertyName;
+            Value = default;
+
+            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            _logger = loggerFactory.CreateLogger<PropertyChangedHandler<T, V>>();
+        }
+
+        public PropertyChangedHandler(string propertyName, ILoggerFactory? loggerFactory = null)
+        {
+            Handler = (v) => { };
+            PropertyName = propertyName;
+            Value = default;
 
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<PropertyChangedHandler<T, V>>();
@@ -40,9 +53,15 @@ namespace Golem.Tools
                 return;
 
             if (value is null)
+            {
+                Value = default;
                 Handler(default);
+            }
             else if (value is V v)
+            {
+                Value = v;
                 Handler(v);
+            }
             else
                 Console.WriteLine("Cannot handle property changed for {0} - incorrect type: {1}", PropertyName, value);
 

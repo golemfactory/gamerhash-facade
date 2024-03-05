@@ -52,25 +52,20 @@ namespace Golem.Tests
             output.WriteLine("Path: " + golemPath);
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
-            GolemStatus status = GolemStatus.Off;
 
-            Action<GolemStatus> updateStatus = (v) =>
-            {
-                status = v;
-            };
-
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
+            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory);
+            golem.PropertyChanged += status.Subscribe();
 
             var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, status);
+            Assert.Equal(GolemStatus.Starting, status.Value);
             await startTask;
-            Assert.Equal(GolemStatus.Ready, status);
+            Assert.Equal(GolemStatus.Ready, status.Value);
 
             var stopTask = golem.Stop();
-            Assert.Equal(GolemStatus.Stopping, status);
+            Assert.Equal(GolemStatus.Stopping, status.Value);
             await stopTask;
 
-            Assert.Equal(GolemStatus.Off, status);
+            Assert.Equal(GolemStatus.Off, status.Value);
         }
 
         [Fact]
@@ -81,26 +76,21 @@ namespace Golem.Tests
             Console.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
-            GolemStatus status = GolemStatus.Off;
 
-            Action<GolemStatus> updateStatus = (v) =>
-            {
-                status = v;
-            };
-
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
+            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory);
+            golem.PropertyChanged += status.Subscribe();
 
             var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, status);
+            Assert.Equal(GolemStatus.Starting, status.Value);
             await startTask;
 
-            Assert.Equal(GolemStatus.Ready, status);
+            Assert.Equal(GolemStatus.Ready, status.Value);
             var stopTask = golem.Stop();
 
-            Assert.Equal(GolemStatus.Stopping, status);
+            Assert.Equal(GolemStatus.Stopping, status.Value);
             await stopTask;
 
-            Assert.Equal(GolemStatus.Off, status);
+            Assert.Equal(GolemStatus.Off, status.Value);
         }
 
         [Fact]
@@ -111,19 +101,14 @@ namespace Golem.Tests
             output.WriteLine("Path: " + golemPath);
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
-            GolemStatus status = GolemStatus.Off;
 
-            Action<GolemStatus> updateStatus = (v) =>
-            {
-                status = v;
-            };
-
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), updateStatus, loggerFactory).Subscribe();
+            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory);
+            golem.PropertyChanged += status.Subscribe();
 
             var startTask = golem.Start();
             await golem.Stop();
 
-            Assert.Equal(GolemStatus.Off, status);
+            Assert.Equal(GolemStatus.Off, status.Value);
         }
     }
 }
