@@ -12,6 +12,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Golem.Tools;
 using Golem.Yagna.Types;
+using Golem;
 
 namespace App
 {
@@ -19,10 +20,12 @@ namespace App
     {
         private readonly Dictionary<string, string> _env;
         private readonly string? _extraArgs;
+        private readonly Network _network;
 
-        public SampleApp(string dir, Dictionary<string, string> env, ILogger logger, string? extraArgs = null) : base(dir, logger)
+        public SampleApp(string dir, Dictionary<string, string> env, Network network, ILogger logger, string? extraArgs = null) : base(dir, logger)
         {
             _env = env;
+            _network = network;
             _extraArgs = extraArgs;
             var app_filename = ProcessFactory.BinName("app");
             var app_src = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", app_filename);
@@ -35,7 +38,7 @@ namespace App
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "app");
             Directory.CreateDirectory(working_dir);
             
-            return StartProcess("app", working_dir, $"--network {Network.Goerli.Id} --driver {PaymentDriver.ERC20.Id} --subnet-tag public {_extraArgs}", _env, true);
+            return StartProcess("app", working_dir, $"--network {_network.Id} --driver {PaymentDriver.ERC20.Id} --subnet-tag public {_extraArgs}", _env, true);
         }
     }
 

@@ -2,6 +2,9 @@
 using System.Diagnostics;
 
 using CommandLine;
+
+using Golem;
+
 using GolemLib;
 using Microsoft.Extensions.Logging;
 
@@ -13,8 +16,9 @@ namespace FacadeApp
         public string? GolemPath { get; set; }
         [Option('d', "data_dir", Required = false, HelpText = "Path to the provider's data directory")]
         public string? DataDir { get; set; }
+        [Option('m', "mainnet", Default = false, Required = false, HelpText = "Enables usage of mainnet")]
+        public required bool Mainnet { get;  set; }
     }
-
 
 
     internal class Program
@@ -29,12 +33,14 @@ namespace FacadeApp
 
             string golemPath = "";
             string? dataDir = null;
+            bool mainnet = false;
 
             Parser.Default.ParseArguments<FacadeAppArguments>(args)
                .WithParsed<FacadeAppArguments>(o =>
                {
                    golemPath = o.GolemPath ?? "";
                    dataDir = o.DataDir;
+                   mainnet = o.Mainnet;
                });
 
             logger.LogInformation("Path: " + golemPath);
@@ -42,40 +48,39 @@ namespace FacadeApp
 
             var binaries = Path.Combine(golemPath, "golem");
             dataDir = Path.Combine(golemPath, "golem-data");
+;
+            var golem = await new Factory().Create(golemPath, loggerFactory, mainnet);
 
-            await using (var golem = new Golem.Golem(binaries, dataDir, loggerFactory))
+            golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
+
+            bool end = false;
+
+            do
             {
-                golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
+                Console.WriteLine("Start/Stop/End?");
+                var line = Console.ReadLine();
 
-                bool end = false;
-
-                do
+                switch (line)
                 {
-                    Console.WriteLine("Start/Stop/End?");
-                    var line = Console.ReadLine();
+                    case "Start":
+                        await golem.Start();
+                        break;
+                    case "Stop":
+                        await golem.Stop();
+                        break;
+                    case "End":
+                        end = true;
+                        break;
 
-                    switch (line)
-                    {
-                        case "Start":
-                            await golem.Start();
-                            break;
-                        case "Stop":
-                            await golem.Stop();
-                            break;
-                        case "End":
-                            end = true;
-                            break;
+                    case "Wallet":
+                        var walletAddress = golem.WalletAddress;
+                        golem.WalletAddress = walletAddress;
+                        Console.WriteLine($"Wallet: {walletAddress}");
+                        break;
 
-                        case "Wallet":
-                            var walletAddress = golem.WalletAddress;
-                            golem.WalletAddress = walletAddress;
-                            Console.WriteLine($"Wallet: {walletAddress}");
-                            break;
-
-                        default: Console.WriteLine($"Didn't understand: {line}"); break;
-                    }
-                } while (!end);
-            }
+                    default: Console.WriteLine($"Didn't understand: {line}"); break;
+                }
+            } while (!end);
 
             Console.WriteLine("Done");
         }

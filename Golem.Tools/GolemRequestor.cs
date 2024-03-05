@@ -32,7 +32,6 @@ namespace Golem.Tools
 
         private GolemRequestor(string dir, ILogger logger) : base(dir, logger)
         {
-            //TODO configurable network
             var envBuilder = new EnvironmentBuilder();
             envBuilder.WithYagnaDataDir(Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")));
             envBuilder.WithYagnaApiUrl("http://127.0.0.1:7465");
@@ -87,7 +86,7 @@ namespace Golem.Tools
             return Convert.ToBase64String(data);
         }
 
-        public SampleApp CreateSampleApp(string? extraArgs = null)
+        public SampleApp CreateSampleApp(string? extraArgs = null, bool mainnet = false)
         {
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env["YAGNA_APPKEY"] = AppKey ?? throw new Exception("Unable to create app process. No YAGNA_APPKEY.");
@@ -103,7 +102,8 @@ namespace Golem.Tools
                 pathEnvVar = $"{pathEnvVar}:{binariesDir}";
             }
             env["PATH"] = pathEnvVar;
-            return new SampleApp(_dir, env, _logger, extraArgs);
+            var network = Factory.Network(mainnet);
+            return new SampleApp(_dir, env, network, _logger, extraArgs);
         }
 
         public void InitPayment(double minFundThreshold = 100.0)

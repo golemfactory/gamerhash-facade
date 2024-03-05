@@ -21,6 +21,9 @@ public class AppArguments
     public required RelayType Relay { get; set; }
     [Option('f', "framework", Default = Framework.Automatic, Required = false, HelpText = "Type of AI Framework to run")]
     public required Framework AiFramework { get; set; }
+    [Option('m', "mainnet", Default = false, Required = false, HelpText = "Enables usage of mainnet")]
+    public required bool Mainnet { get;  set; }
+
 }
 
 

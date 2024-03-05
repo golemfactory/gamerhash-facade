@@ -11,6 +11,7 @@ using App;
 using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Golem.Tools;
+using Golem;
 
 
 namespace MockGUI.ViewModels
@@ -75,10 +76,8 @@ namespace MockGUI.ViewModels
         public static async Task<GolemViewModel> CreateStatic(string modulesDir, RelayType relayType, bool mainnet)
         {
             var loggerFactory = createLoggerFactory(modulesDir);
-            var binaries = Path.Combine(modulesDir, "golem");
-            var datadir = Path.Combine(modulesDir, "golem-data");
 
-            var golem = new Golem.Golem(binaries, datadir, loggerFactory, mainnet);
+            var golem = await new Factory().Create(modulesDir, loggerFactory, mainnet);
             var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
             return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
         }
@@ -119,9 +118,8 @@ namespace MockGUI.ViewModels
             Type? t = ass.GetType(factoryType) ?? throw new Exception("Factory Type not found. Lib not loaded: " + dllPath);
             var obj = Activator.CreateInstance(t) ?? throw new Exception("Creating Factory instance failed. Lib not loaded: " + dllPath);
             var factory = obj as IFactory ?? throw new Exception("Cast to IFactory failed.");
-            factory.Mainnet = mainnet;
 
-            return await factory.Create(modulesDir, loggerFactory);
+            return await factory.Create(modulesDir, loggerFactory, mainnet);
         }
 
         private static ILoggerFactory createLoggerFactory(string modulesDir)

@@ -21,7 +21,7 @@ public class AppArguments
     public bool UseDll { get; set; }
     [Option('r', "relay", Default = RelayType.Public, Required = false, HelpText = "Change relay to devnet yacn2a or setup local")]
     public required RelayType Relay { get; set; }
-    [Option('m', "mainnet", Required = false, HelpText = "Enables usage of mainnet")]
+    [Option('m', "mainnet", Default = false, Required = false, HelpText = "Enables usage of mainnet")]
     public bool Mainnet { get; set; }
 }
 

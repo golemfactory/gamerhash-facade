@@ -187,12 +187,12 @@ namespace Golem.Tools
 
         public static string BinariesDir(string test_dir)
         {
-            return Path.Combine(test_dir, "modules", "golem");
+            return Path.Combine(ModulesDir(test_dir), "golem");
         }
 
         public static string DataDir(string test_dir)
         {
-            return Path.Combine(test_dir, "modules", "golem-data");
+            return Path.Combine(ModulesDir(test_dir), "golem-data");
         }
 
         public static string ModulesDir(string test_dir)
@@ -212,7 +212,7 @@ namespace Golem.Tools
 
         public static string ExeUnitsDir(string test_dir)
         {
-            return Path.Combine(test_dir, "modules", "plugins");
+            return Path.Combine(ModulesDir(test_dir), "plugins");
         }
 
         internal static async Task<string> Download(string url)

@@ -50,7 +50,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
             output.WriteLine("Path: " + golemPath);
 
-            var golem = TestUtils.golem(golemPath, loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
@@ -109,7 +109,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
             output.WriteLine("Path: " + golemPath);
 
-            var golem = TestUtils.golem(golemPath, loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
@@ -145,7 +145,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = TestUtils.golem(golemPath, loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
@@ -173,7 +173,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = TestUtils.golem(golemPath, loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
             await golem.Start();
 
             ChangePrices_VerifyPrice(golem, loggerFactory);
@@ -190,7 +190,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = TestUtils.golem(golemPath, loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
             ChangePrices_VerifyPrice(golem, loggerFactory);
         }
 
@@ -203,7 +203,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory(testName);
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = TestUtils.golem(golemPath, loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
             // Create new runtime descriptor with name "dummy_copy"
             var dummyDescPath = Path.Combine(golemPath, "modules", "plugins", "ya-dummy-ai.json");
@@ -238,7 +238,7 @@ namespace Golem.Tests
 
             // Golem on initialization should unify prices in all presets 
             // (it takes price from first Preset, and sets the same price for others if different)
-            golem = TestUtils.golem(golemPath, loggerFactory);
+            golem = await TestUtils.Golem(golemPath, loggerFactory);
             var price = golem.Price;
 
             Assert.Equal(copyPresetGpuPriceOriginalValue, price.GpuPerSec);
@@ -263,7 +263,7 @@ namespace Golem.Tests
             return copyPresetGpuPriceObj?.Value<decimal>();
         }
 
-        void ChangePrices_VerifyPrice(Golem golem, ILoggerFactory loggerFactory)
+        void ChangePrices_VerifyPrice(IGolem golem, ILoggerFactory loggerFactory)
         {
             decimal price = 0;
 

@@ -8,8 +8,6 @@ using Golem.Yagna.Types;
 using GolemLib;
 using GolemLib.Types;
 
-using Medallion.Shell;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -28,8 +26,6 @@ namespace Golem
         private readonly GolemPrice _golemPrice;
 
         private readonly Jobs _jobs;
-
-        private readonly Network _network;
 
         public GolemPrice Price
         {
@@ -65,6 +61,12 @@ namespace Golem
                     OnPropertyChanged();
                 }
             }
+        }
+
+        private readonly Network _network = Network.Mainnet;
+
+        public bool Mainnet { 
+            get => _network == Network.Mainnet; 
         }
 
         private GolemStatus status;
@@ -258,24 +260,22 @@ namespace Golem
             return false;
         }
 
-        public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory, bool mainnet = true)
+        public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory, Network network)
         {
             var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : "./provider";
             var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : "./yagna";
-
-            _network = mainnet ? Network.Mainnet : Network.Goerli;
 
             loggerFactory ??= NullLoggerFactory.Instance;
 
             _logger = loggerFactory.CreateLogger<Golem>();
             _yagnaCancellationtokenSource = new CancellationTokenSource();
             _providerCancellationtokenSource = new CancellationTokenSource();
-
             Yagna = new YagnaService(golemPath, yagna_datadir, loggerFactory);
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, _network, loggerFactory);
             _golemPrice = ProviderConfig.GolemPrice;
             _jobs = new Jobs(SetCurrentJob, loggerFactory);
+            _network = network;
 
             // Listen to property changed event on nested properties to update Provider presets.
             Price.PropertyChanged += OnGolemPriceChanged;
