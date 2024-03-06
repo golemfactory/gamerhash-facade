@@ -106,7 +106,8 @@ namespace Golem.Yagna
         private readonly ILogger _logger;
 
 
-        private static Process? ProviderProcess { get; set; }
+        private Process? ProviderProcess { get; set; }
+        private SemaphoreSlim ProcLock { get; } = new SemaphoreSlim(1, 1);
 
         public Provider(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
         {
@@ -187,94 +188,78 @@ namespace Golem.Yagna
                 return profiles?["default"];
             }
         }
+
+        public bool HasExited => ProviderProcess?.HasExited ?? true;
+
         public void UpdateDefaultProfile(String param, String value)
         {
             ExecToText($"profile update {param} {value} default".Split());
         }
 
-        public bool Run(string appKey, Network network, Action<int> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
+        public async Task Run(string appKey, Network network, Func<int, string, Task> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
-            if (cancellationToken.IsCancellationRequested)
-                return false;
-
-            string debugSwitch = "";
-            if (enableDebugLogs)
+            await ProcLock.WaitAsync(cancellationToken);
+            try
             {
-                debugSwitch = "--debug";
-            }
-            var arguments = $"run {debugSwitch} --payment-network {network.Id}".Split();
-
-            var env = new Dictionary<string, string>(Env);
-            env["MIN_AGREEMENT_EXPIRATION"] = "30s";
-            env["YAGNA_APPKEY"] = appKey;
-
-            ProviderProcess = ProcessFactory.StartProcess(_yaProviderPath, arguments, env);
-            ChildProcessTracker.AddProcess(ProviderProcess);
-
-            ProviderProcess.WaitForExitAsync(cancellationToken)
-                .ContinueWith(result =>
-            {
-                if(ProviderProcess != null && ProviderProcess.HasExited)
+                cancellationToken.ThrowIfCancellationRequested();
+                if (ProviderProcess != null)
                 {
-                    var exitCode = ProviderProcess?.ExitCode ?? throw new GolemException("Unable to get Provider process exit code");
-                    exitHandler(exitCode);
+                    throw new GolemException("Provider process is already running");
                 }
-                ClearHandle();
-            });
 
-            cancellationToken.Register(async () =>
+                string debugSwitch = "";
+                if (enableDebugLogs)
+                {
+                    debugSwitch = "--debug";
+                }
+                var arguments = $"run {debugSwitch} --payment-network {network.Id}".Split();
+
+                var env = new Dictionary<string, string>(Env);
+                env["MIN_AGREEMENT_EXPIRATION"] = "30s";
+                env["YAGNA_APPKEY"] = appKey;
+
+                ProviderProcess = await Task.Run(() => ProcessFactory.StartProcess(_yaProviderPath, arguments, env));
+                ChildProcessTracker.AddProcess(ProviderProcess);
+
+                _ = ProviderProcess.WaitForExitAsync()
+                    .ContinueWith(result =>
+                {
+                    if (ProviderProcess != null && ProviderProcess.HasExited)
+                    {
+                        var exitCode = ProviderProcess?.ExitCode ?? 1;
+                        exitHandler(exitCode, "Provider");
+                    }
+                    ProviderProcess = null;
+                });
+            }
+            catch (Exception)
             {
-                _logger.LogInformation("Canceling Provider process");
-                await Stop();
-            });
-
-            return ClearHandle();
+                throw;
+            }
+            finally
+            {
+                ProcLock.Release();
+            }
         }
 
         public async Task Stop(int stopTimeoutMs = 30_000)
         {
-            if (!ClearHandle())
+            Process proc;
+            await ProcLock.WaitAsync();
+            try
             {
-                return;
+                if (ProviderProcess == null)
+                    return;
+                proc = ProviderProcess;
             }
+            finally
+            {
+                ProcLock.Release();
+            }
+
             _logger.LogInformation("Stopping Provider process");
-            if (ProviderProcess != null)
-                await ProcessFactory.StopProcess(ProviderProcess, stopTimeoutMs, _logger);
-            ClearHandle();
-        }
-
-        /// <summary>
-        /// Check and update Provider process handle.
-        /// </summary>
-        /// <returns>`True` if Proider is alive. `False` if it is not.</returns>
-        public bool ClearHandle()
-        {
-            if (ProviderProcess == null)
-                return false;
-            if (ProviderProcess.HasExited)
-            {
-                _logger.LogInformation("Clearing process handle");
-                ProviderProcess = null;
-                return false;
-            }
-            return true;
-        }
-
-        private void BindOutputEventHandlers(Process proc)
-        {
-            proc.OutputDataReceived += OnOutputDataRecv;
-            proc.ErrorDataReceived += OnErrorDataRecv;
-            proc.BeginErrorReadLine();
-            proc.BeginOutputReadLine();
-        }
-
-        private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            _logger.LogInformation($"{e.Data}");
-        }
-        private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            _logger.LogInformation($"{e.Data}");
+            await ProcessFactory.StopProcess(proc, stopTimeoutMs, _logger);
+            ProviderProcess = null;
         }
     }
 }

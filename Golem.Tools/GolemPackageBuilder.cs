@@ -2,6 +2,7 @@ using System.IO;
 using System.IO.Compression;
 using System.IO.Enumeration;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.AccessControl;
@@ -55,7 +56,7 @@ namespace Golem.Tools
             return dir;
         }
 
-        public async static Task<string> BuildTestDirectory(string test_name)
+        public async static Task<string> BuildTestDirectory([CallerMemberName] string test_name = "test")
         {
             var dir = InitTestDirectory(test_name);
             var system = System();
