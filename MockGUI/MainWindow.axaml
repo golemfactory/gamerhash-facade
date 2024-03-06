@@ -138,7 +138,11 @@
     </Window.DataTemplates>
 
     <StackPanel Margin="40">
-        <TextBlock Margin="0 5" FontSize="34" FontWeight="Bold">AI Provider</TextBlock>
+        <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0 5" FontSize="34" FontWeight="Bold">AI Provider</TextBlock>
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="10" FontSize="18" VerticalAlignment="Center" IsVisible="{Binding Golem.Mainnet}">Mainnet</TextBlock>
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="10" FontSize="18" VerticalAlignment="Center" IsVisible="{Binding !Golem.Mainnet}">Testnet</TextBlock>
+        </Grid>
         <StackPanel Orientation="Horizontal">
             <StackPanel>
                 <Border Classes="Panel">
