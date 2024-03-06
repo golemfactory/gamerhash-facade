@@ -155,7 +155,7 @@ namespace MockGUI.ViewModels
         {
             try
             {
-                App = new FullExample(WorkDir, "Requestor1", _loggerFactory);
+                App = new FullExample(WorkDir, "Requestor1", _loggerFactory, mainnet: Golem.Mainnet);
                 await App.Run();
             }
             catch (Exception e)

@@ -66,6 +66,15 @@ Gracefully shutdown application should take a few seconds to stop python script 
 
 You can hit Ctrl-C for the second time to forcefully kill application.
 
+#### Running example tasks on Mainnnet
+
+Run both _MockGUI_ and _ExampleRunner_ with `--mainnet` param.
+
+```ps1
+dotnet run --project MockGUI --golem modules --mainnet
+dotnet run --project ExampleRunner -- --golem modules --framework Dummy --mainnet
+```
+
 ### Statuses of finished jobs
 
 Although Requestor should accept Invoices immediately or short time after task was finished, the payments aren't done immediately. Payment driver can batch payments together to avoid paying higher gas fees.

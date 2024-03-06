@@ -49,6 +49,7 @@ namespace App
         private string WorkDir { get; set; }
         private string Name { get; set; }
         private readonly ILogger _logger;
+        private readonly bool _mainnet;
 
         private readonly string _runtime;
 
@@ -73,13 +74,14 @@ namespace App
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-        public FullExample(string datadir, string name, ILoggerFactory loggerFactory, string runtime = "dummy")
+        public FullExample(string datadir, string name, ILoggerFactory loggerFactory, string runtime = "dummy", bool mainnet = false)
         {
             _logger = loggerFactory.CreateLogger(name);
             WorkDir = Path.Combine(datadir, name);
             Name = name;
             _message = "";
             _runtime = runtime;
+            _mainnet = mainnet;
         }
 
         public async Task Run()
@@ -89,8 +91,7 @@ namespace App
                 _logger.LogInformation("Starting Requestor daemon: " + Name);
                 Message = "Starting Daemon";
 
-                //TODO: configurable network
-                Requestor = await Task.Run(async () => await GolemRequestor.BuildRelative(WorkDir, _logger, false));
+                Requestor = await Task.Run(async () => await GolemRequestor.BuildRelative(WorkDir, _logger, cleanupData: false, _mainnet));
                 await Task.Run(() => Requestor.Start());
 
                 Message = "Funding accounts";
@@ -100,7 +101,8 @@ namespace App
                 _logger.LogInformation("Creating requestor application: " + Name);
                 Message = "Starting Application";
 
-                App = Requestor?.CreateSampleApp(extraArgs: $"--runtime {_runtime}") ?? throw new Exception("Requestor '" + Name + "' not started yet");
+                App = Requestor?.CreateSampleApp(extraArgs: $"--runtime {_runtime}") 
+                    ?? throw new Exception("Requestor '" + Name + "' not started yet");
                 await Task.Run(() => App.Start());
 
                 _logger.LogInformation("Application started: " + Name);

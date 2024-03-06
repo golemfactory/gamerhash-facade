@@ -40,7 +40,7 @@ class ExampleRunner
 
         GolemRelay.SetEnv(parsed.Relay);
 
-        var App = new FullExample(workDir, "Requestor", loggerFactory, runtime: parsed.AiFramework.ToString().ToLower());
+        var App = new FullExample(workDir, "Requestor", loggerFactory, runtime: parsed.AiFramework.ToString().ToLower(), parsed.Mainnet);
         var logger = loggerFactory.CreateLogger("Example");
 
         _ = Task.Run(async () =>

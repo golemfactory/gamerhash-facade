@@ -30,7 +30,9 @@ namespace Golem.Tools
 
         public string? AppKey;
 
-        private GolemRequestor(string dir, ILogger logger) : base(dir, logger)
+        private readonly bool _mainnet;
+
+        private GolemRequestor(string dir, bool mainnet, ILogger logger) : base(dir, logger)
         {
             var envBuilder = new EnvironmentBuilder();
             envBuilder.WithYagnaDataDir(Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")));
@@ -38,18 +40,19 @@ namespace Golem.Tools
             envBuilder.WithGsbUrl("tcp://127.0.0.1:7464");
             envBuilder.WithYaNetBindUrl("udp://0.0.0.0:11500");
             _env = envBuilder.Build();
+            _mainnet = mainnet;
         }
 
-        public async static Task<GolemRequestor> Build(string test_name, ILogger logger, bool cleanupData = true)
+        public async static Task<GolemRequestor> Build(string test_name, ILogger logger, bool cleanupData = true, bool mainnet = false)
         {
             var dir = await PackageBuilder.BuildRequestorDirectory(test_name, cleanupData);
-            return new GolemRequestor(dir, logger);
+            return new GolemRequestor(dir, mainnet, logger);
         }
 
-        public async static Task<GolemRequestor> BuildRelative(string datadir, ILogger logger, bool cleanupData = true)
+        public async static Task<GolemRequestor> BuildRelative(string datadir, ILogger logger, bool cleanupData = true, bool mainnet = false)
         {
             var dir = await PackageBuilder.BuildRequestorDirectoryRelative(datadir, cleanupData);
-            return new GolemRequestor(dir, logger);
+            return new GolemRequestor(dir, mainnet, logger);
         }
 
         public override bool Start()
@@ -70,7 +73,8 @@ namespace Golem.Tools
             {
                 return key;
             }
-            var keyPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", "test_key.plain");
+            var keyFilename = _mainnet ? "main_key.plain" : "test_key.plain";
+            var keyPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", keyFilename);
             var keyReader = new StreamReader(keyPath);
             return keyReader.ReadLine() ?? throw new Exception($"Failed to read key from file {keyPath}");
         }
@@ -86,7 +90,7 @@ namespace Golem.Tools
             return Convert.ToBase64String(data);
         }
 
-        public SampleApp CreateSampleApp(string? extraArgs = null, bool mainnet = false)
+        public SampleApp CreateSampleApp(string? extraArgs = null)
         {
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env["YAGNA_APPKEY"] = AppKey ?? throw new Exception("Unable to create app process. No YAGNA_APPKEY.");
@@ -102,7 +106,7 @@ namespace Golem.Tools
                 pathEnvVar = $"{pathEnvVar}:{binariesDir}";
             }
             env["PATH"] = pathEnvVar;
-            var network = Factory.Network(mainnet);
+            var network = Factory.Network(_mainnet);
             return new SampleApp(_dir, env, network, _logger, extraArgs);
         }
 
@@ -123,7 +127,7 @@ namespace Golem.Tools
                 WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment release-allocations", _env));
             }
 
-            if (totalGlm < minFundThreshold)
+            if (totalGlm < minFundThreshold && !_mainnet)
             {
                 WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment fund", _env));
             }

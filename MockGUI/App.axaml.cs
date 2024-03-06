@@ -68,7 +68,7 @@ public partial class App : Application
 
 class ShutdownHook
 {
-    private GolemViewModel view;
+    private readonly GolemViewModel view;
 
     public ShutdownHook(GolemViewModel view)
     {
