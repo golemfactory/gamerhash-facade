@@ -238,13 +238,20 @@ namespace Golem.Yagna
             //
             // Spawning process and setting YagnaProcess should be atomic operation, but stopping process
             // doesn't need to happen under the lock.
+            Process proc;
             await ProcLock.WaitAsync();
-            // Save reference to YagnaProcess under lock, because it can change before we will reach StopProcess.
-            var proc = YagnaProcess;
-            ProcLock.Release();
+            try
+            {
+                // Save reference to YagnaProcess under lock, because it can change before we will reach StopProcess.
+                if (YagnaProcess == null)
+                    return;
+                proc = YagnaProcess;
+            }
+            finally
+            {
+                ProcLock.Release();
+            }
 
-            if (proc == null)
-                return;
             _logger.LogInformation("Stopping Yagna process");
 
             await ProcessFactory.StopProcess(proc, stopTimeoutMs, _logger);

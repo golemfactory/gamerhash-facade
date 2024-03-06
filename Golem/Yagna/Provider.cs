@@ -244,12 +244,18 @@ namespace Golem.Yagna
 
         public async Task Stop(int stopTimeoutMs = 30_000)
         {
+            Process proc;
             await ProcLock.WaitAsync();
-            var proc = ProviderProcess;
-            ProcLock.Release();
-
-            if (proc == null)
-                return;
+            try
+            {
+                if (ProviderProcess == null)
+                    return;
+                proc = ProviderProcess;
+            }
+            finally
+            {
+                ProcLock.Release();
+            }
 
             _logger.LogInformation("Stopping Provider process");
             await ProcessFactory.StopProcess(proc, stopTimeoutMs, _logger);
