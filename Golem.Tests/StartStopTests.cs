@@ -53,8 +53,7 @@ namespace Golem.Tests
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory);
-            golem.PropertyChanged += status.Subscribe();
+            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
             var startTask = golem.Start();
             Assert.Equal(GolemStatus.Starting, status.Value);
@@ -77,8 +76,7 @@ namespace Golem.Tests
 
             var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory);
-            golem.PropertyChanged += status.Subscribe();
+            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
             var startTask = golem.Start();
             Assert.Equal(GolemStatus.Starting, status.Value);
@@ -102,13 +100,93 @@ namespace Golem.Tests
 
             var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory);
-            golem.PropertyChanged += status.Subscribe();
+            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
             var startTask = golem.Start();
             await golem.Stop();
 
             Assert.Equal(GolemStatus.Off, status.Value);
+        }
+
+        [Fact]
+        public async Task StartStopLoop_SingleStop()
+        {
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
+            output.WriteLine("Path: " + golemPath);
+
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
+
+            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+
+            for (int i = 0; i < 5; i++)
+            {
+                var startTask = golem.Start();
+                Assert.Equal(GolemStatus.Starting, status.Value);
+                await startTask;
+                Assert.Equal(GolemStatus.Ready, status.Value);
+
+                await Task.Delay(TimeSpan.FromMilliseconds(10 + 300 * i));
+
+                var stopTask = golem.Stop();
+                Assert.Equal(GolemStatus.Stopping, status.Value);
+                await stopTask;
+
+                Assert.Equal(GolemStatus.Off, status.Value);
+            }
+        }
+
+        [Fact]
+        public async Task StartStopLoop_BreakStartup()
+        {
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
+            output.WriteLine("Path: " + golemPath);
+
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
+
+            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+
+            for (int i = 0; i < 20; i++)
+            {
+                var startTask = golem.Start();
+
+                await Task.Delay(TimeSpan.FromMilliseconds(10 + 100 * i));
+
+                var stopTask1 = golem.Stop();
+                var stopTask2 = golem.Stop();
+
+                await stopTask1;
+                await stopTask2;
+
+                Assert.Equal(GolemStatus.Off, status.Value);
+            }
+        }
+
+        [Fact]
+        public async Task StartStopLoop_StartDuringStopping()
+        {
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
+            output.WriteLine("Path: " + golemPath);
+
+            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
+
+            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+
+            for (int i = 0; i < 3; i++)
+            {
+                await golem.Start();
+                Assert.Equal(GolemStatus.Ready, status.Value);
+
+                var stopTask = golem.Stop();
+                Assert.Equal(GolemStatus.Stopping, status.Value);
+
+                await golem.Start();
+                await stopTask;
+
+                Assert.Equal(GolemStatus.Off, status.Value);
+            }
         }
     }
 }

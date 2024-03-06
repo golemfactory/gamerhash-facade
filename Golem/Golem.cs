@@ -250,6 +250,10 @@ namespace Golem
                 Provider.PresetConfig.InitilizeDefaultPresets();
                 await Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 throw new Exception($"Failed to start provider: {e}");
@@ -289,6 +293,7 @@ namespace Golem
         {
             if (!cancellationTokenSource.IsCancellationRequested)
             {
+                _logger.LogDebug("Requesting cancellation");
                 cancellationTokenSource.Cancel();
             }
             else

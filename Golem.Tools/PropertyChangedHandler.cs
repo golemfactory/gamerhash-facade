@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem.Tools
 {
-    public class PropertyChangedHandler<T, V>
+    public class PropertyChangedHandler<T, V> where T : INotifyPropertyChanged
     {
         private Action<V?> Handler { get; set; }
         private string PropertyName { get; set; }
@@ -29,8 +29,20 @@ namespace Golem.Tools
             PropertyName = propertyName;
             Value = default;
 
-            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            loggerFactory ??= NullLoggerFactory.Instance;
             _logger = loggerFactory.CreateLogger<PropertyChangedHandler<T, V>>();
+        }
+
+        public PropertyChangedHandler<T, V> Observe(object? observed)
+        {
+            if (observed != null && observed is T obj)
+            {
+                var property = obj.GetType().GetProperty(PropertyName);
+                Value = property != null ? (V?)property.GetValue(obj) : default;
+                obj.PropertyChanged += Subscribe();
+            }
+
+            return this;
         }
 
         public PropertyChangedEventHandler Subscribe()
