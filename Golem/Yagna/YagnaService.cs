@@ -285,7 +285,9 @@ namespace Golem.Yagna
 
                 if (HasExited) // yagna has stopped
                 {
-                    throw new Exception("Failed to start yagna ...");
+                    // In case there was race condition between HasExited and cancellation.
+                    cancellationToken.ThrowIfCancellationRequested();
+                    throw new Exception("Yagna failed to start when waiting for REST endpoints...");
                 }
 
                 try
