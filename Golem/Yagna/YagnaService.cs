@@ -178,9 +178,7 @@ namespace Golem.Yagna
             // during `YagnaSerice::Run` execution. There is race condition possible, when `YagnaProcess`
             // is still null, but will be created in a moment and at the same time `YagnaSerice::Stop` will
             // check that `YagnaProcess` is null and will not stop the process.
-            _logger.LogInformation("Acquire Yagna lock");
             await ProcLock.WaitAsync(cancellationToken);
-            _logger.LogInformation("Acquired Yagna lock");
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -229,7 +227,6 @@ namespace Golem.Yagna
             finally
             {
                 ProcLock.Release();
-                _logger.LogInformation("Yagna ProcLock released");
             }
         }
 
@@ -241,13 +238,10 @@ namespace Golem.Yagna
             //
             // Spawning process and setting YagnaProcess should be atomic operation, but stopping process
             // doesn't need to happen under the lock.
-            _logger.LogInformation("Acquire Yagna lock");
             await ProcLock.WaitAsync();
-            _logger.LogInformation("Acquired Yagna lock");
             // Save reference to YagnaProcess under lock, because it can change before we will reach StopProcess.
             var proc = YagnaProcess;
             ProcLock.Release();
-            _logger.LogInformation("Yagna ProcLock released");
 
             if (proc == null)
                 return;

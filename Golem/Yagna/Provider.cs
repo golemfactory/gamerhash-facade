@@ -198,9 +198,7 @@ namespace Golem.Yagna
 
         public async Task Run(string appKey, Network network, Func<int, string, Task> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
-            _logger.LogInformation("Acquire Provider lock");
             await ProcLock.WaitAsync(cancellationToken);
-            _logger.LogInformation("Acquired Provider lock");
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -241,18 +239,15 @@ namespace Golem.Yagna
             finally
             {
                 ProcLock.Release();
-                _logger.LogInformation("Provider ProcLock released");
             }
         }
 
         public async Task Stop(int stopTimeoutMs = 30_000)
         {
-            _logger.LogInformation("Acquire Provider lock");
             await ProcLock.WaitAsync();
-            _logger.LogInformation("Acquired Provider lock");
             var proc = ProviderProcess;
             ProcLock.Release();
-            _logger.LogInformation("Provider ProcLock released");
+
             if (proc == null)
                 return;
 
