@@ -268,7 +268,7 @@ namespace Golem
         {
             return async (int exitCode, string which) =>
             {
-                if (Status != GolemStatus.Stopping)
+                if (Status != GolemStatus.Stopping && Status != GolemStatus.Off)
                 {
                     _logger.LogError($"Unexpected {which} shutdown. Exit code: {exitCode}");
 
