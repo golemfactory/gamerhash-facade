@@ -30,7 +30,9 @@ namespace Golem.Yagna
     {
         private readonly string _yaExePath;
         private readonly string? _dataDir;
-        private static Process? YagnaProcess { get; set; }
+        private Process? YagnaProcess { get; set; }
+        private SemaphoreSlim ProcLock { get; } = new SemaphoreSlim(1, 1);
+
         private readonly HttpClient _httpClient;
         private readonly ILogger _logger;
 
@@ -141,63 +143,92 @@ namespace Golem.Yagna
 
         public bool HasExited => YagnaProcess?.HasExited ?? true;
 
-        public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
+        public async Task Run(YagnaStartupOptions options, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
             cancellationToken.Register(_httpClient.CancelPendingRequests);
 
-            if (YagnaProcess != null || cancellationToken.IsCancellationRequested)
+            // Synchronizing of process creation is necessary to avoid scenario, when `YagnaSerice::Stop` is called
+            // during `YagnaSerice::Run` execution. There is race condition possible, when `YagnaProcess`
+            // is still null, but will be created in a moment and at the same time `YagnaSerice::Stop` will
+            // check that `YagnaProcess` is null and will not stop the process.
+            await ProcLock.WaitAsync(cancellationToken);
+            try
             {
-                return false;
-            }
-
-            string debugFlag = "";
-            if (options.Debug)
-            {
-                debugFlag = "--debug";
-            }
-
-            EnvironmentBuilder environment = Env;
-            environment = options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(options.YagnaApiUrl) : environment;
-            environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
-            environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
-
-            var args = $"service run {debugFlag}".Split();
-            YagnaProcess = ProcessFactory.StartProcess(_yaExePath, args, environment.Build());
-            ChildProcessTracker.AddProcess(YagnaProcess);
-
-            YagnaProcess.WaitForExitAsync(cancellationToken)
-                .ContinueWith(result =>
+                cancellationToken.ThrowIfCancellationRequested();
+                if (YagnaProcess != null)
                 {
-                    if(YagnaProcess!=null && YagnaProcess.HasExited)
+                    throw new GolemException("Yagna process is already running");
+                }
+
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
+
+                string debugFlag = "";
+                if (options.Debug)
+                {
+                    debugFlag = "--debug";
+                }
+
+                EnvironmentBuilder environment = Env;
+                environment = options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(options.YagnaApiUrl) : environment;
+                environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
+                environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
+
+                var args = $"service run {debugFlag}".Split();
+
+                YagnaProcess = await Task.Run(() => ProcessFactory.StartProcess(_yaExePath, args, environment.Build()));
+                ChildProcessTracker.AddProcess(YagnaProcess);
+
+                _ = YagnaProcess.WaitForExitAsync()
+                    .ContinueWith(result =>
                     {
-                        var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
-                        exitHandler(exitCode);
-                    }
-                    YagnaProcess = null;
-                });
-
-            cancellationToken.Register(async () =>
+                        // This code is not synchronized, to avoid deadlocks in case exitHandler will call any
+                        // functions on YagnaService.
+                        if (YagnaProcess != null && YagnaProcess.HasExited)
+                        {
+                            // If we can't acquire exitCode it is better to send any code to exiHandler,
+                            // than to throw an exception here. Otherwise exitHandler won't be called.
+                            var exitCode = YagnaProcess?.ExitCode ?? 1;
+                            exitHandler(exitCode, "Yagna");
+                        }
+                        YagnaProcess = null;
+                    });
+            }
+            catch (Exception)
             {
-                _logger.LogInformation("Canceling Yagna process");
-                await Stop();
-            });
-
-            return !YagnaProcess.HasExited;
+                throw;
+            }
+            finally
+            {
+                ProcLock.Release();
+            }
         }
 
         public async Task Stop(int stopTimeoutMs = 30_000)
         {
-            if (YagnaProcess == null)
-                return;
-            if (YagnaProcess.HasExited)
+            // There is no symmetry in synchronization of `Run` and `Stop` methods. It is possible to call
+            // `YagnaService::Stop` multiple times, but `YagnaService::Run` can be called only once.
+            // We can't lock here for entire duration of `StopProcess`, because we would block another `Stop`.
+            //
+            // Spawning process and setting YagnaProcess should be atomic operation, but stopping process
+            // doesn't need to happen under the lock.
+            Process proc;
+            await ProcLock.WaitAsync();
+            try
             {
-                YagnaProcess = null;
-                return;
+                // Save reference to YagnaProcess under lock, because it can change before we will reach StopProcess.
+                if (YagnaProcess == null)
+                    return;
+                proc = YagnaProcess;
             }
+            finally
+            {
+                ProcLock.Release();
+            }
+
             _logger.LogInformation("Stopping Yagna process");
-            var cmd = YagnaProcess;
-            await ProcessFactory.StopProcess(cmd, stopTimeoutMs, _logger);
+
+            await ProcessFactory.StopProcess(proc, stopTimeoutMs, _logger);
             YagnaProcess = null;
         }
 
@@ -297,14 +328,14 @@ namespace Golem.Yagna
             //yagna is starting and /me won't work until all services are running
             for (int tries = 0; tries < 200; ++tries)
             {
-                if (cancellationToken.IsCancellationRequested)
-                    return null;
-
                 Thread.Sleep(300);
+                cancellationToken.ThrowIfCancellationRequested();
 
                 if (HasExited) // yagna has stopped
                 {
-                    throw new Exception("Failed to start yagna ...");
+                    // In case there was race condition between HasExited and cancellation.
+                    cancellationToken.ThrowIfCancellationRequested();
+                    throw new Exception("Yagna failed to start when waiting for REST endpoints...");
                 }
 
                 try
