@@ -17,6 +17,9 @@ public interface IGolem : INotifyPropertyChanged
     /// Indicates whether Mainnet network or a test network is used.
     /// </summary>
     public bool Mainnet { get; }
+
+    public string Network { get; }
+
     public GolemStatus Status { get; }
     /// <summary>
     /// You can either listen to PropertyChanged notifications for this property

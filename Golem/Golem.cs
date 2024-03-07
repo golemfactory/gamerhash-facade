@@ -63,10 +63,14 @@ namespace Golem
             }
         }
 
-        private readonly Network _network = Network.Mainnet;
+        private readonly Network _network = Factory.Network(true);
+
+        public string Network {
+            get => _network.Id;
+        }
 
         public bool Mainnet { 
-            get => _network == Network.Mainnet; 
+            get => _network == Factory.Network(true); 
         }
 
         private GolemStatus status;

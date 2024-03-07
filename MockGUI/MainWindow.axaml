@@ -138,10 +138,11 @@
     </Window.DataTemplates>
 
     <StackPanel Margin="40">
-        <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto">
+        <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto">
             <TextBlock Grid.Row="0" Grid.Column="0" Margin="0 5" FontSize="34" FontWeight="Bold">AI Provider</TextBlock>
-            <TextBlock Grid.Row="0" Grid.Column="1" Margin="10" FontSize="18" VerticalAlignment="Center" IsVisible="{Binding Golem.Mainnet}">Mainnet</TextBlock>
-            <TextBlock Grid.Row="0" Grid.Column="1" Margin="10" FontSize="18" VerticalAlignment="Center" IsVisible="{Binding !Golem.Mainnet}">Testnet</TextBlock>
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="15" FontSize="18" VerticalAlignment="Center" IsVisible="{Binding Golem.Mainnet}">Mainnet:</TextBlock>
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="15" FontSize="18" VerticalAlignment="Center" IsVisible="{Binding !Golem.Mainnet}">Testnet:</TextBlock>
+            <TextBlock Grid.Row="0" Grid.Column="2" Margin="15" FontSize="18" VerticalAlignment="Center" Text="{Binding Golem.Network, Mode=OneWay}" />
         </Grid>
         <StackPanel Orientation="Horizontal">
             <StackPanel>
@@ -157,7 +158,7 @@
                             <TextBlock Grid.Row="1" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NodeId}"/>
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Wallet Address</TextBlock>
-                            <TextBox Grid.Row="2" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.WalletAddress, Mode=TwoWay}"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.WalletAddress, Mode=TwoWay}" IsEnabled="{Binding !Golem.Mainnet}" />
 
                             <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Network Speed</TextBlock>
                             <TextBox Grid.Row="3" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NetworkSpeed, Mode=TwoWay}"/>
