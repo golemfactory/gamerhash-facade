@@ -100,6 +100,7 @@ class ActivityLoop
                 catch (TaskCanceledException)
                 {
                     _logger.LogDebug("Activity loop cancelled");
+                    return;
                 }
                 catch (Exception e)
                 {

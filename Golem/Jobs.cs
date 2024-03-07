@@ -75,18 +75,6 @@ class Jobs : IJobsUpdater
         }
     }
 
-    public void UpdateUsage(string jobId, GolemUsage usage)
-    {
-        if (_jobs.TryGetValue(jobId, out var job))
-        {
-            job.CurrentUsage = usage;
-        }
-        else
-        {
-            _logger.LogWarning($"Failed to update usage. Job not found: {jobId}");
-        }
-    }
-
     public void UpdatePaymentStatus(string id, GolemLib.Types.PaymentStatus paymentStatus)
     {
         if (_jobs.TryGetValue(id, out var job))
