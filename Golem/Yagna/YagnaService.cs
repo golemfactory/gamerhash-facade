@@ -201,7 +201,7 @@ namespace Golem.Yagna
                 ChildProcessTracker.AddProcess(YagnaProcess);
 
                 _ = YagnaProcess.WaitForExitAsync()
-                    .ContinueWith(result =>
+                    .ContinueWith(async result =>
                     {
                         // This code is not synchronized, to avoid deadlocks in case exitHandler will call any
                         // functions on YagnaService.
@@ -210,7 +210,7 @@ namespace Golem.Yagna
                             // If we can't acquire exitCode it is better to send any code to exiHandler,
                             // than to throw an exception here. Otherwise exitHandler won't be called.
                             var exitCode = YagnaProcess?.ExitCode ?? 1;
-                            exitHandler(exitCode, "Yagna");
+                            await exitHandler(exitCode, "Yagna");
                         }
                         YagnaProcess = null;
                     });
