@@ -223,12 +223,12 @@ namespace Golem.Yagna
                 ChildProcessTracker.AddProcess(ProviderProcess);
 
                 _ = ProviderProcess.WaitForExitAsync()
-                    .ContinueWith(result =>
+                    .ContinueWith(async result =>
                 {
                     if (ProviderProcess != null && ProviderProcess.HasExited)
                     {
                         var exitCode = ProviderProcess?.ExitCode ?? 1;
-                        exitHandler(exitCode, "Provider");
+                        await exitHandler(exitCode, "Provider");
                     }
                     ProviderProcess = null;
                 });

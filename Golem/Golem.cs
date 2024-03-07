@@ -168,8 +168,6 @@ namespace Golem
             {
                 await Task.Yield();
 
-                var yagnaOptions = Yagna.StartupOptions();
-
                 await StartupYagna(yagnaOptions, exitHandler, yagnaCancellationTokenSource.Token);
                 var defaultKey = (Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured"))
                     ?? throw new Exception("Can't get app-key, neither 'default' nor 'autoconfigured'");
@@ -235,13 +233,13 @@ namespace Golem
             try
             {
                 _logger.LogInformation($"Init Payment (node id) {account}");
-                Yagna.PaymentService.Init(account ?? "");
+                Yagna.PaymentService.Init(account ?? "", yagnaOptions);
 
                 var walletAddress = WalletAddress;
                 if (walletAddress != account)
                 {
                     _logger.LogInformation($"Init Payment (wallet) {walletAddress}");
-                    Yagna.PaymentService.Init(walletAddress ?? "");
+                    Yagna.PaymentService.Init(walletAddress ?? "", yagnaOptions);
                 }
 
                 OnPropertyChanged(nameof(WalletAddress));
@@ -259,7 +257,7 @@ namespace Golem
             try
             {
                 Provider.PresetConfig.InitilizeDefaultPresets();
-                await Provider.Run(yagnaOptions.AppKey, Network.Goerli, exitHandler, cancellationToken, true);
+                await Provider.Run(yagnaOptions.AppKey, _network, exitHandler, cancellationToken, true);
             }
             catch (OperationCanceledException)
             {
@@ -339,54 +337,6 @@ namespace Golem
             if (sender is GolemPrice price)
             {
                 ProviderConfig.GolemPrice = price;
-            }
-        }
-
-        private async Task<bool> StartupYagnaAsync(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
-        {
-            var success = Yagna.Run(yagnaOptions, exitHandler, cancellationToken);
-
-            if (!success)
-                return false;
-
-            var account = await Yagna.WaitForIdentityAsync(cancellationToken);
-
-            _ = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs);
-            _ = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs);
-
-            try
-            {
-                _logger.LogInformation($"Init Payment (node id) {account}");
-                Yagna.PaymentService.Init(account ?? "", yagnaOptions);
-
-                var walletAddress = WalletAddress;
-                if (walletAddress != account)
-                {
-                    _logger.LogInformation($"Init Payment (wallet) {walletAddress}");
-                    Yagna.PaymentService.Init(walletAddress ?? "", yagnaOptions);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("Payment init failed: {0}", e);
-                return false;
-            }
-
-            return success;
-        }
-
-        public bool StartupProvider(YagnaStartupOptions yagnaOptions, Action<int> exitHandler, CancellationToken cancellationToken)
-        {
-            try
-            {
-                Provider.PresetConfig.InitilizeDefaultPresets();
-
-                return Provider.Run(yagnaOptions.AppKey, _network, exitHandler, cancellationToken, true);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("Failed to start provider: {0}", e);
-                return false;
             }
         }
 

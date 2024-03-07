@@ -51,7 +51,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             output.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.DataDir(golemPath), loggerFactory);
+            var golem =  await TestUtils.Golem(golemPath, loggerFactory);
 
             var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
@@ -98,7 +98,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             output.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
             var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
@@ -115,7 +115,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             output.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
             var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
@@ -143,7 +143,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             output.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
             var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
@@ -170,7 +170,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             output.WriteLine("Path: " + golemPath);
 
-            var golem = new Golem(PackageBuilder.BinariesDir(golemPath), PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
             var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
