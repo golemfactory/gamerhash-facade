@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 using Golem.Tools;
 
@@ -21,7 +22,6 @@ namespace Golem.Tests
 
         public GolemTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
         {
-
             var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
 
             _golemLib = Path.Combine(dir, "Golem.dll");
@@ -32,7 +32,7 @@ namespace Golem.Tests
             _loggerProvider = new TestLoggerProvider(golemFixture.Sink);
         }
 
-        ILoggerFactory CreateLoggerFactory(string testName)
+        ILoggerFactory CreateLoggerFactory([CallerMemberName] string testName = "test")
         {
             var logfile = Path.Combine(PackageBuilder.TestDir(testName), testName + "-{Date}.log");
             return LoggerFactory.Create(builder => builder
@@ -128,7 +128,7 @@ namespace Golem.Tests
         [Fact]
         public async Task TestDownloadArtifacts()
         {
-            var dir = await PackageBuilder.BuildTestDirectory("TestDownloadArtifacts");
+            var dir = await PackageBuilder.BuildTestDirectory();
 
             Assert.True(Directory.EnumerateFiles(dir, "modules/golem/yagna*").Any());
             Assert.True(Directory.EnumerateFiles(dir, "modules/golem/ya-provider*").Any());
@@ -139,10 +139,8 @@ namespace Golem.Tests
         [Fact]
         public async Task Start_ChangeWallet_VerifyStatusAsync()
         {
-            var testName = nameof(Start_ChangeWallet_VerifyStatusAsync);
-            var loggerFactory = CreateLoggerFactory(testName);
-
-            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
             Console.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
@@ -167,10 +165,8 @@ namespace Golem.Tests
         [Fact]
         public async Task Start_ChangePrices_VerifyPriceAsync()
         {
-            var testName = nameof(Start_ChangePrices_VerifyPriceAsync);
-            var loggerFactory = CreateLoggerFactory(testName);
-
-            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
             Console.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
@@ -184,10 +180,8 @@ namespace Golem.Tests
         [Fact]
         public async Task DoNotStart_ChangePrices_VerifyPriceAsync()
         {
-            var testName = nameof(DoNotStart_ChangePrices_VerifyPriceAsync);
-            var loggerFactory = CreateLoggerFactory(testName);
-
-            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
             Console.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
@@ -197,10 +191,8 @@ namespace Golem.Tests
         [Fact]
         public async Task InitPrice_ChangeOnePreset_VerifyPriceAsync()
         {
-            var testName = nameof(InitPrice_ChangeOnePreset_VerifyPriceAsync);
-            var loggerFactory = CreateLoggerFactory(testName);
-
-            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
             Console.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);

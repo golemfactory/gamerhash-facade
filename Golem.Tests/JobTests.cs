@@ -54,7 +54,7 @@ namespace Golem.Tests
         {
             // Having
 
-            string golemPath = await PackageBuilder.BuildTestDirectory(nameof(JobTests));
+            string golemPath = await PackageBuilder.BuildTestDirectory();
             _logger.LogInformation($"Path: {golemPath}");
             var golem = await TestUtils.Golem(golemPath, _loggerFactory);
 
