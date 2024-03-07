@@ -74,9 +74,8 @@ namespace Golem.Tools
                 return key;
             }
             var keyFilename = _mainnet ? "main_key.plain" : "test_key.plain";
-            var keyPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", keyFilename);
-            var keyReader = new StreamReader(keyPath);
-            return keyReader.ReadLine() ?? throw new Exception($"Failed to read key from file {keyPath}");
+            var keyReader = PackageBuilder.ReadResource(keyFilename);
+            return keyReader.ReadLine() ?? throw new Exception($"Failed to read key from file {keyFilename}");
         }
 
         private string generateRandomAppkey()
@@ -116,7 +115,8 @@ namespace Golem.Tools
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env.Add("RUST_LOG", "none");
 
-            var payment_status_process = WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment status --json", env));
+            var network = Factory.Network(_mainnet);
+            var payment_status_process = WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"payment status --json --network {network.Id}", env));
             var payment_status_output_json = String.Join("\n", payment_status_process.GetOutputAndErrorLines());
             var payment_status_output_obj = JObject.Parse(payment_status_output_json);
             var totalGlm = payment_status_output_obj.Value<float>("amount");
@@ -129,7 +129,7 @@ namespace Golem.Tools
 
             if (totalGlm < minFundThreshold && !_mainnet)
             {
-                WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment fund", _env));
+                WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"payment fund --network {network.Id}", _env));
             }
             return;
         }

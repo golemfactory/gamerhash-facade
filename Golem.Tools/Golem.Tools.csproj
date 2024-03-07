@@ -47,8 +47,7 @@
             <!-- <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory> -->
             <IsAssembly>true</IsAssembly>
         </Content>
-        <!-- Copies test_key.plain and main_key.plain -->
-        <EmbeddedResource Include="*_key.plain">
+        <EmbeddedResource  Include="resources\**" LinkBase="resources">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </EmbeddedResource>
     </ItemGroup>

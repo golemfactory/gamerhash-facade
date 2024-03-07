@@ -58,7 +58,6 @@ namespace MockGUI.ViewModels
         {
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<GolemViewModel>();
-
             WorkDir = modulesDir;
             Golem = golem;
             Relay = relay;
@@ -67,17 +66,21 @@ namespace MockGUI.ViewModels
 
         public static async Task<GolemViewModel> Load(string modulesDir, RelayType relayType, bool mainnet)
         {
-            var loggerFactory = createLoggerFactory(modulesDir);
-            var golem = await LoadLib("Golem.dll", modulesDir, loggerFactory, mainnet);
-            var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
-            return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
+            return await Create(modulesDir, (loggerFactory) => LoadLib("Golem.dll", modulesDir, loggerFactory, mainnet), relayType, mainnet);
         }
 
         public static async Task<GolemViewModel> CreateStatic(string modulesDir, RelayType relayType, bool mainnet)
         {
-            var loggerFactory = createLoggerFactory(modulesDir);
+            return await Create(modulesDir, (loggerFactory) => new Factory().Create(modulesDir, loggerFactory, mainnet), relayType, mainnet);
+        }
 
-            var golem = await new Factory().Create(modulesDir, loggerFactory, mainnet);
+        static async Task<GolemViewModel> Create(string modulesDir, Func<ILoggerFactory?, Task<IGolem>> createGolem, RelayType relayType, bool mainnet)
+        {
+            var loggerFactory = createLoggerFactory(modulesDir);
+            var golem = await createGolem(loggerFactory);
+            if (mainnet) {
+                ((Golem.Golem)golem).WalletAddress = mainnetWalletAddr();
+            }
             var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
             return new GolemViewModel(modulesDir, golem, relay, loggerFactory);
         }
@@ -105,6 +108,13 @@ namespace MockGUI.ViewModels
             else
                 return null;
 
+        }
+
+        private static string mainnetWalletAddr()
+        {
+            var mainnetAddressFilename = "main_address.txt";
+            var mainnetAddressReader = PackageBuilder.ReadResource(mainnetAddressFilename);
+            return mainnetAddressReader.ReadLine() ?? throw new Exception($"Failed to read from file {mainnetAddressFilename}");
         }
 
         public static async Task<IGolem> LoadLib(string lib, string modulesDir, ILoggerFactory? loggerFactory, bool mainnet)
@@ -163,7 +173,6 @@ namespace MockGUI.ViewModels
                 _logger.LogInformation("Error starting app: " + e.ToString());
                 App = null;
             }
-
         }
 
         public async void OnListJobs()

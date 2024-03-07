@@ -94,7 +94,7 @@ namespace App
                 Requestor = await Task.Run(async () => await GolemRequestor.BuildRelative(WorkDir, _logger, cleanupData: false, _mainnet));
                 await Task.Run(() => Requestor.Start());
 
-                Message = "Funding accounts";
+                Message = "Payment Initialization";
                 _logger.LogInformation("Initializing payment accounts for: " + Name);
                 await Task.Run(() => Requestor.InitPayment());
 
