@@ -367,23 +367,5 @@ namespace Golem.Yagna
             token.Register(_httpClient.CancelPendingRequests);
             return new InvoiceEventsLoop(_httpClient, token, _logger).Start(jobs.UpdatePaymentStatus, jobs.UpdatePaymentConfirmation);
         }
-
-        private void BindOutputEventHandlers(Process proc)
-        {
-            proc.OutputDataReceived += OnOutputDataRecv;
-            proc.ErrorDataReceived += OnErrorDataRecv;
-            proc.BeginErrorReadLine();
-            proc.BeginOutputReadLine();
-        }
-
-        private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            _logger.LogInformation($"{e.Data}");
-        }
-
-        private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            _logger.LogInformation($"{e.Data}");
-        }
     }
 }
