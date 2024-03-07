@@ -23,6 +23,6 @@ public class DownloadArgs
 {
     [Option('t', "target", Default = "modules", Required = false, HelpText = "Directory where binaries will be generated relative to working dir")]
     public required string Target { get; set; }
-    [Option('p', "version", Default = "v0.1.4", Required = false, HelpText = "Yagna version github tag")]
+    [Option('p', "version", Default = "v0.1.7", Required = false, HelpText = "Gamerhash facade package version")]
     public required string PackageVersion { get; set; }
 }
