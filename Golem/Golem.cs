@@ -63,14 +63,12 @@ namespace Golem
             }
         }
 
-        private readonly Network _network = Factory.Network(true);
-
         public string Network {
-            get => _network.Id;
+            get => Yagna.Options.Network.Id;
         }
 
         public bool Mainnet { 
-            get => _network == Factory.Network(true); 
+            get => Yagna.Options.Network == Factory.Network(true);
         }
 
         private GolemStatus status;
@@ -115,7 +113,6 @@ namespace Golem
                 if (Status == GolemStatus.Ready)
                 {
                     _logger.LogInformation($"Init Payment (wallet changed) {value}");
-                    var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(_network);
                     Yagna.PaymentService.Init(value);
                 }
                 ProviderConfig.UpdateAccount(value, () => OnPropertyChanged(nameof(WalletAddress)));
@@ -255,7 +252,7 @@ namespace Golem
             try
             {
                 Provider.PresetConfig.InitilizeDefaultPresets();
-                await Provider.Run(Yagna.Options.AppKey, _network, exitHandler, cancellationToken, true);
+                await Provider.Run(Yagna.Options.AppKey, Yagna.Options.Network, exitHandler, cancellationToken, true);
             }
             catch (OperationCanceledException)
             {
@@ -319,13 +316,12 @@ namespace Golem
             _logger = loggerFactory.CreateLogger<Golem>();
             _yagnaCancellationtokenSource = new CancellationTokenSource();
             _providerCancellationtokenSource = new CancellationTokenSource();
-            var startupOptions = YagnaOptionsFactory.CreateStartupOptions(network);
-            Yagna = new YagnaService(golemPath, yagna_datadir, startupOptions, loggerFactory);
+            var options = YagnaOptionsFactory.CreateStartupOptions(network);
+            Yagna = new YagnaService(golemPath, yagna_datadir, options, loggerFactory);
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
-            ProviderConfig = new ProviderConfigService(Provider, _network, loggerFactory);
+            ProviderConfig = new ProviderConfigService(Provider, options.Network, loggerFactory);
             _golemPrice = ProviderConfig.GolemPrice;
             _jobs = new Jobs(Yagna, SetCurrentJob, loggerFactory);
-            _network = network;
 
             // Listen to property changed event on nested properties to update Provider presets.
             Price.PropertyChanged += OnGolemPriceChanged;
