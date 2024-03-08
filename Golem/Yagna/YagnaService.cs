@@ -7,6 +7,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Net.Http.Headers;
+using Golem.Model;
+using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Golem.Yagna
 {
@@ -19,44 +22,13 @@ namespace Golem.Yagna
         public bool Debug { get; set; }
 
         public string YagnaApiUrl { get; set; } = "";
-        public Network Network { get; set; } = Network.Mainnet;
+        public Network Network { get; set; } = Factory.Network(true);
         public PaymentDriver PaymentDriver { get; set; } = PaymentDriver.ERC20;
-    }
-
-
-
-    //[JsonObject(MemberSerialization.OptIn)]
-    public class IdInfo
-    {
-        // [JsonPropertyName("alias")]
-        public string? Alias { get; set; }
-
-        // [JsonPropertyName("default")]
-        public bool IsDefault { get; set; }
-
-        // [JsonPropertyName("locked")]
-        public bool IsLocked { get; set; }
-
-        // [JsonPropertyName("nodeId")]
-        public string NodeId { get; set; }
-
-        public IdInfo(bool _isDefault, bool _isLocked, string? _alias, string _nodeId)
-        {
-            IsDefault = _isDefault;
-            IsLocked = _isLocked;
-            Alias = _alias;
-            NodeId = _nodeId;
-        }
-
-        [JsonConstructor]
-        public IdInfo()
-        {
-            NodeId = "";
-        }
     }
 
     public class YagnaService
     {
+        public readonly YagnaStartupOptions Options;
         private readonly string _yaExePath;
         private readonly string? _dataDir;
         private Process? YagnaProcess { get; set; }
@@ -77,8 +49,9 @@ namespace Golem.Yagna
             }
         }
 
-        public YagnaService(string golemPath, string dataDir, ILoggerFactory? loggerFactory)
+        public YagnaService(string golemPath, string dataDir, YagnaStartupOptions startupOptions, ILoggerFactory? loggerFactory)
         {
+            Options = startupOptions;
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<YagnaService>();
             _yaExePath = Path.GetFullPath(Path.Combine(golemPath, ProcessFactory.BinName("yagna")));
@@ -167,8 +140,11 @@ namespace Golem.Yagna
 
         public bool HasExited => YagnaProcess?.HasExited ?? true;
 
-        public async Task Run(YagnaStartupOptions options, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
+        public async Task Run(Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Options.AppKey);
+            cancellationToken.Register(_httpClient.CancelPendingRequests);
+
             // Synchronizing of process creation is necessary to avoid scenario, when `YagnaSerice::Stop` is called
             // during `YagnaSerice::Run` execution. There is race condition possible, when `YagnaProcess`
             // is still null, but will be created in a moment and at the same time `YagnaSerice::Stop` will
@@ -182,18 +158,18 @@ namespace Golem.Yagna
                     throw new GolemException("Yagna process is already running");
                 }
 
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Options.AppKey);
 
                 string debugFlag = "";
-                if (options.Debug)
+                if (Options.Debug)
                 {
                     debugFlag = "--debug";
                 }
 
                 EnvironmentBuilder environment = Env;
-                environment = options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(options.YagnaApiUrl) : environment;
-                environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
-                environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
+                environment = Options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(Options.YagnaApiUrl) : environment;
+                environment = Options.PrivateKey != null ? environment.WithPrivateKey(Options.PrivateKey) : environment;
+                environment = Options.AppKey != null ? environment.WithAppKey(Options.AppKey) : environment;
 
                 var args = $"service run {debugFlag}".Split();
 
@@ -253,27 +229,101 @@ namespace Golem.Yagna
             YagnaProcess = null;
         }
 
-        public async Task<MeInfo?> Me(CancellationToken cancellationToken)
+        public async Task<T> RestCall<T>(string path, CancellationToken token = default) where T : class
         {
-            var response = _httpClient.GetAsync($"/me", cancellationToken).Result;
+            var response = _httpClient.GetAsync(path, token).Result;
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
                 throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
             }
-            var txt = await response.Content.ReadAsStringAsync();
+            var txt = await response.Content.ReadAsStringAsync(token);
+            return Deserialize<T>(txt);
+        }
+
+        public async IAsyncEnumerable<T> RestStream<T>(string path, [EnumeratorCancellation] CancellationToken token = default) where T : class
+        {
+            var stream = await _httpClient.GetStreamAsync(path, token);
+            using StreamReader reader = new StreamReader(stream);
+
+            while (true)
+            {
+                T result;
+                try
+                {
+                    result = await Next<T>(reader, "data:", token);
+                }
+                catch (OperationCanceledException e)
+                {
+                    throw e;
+                }
+                catch (Exception error)
+                {
+                    _logger.LogError("Failed to get next stream event: {0}", error);
+                    break;
+                }
+                yield return result;
+            }
+            yield break;
+        }
+
+        private async Task<T> Next<T>(StreamReader reader, string dataPrefix = "data:", CancellationToken token = default) where T : class
+        {
+            StringBuilder messageBuilder = new StringBuilder();
+
+            string? line;
+            while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(token)))
+            {
+                if (line.StartsWith(dataPrefix))
+                {
+                    messageBuilder.Append(line.Substring(dataPrefix.Length).TrimStart());
+                    _logger.LogDebug("got line {0}", line);
+                }
+                else
+                {
+                    _logger.LogError("Unable to deserialize message: {0}", line);
+                }
+            }
+
+            return Deserialize<T>(messageBuilder.ToString());
+        }
+
+        internal static T Deserialize<T>(string text) where T : class
+        {
             var options = new JsonSerializerOptionsBuilder()
                             .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
                             .Build();
 
-            return JsonSerializer.Deserialize<MeInfo>(txt, options) ?? null;
+            return JsonSerializer.Deserialize<T>(text, options)
+                ?? throw new Exception($"Failed to deserialize REST call reponse to type: {typeof(T).Name}");
         }
 
-        public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken)
+        public async Task<MeInfo> Me(CancellationToken token)
         {
-            string? identity = null;
+            return await RestCall<MeInfo>("/me", token);
+        }
 
+        public async Task<YagnaAgreement> GetAgreement(string agreementId, CancellationToken token = default)
+        {
+            return await RestCall<YagnaAgreement>($"/market-api/v1/agreements/{agreementId}", token);
+        }
+
+        public async Task<ActivityStatePair> GetState(string activityId, CancellationToken token = default)
+        {
+            return await RestCall<ActivityStatePair>($"/activity-api/v1/activity/{activityId}/state", token);
+        }
+
+        public async IAsyncEnumerable<TrackingEvent> ActivityMonitorStream([EnumeratorCancellation] CancellationToken token = default)
+        {
+            await foreach (var item in RestStream<TrackingEvent>($"/activity-api/v1/_monitor", token))
+            {
+                yield return item;
+            }
+        }
+
+        public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken = default)
+        {
             //yagna is starting and /me won't work until all services are running
-            for (int tries = 0; tries < 300; ++tries)
+            for (int tries = 0; tries < 200; ++tries)
             {
                 Thread.Sleep(300);
                 cancellationToken.ThrowIfCancellationRequested();
@@ -287,30 +337,21 @@ namespace Golem.Yagna
 
                 try
                 {
-                    MeInfo? meInfo = await Me(cancellationToken);
-                    //sanity check
-                    if (meInfo != null)
-                    {
-                        if (String.IsNullOrEmpty(identity))
-                            identity = meInfo.Identity;
-                        break;
-                    }
-                    throw new Exception("Failed to get key");
-
+                    MeInfo meInfo = await Me(cancellationToken);
+                    return meInfo.Identity;
                 }
                 catch (Exception)
                 {
                     // consciously swallow the exception... presumably REST call error...
                 }
             }
-            return identity;
+            return null;
         }
 
         /// TODO: Reconsider API of this function.
         public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobsUpdater jobs)
         {
-            token.Register(_httpClient.CancelPendingRequests);
-            return new ActivityLoop(_httpClient, token, _logger).Start(
+            return new ActivityLoop(this, token, _logger).Start(
                 setCurrentJob,
                 jobs,
                 token
@@ -323,212 +364,5 @@ namespace Golem.Yagna
             token.Register(_httpClient.CancelPendingRequests);
             return new InvoiceEventsLoop(_httpClient, token, _logger).Start(jobs.UpdatePaymentStatus, jobs.UpdatePaymentConfirmation);
         }
-
-        private void BindOutputEventHandlers(Process proc)
-        {
-            proc.OutputDataReceived += OnOutputDataRecv;
-            proc.ErrorDataReceived += OnErrorDataRecv;
-            proc.BeginErrorReadLine();
-            proc.BeginOutputReadLine();
-        }
-
-        private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            _logger.LogInformation($"{e.Data}");
-        }
-
-        private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            _logger.LogInformation($"{e.Data}");
-        }
-    }
-
-    public class KeyInfo
-    {
-        public string Name { get; set; }
-
-        public string? Key { get; set; }
-
-        public string Id { get; set; }
-
-        public string? Role { get; set; }
-
-        public DateTime? Created { get; set; }
-
-        [JsonConstructor]
-        public KeyInfo()
-        {
-            Name = "";
-            Id = "";
-        }
-    }
-
-    public class MeInfo
-    {
-        public string? Name { get; set; }
-        public string? Identity { get; set; }
-
-        public string? Role { get; set; }
-
-        [JsonConstructor]
-        public MeInfo()
-        {
-        }
-    }
-
-    public class AppKeyService
-    {
-        private readonly YagnaService _yagnaService;
-        private readonly string? _id;
-
-        internal AppKeyService(YagnaService yagnaService, string? id)
-        {
-            this._yagnaService = yagnaService;
-            this._id = id;
-        }
-
-        private string[] prepareArgs(params string[] arguments)
-        {
-            var execArgs = new List<string>(3 + arguments.Length);
-            execArgs.Add("--json");
-            if (_id != null)
-            {
-                execArgs.Add("--id");
-                execArgs.Add(_id);
-            }
-            execArgs.Add("app-key");
-            execArgs.AddRange(arguments);
-
-            return execArgs.ToArray();
-        }
-
-        private T? Exec<T>(params string[] arguments) where T : class
-        {
-            return _yagnaService.Exec<T>(prepareArgs(arguments));
-        }
-
-        private async Task<T?> ExecAsync<T>(params string[] arguments) where T : class
-        {
-            return await _yagnaService.ExecAsync<T>(prepareArgs(arguments));
-        }
-
-        public string? Create(string name)
-        {
-            return Exec<string>("create", name);
-        }
-        public async Task<string?> CreateAsync(string name)
-        {
-            return await ExecAsync<string>("create", name);
-        }
-
-        public void Drop(string name)
-        {
-            var opt = Exec<string>("drop", name);
-        }
-
-        public KeyInfo? Get(string name)
-        {
-            var keys = List();
-            if (keys is not null && keys.Count > 0)
-            {
-                if (keys.Count > 1)
-                {
-                    return keys.Where(x => x.Name.Equals(name)).FirstOrDefault();
-                }
-                else if (keys.Count == 1)
-                {
-                    return keys.First();
-                }
-            }
-            return null;
-        }
-
-        public List<KeyInfo> List()
-        {
-            var output = new List<KeyInfo>();
-            int tries = 0;
-            while (output.Count == 0)
-            {
-                List<KeyInfo>? o;
-                try
-                {
-                    o = Exec<List<KeyInfo>>("list");
-                }
-                catch (Exception e)
-                {
-                    Console.Error.WriteLine(e.ToString());
-                    o = null;
-                }
-                if (o != null)
-                    output.AddRange(o);
-                else
-                    Thread.Sleep(1000);
-                if (++tries == 10)
-                {
-                    throw new Exception("Failed to obtain key list from yagna service");
-                }
-            }
-            return output;
-        }
-
-        public async Task<List<KeyInfo>> ListAsync()
-        {
-            var output = await ExecAsync<List<KeyInfo>>("list");
-            return output ?? new List<KeyInfo>();
-        }
-
-
-    }
-
-    public class IdService
-    {
-        readonly YagnaService _yagna;
-
-        internal IdService(YagnaService yagna)
-        {
-            _yagna = yagna;
-        }
-
-        public List<IdInfo> List()
-        {
-            var table = _yagna.Exec<List<IdInfo>>("--json", "id", "list");
-            return table ?? new List<IdInfo>();
-        }
-    }
-
-
-    public class PaymentService
-    {
-        readonly YagnaService _yagna;
-
-        internal PaymentService(YagnaService yagna)
-        {
-            _yagna = yagna;
-        }
-
-        public void Init(string account, YagnaStartupOptions yagnaOptions)
-        {
-            _yagna.ExecToText("payment", "init", "--receiver", "--network", yagnaOptions.Network.Id, "--driver", yagnaOptions.PaymentDriver.Id, "--account", account);
-        }
-
-        public async Task<PaymentStatus?> Status(Network network, string driver, string account)
-        {
-            return await _yagna.ExecAsync<PaymentStatus>("--json", "payment", "status", "--network", network.Id, "--driver", driver, "--account", account);
-        }
-
-        public async Task<string?> ExitTo(Network network, string driver, string account, string? destination)
-        {
-            if (destination == null)
-            {
-                return null;
-            }
-            return await _yagna.ExecToTextAsync("--json", "payment", "exit", "--network", network.Id, "--driver", driver, "--account", account, "--to-address", destination);
-        }
-
-        public async Task<ActivityStatus?> ActivityStatus()
-        {
-            return await _yagna.ExecAsync<ActivityStatus>("--json", "activity", "status");
-        }
-
     }
 }

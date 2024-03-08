@@ -116,7 +116,7 @@ namespace Golem
                 {
                     _logger.LogInformation($"Init Payment (wallet changed) {value}");
                     var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(_network);
-                    Yagna.PaymentService.Init(value, yagnaOptions);
+                    Yagna.PaymentService.Init(value);
                 }
                 ProviderConfig.UpdateAccount(value, () => OnPropertyChanged(nameof(WalletAddress)));
             }
@@ -162,17 +162,15 @@ namespace Golem
             var (yagnaCancellationTokenSource, providerCancellationTokenSource) = ResetTokens();
             var exitHandler = ExitCleanupHandler(yagnaCancellationTokenSource, providerCancellationTokenSource);
 
-            var yagnaOptions = YagnaOptionsFactory.CreateStartupOptions(_network);
-
             try
             {
                 await Task.Yield();
 
-                await StartupYagna(yagnaOptions, exitHandler, yagnaCancellationTokenSource.Token);
+                await StartupYagna(exitHandler, yagnaCancellationTokenSource.Token);
                 var defaultKey = (Yagna.AppKeyService.Get("default") ?? Yagna.AppKeyService.Get("autoconfigured"))
                     ?? throw new Exception("Can't get app-key, neither 'default' nor 'autoconfigured'");
 
-                await StartupProvider(yagnaOptions, exitHandler, providerCancellationTokenSource.Token);
+                await StartupProvider(exitHandler, providerCancellationTokenSource.Token);
                 Status = GolemStatus.Ready;
             }
             catch (OperationCanceledException)
@@ -219,11 +217,11 @@ namespace Golem
             OnPropertyChanged(nameof(NodeId));
         }
 
-        private async Task StartupYagna(YagnaStartupOptions yagnaOptions, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
+        private async Task StartupYagna(Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Starting Golem's Yagna");
 
-            await Yagna.Run(yagnaOptions, exitHandler, cancellationToken);
+            await Yagna.Run(exitHandler, cancellationToken);
 
             var account = await Yagna.WaitForIdentityAsync(cancellationToken);
 
@@ -233,13 +231,13 @@ namespace Golem
             try
             {
                 _logger.LogInformation($"Init Payment (node id) {account}");
-                Yagna.PaymentService.Init(account ?? "", yagnaOptions);
+                Yagna.PaymentService.Init(account ?? "");
 
                 var walletAddress = WalletAddress;
                 if (walletAddress != account)
                 {
                     _logger.LogInformation($"Init Payment (wallet) {walletAddress}");
-                    Yagna.PaymentService.Init(walletAddress ?? "", yagnaOptions);
+                    Yagna.PaymentService.Init(walletAddress ?? "");
                 }
 
                 OnPropertyChanged(nameof(WalletAddress));
@@ -252,12 +250,12 @@ namespace Golem
             }
         }
 
-        public async Task StartupProvider(YagnaStartupOptions yagnaOptions, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
+        public async Task StartupProvider(Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
             try
             {
                 Provider.PresetConfig.InitilizeDefaultPresets();
-                await Provider.Run(yagnaOptions.AppKey, _network, exitHandler, cancellationToken, true);
+                await Provider.Run(Yagna.Options.AppKey, _network, exitHandler, cancellationToken, true);
             }
             catch (OperationCanceledException)
             {
@@ -321,11 +319,12 @@ namespace Golem
             _logger = loggerFactory.CreateLogger<Golem>();
             _yagnaCancellationtokenSource = new CancellationTokenSource();
             _providerCancellationtokenSource = new CancellationTokenSource();
-            Yagna = new YagnaService(golemPath, yagna_datadir, loggerFactory);
+            var startupOptions = YagnaOptionsFactory.CreateStartupOptions(network);
+            Yagna = new YagnaService(golemPath, yagna_datadir, startupOptions, loggerFactory);
             Provider = new Provider(golemPath, prov_datadir, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, _network, loggerFactory);
             _golemPrice = ProviderConfig.GolemPrice;
-            _jobs = new Jobs(SetCurrentJob, loggerFactory);
+            _jobs = new Jobs(Yagna, SetCurrentJob, loggerFactory);
             _network = network;
 
             // Listen to property changed event on nested properties to update Provider presets.
