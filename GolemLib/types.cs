@@ -16,6 +16,22 @@ public class GolemUsage : GolemPrice
             + prices.NumRequests * this.NumRequests
             + prices.EnvPerSec * this.EnvPerSec;
     }
+
+    // Constructor from GolemPrice
+    public GolemUsage(GolemPrice price)
+    {
+        StartPrice = 1;
+        GpuPerSec = price.GpuPerSec;
+        EnvPerSec = price.EnvPerSec;
+        NumRequests = price.NumRequests;
+    }
+
+    public GolemUsage() { }
+
+    public static GolemUsage From(Dictionary<string, decimal> coeffs)
+    {
+        return new GolemUsage(GolemPrice.From(1, coeffs));
+    }
 }
 
 public enum JobStatus

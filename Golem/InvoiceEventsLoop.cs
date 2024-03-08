@@ -62,7 +62,7 @@ class InvoiceEventsLoop
                         var result = await invoiceEventsResponse.Content.ReadAsStringAsync();
                         if (result != null)
                         {
-                            _logger.LogInformation("InvoiceEvent: {0}", result);
+                            _logger.LogDebug("InvoiceEvent: {0}", result);
                             var invoiceEvents = JsonSerializer.Deserialize<List<InvoiceEvent>>(result, _serializerOptions);
                             if (invoiceEvents != null && invoiceEvents.Count > 0)
                             {

@@ -28,8 +28,8 @@ namespace Golem.Model
 
         public string? ExeUnit { get; set; }
     }
-    
-    class TrackingEvent
+
+    public class TrackingEvent
     {
         public DateTime Ts { get; set; }
 
