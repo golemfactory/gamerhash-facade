@@ -52,10 +52,19 @@
             "console": "internalConsole",
             "stopAtEntry": false,
             "env": {
-                // "Logging__LogLevel__Default": "Debug",
-                // "Logging__LogLevel__Microsoft": "Information"
-                // "YA_NET_RELAY_HOST": "127.0.0.1:17464"
-                // "YA_NET_RELAY_HOST":"yacn2a.dev.golem.network:7477"
+            }
+        },
+        {
+            "name": "GUI local relay mainnet",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/MockGUI/bin/Debug/net7.0/MockGUI.dll",
+            "args": ["--golem", "modules", "-r", "Local", "-m"],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "env": {
             }
         },
         {

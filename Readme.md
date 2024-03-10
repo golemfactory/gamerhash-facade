@@ -68,11 +68,26 @@ You can hit Ctrl-C for the second time to forcefully kill application.
 
 #### Running example tasks on Mainnnet
 
+Requestor's mainnet key is using [git-crypt](https://github.com/AGWA/git-crypt).
+
+Before running tasks on mainnet decrypt the key: `git-crypt unlock`
+
 Run both _MockGUI_ and _ExampleRunner_ with `--mainnet` param.
 
 ```ps1
 dotnet run --project MockGUI --golem modules --mainnet
 dotnet run --project ExampleRunner -- --golem modules --framework Dummy --mainnet
+```
+
+##### Adding new users to git-crypt
+
+Download user's public key.
+
+```sh
+# Import it (it will print its id (later it can be done with `gpg --list-keys`))
+gpg --import user_pubkey.gpg
+# Add new user using printed ID (It creates a commit. Use --no-commit when adding multiple users)
+git-crypt add-gpg-user --trusted ABC123XYZ
 ```
 
 ### Statuses of finished jobs
