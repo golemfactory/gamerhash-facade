@@ -10,6 +10,7 @@ namespace Golem.Tools
         Devnet,
         // 127.0.0.1:16464
         Local,
+        None,
     }
 
     public class GolemRelay : GolemRunnable
