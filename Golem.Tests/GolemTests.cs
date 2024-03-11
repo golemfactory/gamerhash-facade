@@ -202,6 +202,32 @@ namespace Golem.Tests
             Assert.Equal(0.008m, golem.Price.NumRequests);
         }
 
+        [Fact]
+        public async Task SetMainnet_VerifyNetwork()
+        {
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
+
+            var modulesDir = PackageBuilder.ModulesDir(golemPath);
+            var golem = await new Factory().Create(modulesDir, loggerFactory, true);
+
+            Assert.True(golem.Mainnet);
+            Assert.Equal("polygon", golem.Network);
+        }
+
+        [Fact]
+        public async Task SetTestnet_VerifyNetwork()
+        {
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
+
+            var modulesDir = PackageBuilder.ModulesDir(golemPath);
+            var golem = await new Factory().Create(modulesDir, loggerFactory, false);
+
+            Assert.False(golem.Mainnet);
+            Assert.Equal("goerli", golem.Network);
+        }
+
         public void Dispose()
         {
             XunitContext.Flush();
