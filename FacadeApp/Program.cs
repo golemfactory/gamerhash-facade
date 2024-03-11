@@ -6,6 +6,7 @@ using CommandLine;
 using Golem;
 
 using GolemLib;
+
 using Microsoft.Extensions.Logging;
 
 namespace FacadeApp
@@ -17,7 +18,7 @@ namespace FacadeApp
         [Option('d', "data_dir", Required = false, HelpText = "Path to the provider's data directory")]
         public string? DataDir { get; set; }
         [Option('m', "mainnet", Default = false, Required = false, HelpText = "Enables usage of mainnet")]
-        public required bool Mainnet { get;  set; }
+        public required bool Mainnet { get; set; }
     }
 
 
@@ -48,39 +49,40 @@ namespace FacadeApp
 
             var binaries = Path.Combine(golemPath, "golem");
             dataDir = Path.Combine(golemPath, "golem-data");
-;
-            var golem = await new Factory().Create(golemPath, loggerFactory, mainnet);
 
-            golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
-
-            bool end = false;
-
-            do
+            await using (var golem = (Golem.Golem)await new Factory().Create(golemPath, loggerFactory, mainnet))
             {
-                Console.WriteLine("Start/Stop/End?");
-                var line = Console.ReadLine();
+                golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
 
-                switch (line)
+                bool end = false;
+
+                do
                 {
-                    case "Start":
-                        await golem.Start();
-                        break;
-                    case "Stop":
-                        await golem.Stop();
-                        break;
-                    case "End":
-                        end = true;
-                        break;
+                    Console.WriteLine("Start/Stop/End?");
+                    var line = Console.ReadLine();
 
-                    case "Wallet":
-                        var walletAddress = golem.WalletAddress;
-                        golem.WalletAddress = walletAddress;
-                        Console.WriteLine($"Wallet: {walletAddress}");
-                        break;
+                    switch (line)
+                    {
+                        case "Start":
+                            await golem.Start();
+                            break;
+                        case "Stop":
+                            await golem.Stop();
+                            break;
+                        case "End":
+                            end = true;
+                            break;
 
-                    default: Console.WriteLine($"Didn't understand: {line}"); break;
-                }
-            } while (!end);
+                        case "Wallet":
+                            var walletAddress = golem.WalletAddress;
+                            golem.WalletAddress = walletAddress;
+                            Console.WriteLine($"Wallet: {walletAddress}");
+                            break;
+
+                        default: Console.WriteLine($"Didn't understand: {line}"); break;
+                    }
+                } while (!end);
+            }
 
             Console.WriteLine("Done");
         }
@@ -101,7 +103,7 @@ namespace FacadeApp
             {
                 case "Status": return Status_PropertyChangedHandler;
                 case "Activities": return Activities_PropertyChangedHandler;
-                default: return Empty_PropertyChangedHandler; 
+                default: return Empty_PropertyChangedHandler;
             }
         }
 
