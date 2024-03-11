@@ -214,10 +214,10 @@ namespace Golem.Tests
             await SetAndVerifyNetwork("goerli", false);
         }
 
-        async Task SetAndVerifyNetwork(string network, bool mainnet)
+        async Task SetAndVerifyNetwork(string network, bool mainnet, [CallerMemberName] string testName = "test")
         {
             var loggerFactory = CreateLoggerFactory();
-            string golemPath = await PackageBuilder.BuildTestDirectory();
+            string golemPath = await PackageBuilder.BuildTestDirectory(testName);
 
             var modulesDir = PackageBuilder.ModulesDir(golemPath);
             var golem = await new Factory().Create(modulesDir, loggerFactory, mainnet);
