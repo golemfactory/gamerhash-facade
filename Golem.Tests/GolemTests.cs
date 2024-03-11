@@ -205,27 +205,25 @@ namespace Golem.Tests
         [Fact]
         public async Task SetMainnet_VerifyNetwork()
         {
-            var loggerFactory = CreateLoggerFactory();
-            string golemPath = await PackageBuilder.BuildTestDirectory();
-
-            var modulesDir = PackageBuilder.ModulesDir(golemPath);
-            var golem = await new Factory().Create(modulesDir, loggerFactory, true);
-
-            Assert.True(golem.Mainnet);
-            Assert.Equal("polygon", golem.Network);
+            await SetAndVerifyNetwork("polygon", true);
         }
 
         [Fact]
         public async Task SetTestnet_VerifyNetwork()
         {
+            await SetAndVerifyNetwork("goerli", false);
+        }
+
+        async Task SetAndVerifyNetwork(string network, bool mainnet)
+        {
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
 
             var modulesDir = PackageBuilder.ModulesDir(golemPath);
-            var golem = await new Factory().Create(modulesDir, loggerFactory, false);
+            var golem = await new Factory().Create(modulesDir, loggerFactory, mainnet);
 
             Assert.False(golem.Mainnet);
-            Assert.Equal("goerli", golem.Network);
+            Assert.Equal(network, golem.Network);
         }
 
         public void Dispose()
