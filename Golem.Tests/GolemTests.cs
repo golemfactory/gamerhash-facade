@@ -222,7 +222,7 @@ namespace Golem.Tests
             var modulesDir = PackageBuilder.ModulesDir(golemPath);
             var golem = await new Factory().Create(modulesDir, loggerFactory, mainnet);
 
-            Assert.False(golem.Mainnet);
+            Assert.Equal(mainnet, golem.Mainnet);
             Assert.Equal(network, golem.Network);
         }
 

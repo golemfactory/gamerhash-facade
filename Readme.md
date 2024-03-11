@@ -68,7 +68,7 @@ You can hit Ctrl-C for the second time to forcefully kill application.
 
 #### Running example tasks on Mainnnet
 
-Requestor's mainnet key is using [git-crypt](https://github.com/AGWA/git-crypt).
+Requestor's mainnet key is encrypted using [git-crypt](https://github.com/AGWA/git-crypt).
 
 Before running tasks on mainnet decrypt the key: `git-crypt unlock`
 
@@ -78,6 +78,10 @@ Run both _MockGUI_ and _ExampleRunner_ with `--mainnet` param.
 dotnet run --project MockGUI --golem modules --mainnet
 dotnet run --project ExampleRunner -- --golem modules --framework Dummy --mainnet
 ```
+
+Verify transactions on https://polygonscan.com/address/0x97D933147C6BECb52c592685Cf1fA28fFc7a1F56#tokentxns
+
+(on mainnet MockGUI Provider has a wallet address set to the address of Requestor to not loose transmitted GLMs)
 
 ##### Adding new users to git-crypt
 
