@@ -48,7 +48,7 @@ class InvoiceEventsLoop
 
             while (!_token.IsCancellationRequested)
             {
-                var url = $"/payment-api/v1/invoiceEvents?timeout={timeout}&afterTimestamp={_since.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture)}";
+                var url = $"/payment-api/v1/invoiceEvents?timeout[timeout]={timeout}&afterTimestamp={_since.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture)}";
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
 
                 requestMessage.Headers.Add("X-Requestor-Events", string.Join(',', _monitorEventTypes));
