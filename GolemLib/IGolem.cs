@@ -14,10 +14,12 @@ public interface IGolem : INotifyPropertyChanged
     /// <param name="speed"></param>
     public uint NetworkSpeed { get; set; }
     /// <summary>
-    /// Indicates whether Mainnet network or a test network is used.
+    /// Indicates whether Mainnet network or a test payment network is used.
     /// </summary>
     public bool Mainnet { get; }
-
+    /// <summary>
+    /// Payment network name.
+    /// </summary>
     public string Network { get; }
 
     public GolemStatus Status { get; }
