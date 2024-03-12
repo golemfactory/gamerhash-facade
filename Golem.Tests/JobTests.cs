@@ -133,6 +133,7 @@ namespace Golem.Tests
             _logger.LogInformation($"Got a job. Status {golem.CurrentJob?.Status}, Id: {golem.CurrentJob?.Id}, RequestorId: {golem.CurrentJob?.RequestorId}");
 
             // keep references to a finishing job status channels
+            var currentJobStatusChannel = jobStatusChannel;
             var currentJobPaymentStatusChannel = jobPaymentStatusChannel;
             var currentJobPaymentConfirmationChannel = jobPaymentConfirmationChannel;
 
@@ -141,22 +142,16 @@ namespace Golem.Tests
             _logger.LogInformation("Stopping App");
             await app.Stop(StopMethod.SigInt);
 
+            Assert.Equal(JobStatus.Finished, await SkipMatching(currentJobStatusChannel, (JobStatus s) => s == JobStatus.Computing, 30_000));
+
             var jobs = await golem.ListJobs(DateTime.MinValue);
             var job = jobs.SingleOrDefault(j => j.Id == jobId);
-
-            Assert.True(job != null && job.Status == JobStatus.Finished);
-            // Job? finishedCurrentJob = await SkipMatching(jobChannel, (Job? j) => { return j?.Status == JobStatus.Finished; });
-            // _logger.LogInformation("No more jobs");
+            Assert.Equal(JobStatus.Finished, job.Status);
             Assert.Null(golem.CurrentJob);
 
             // Checking payments
 
-            // TODO where is InvoiceSent?
-            // Assert.Equal(GolemLib.Types.PaymentStatus.InvoiceSent , await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel));
             Assert.Equal(GolemLib.Types.PaymentStatus.Settled, await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent));
-            // TODO when these will arrive?
-            // Assert.Equal(GolemLib.Types.PaymentStatus.Accepted , await SkipMatching(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.Settled));
-            // Assert.Equal(GolemLib.Types.PaymentStatus.InvoiceSent , await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel));
 
             //TODO payments is empty
             var payments = await SkipMatching<List<GolemLib.Types.Payment>?>(currentJobPaymentConfirmationChannel);
