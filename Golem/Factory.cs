@@ -19,7 +19,7 @@ namespace Golem
         }
 
         public static Network Network(bool mainnet) {
-            return mainnet ? Yagna.Types.Network.Polygon : Yagna.Types.Network.Goerli;
+            return mainnet ? Yagna.Types.Network.Polygon : Yagna.Types.Network.Holesky;
         }
     }
 

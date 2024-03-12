@@ -211,7 +211,7 @@ namespace Golem.Tests
         [Fact]
         public async Task SetTestnet_VerifyNetwork()
         {
-            await SetAndVerifyNetwork("goerli", false);
+            await SetAndVerifyNetwork("holesky", false);
         }
 
         async Task SetAndVerifyNetwork(string network, bool mainnet, [CallerMemberName] string testName = "test")

@@ -13,7 +13,7 @@
             "stopOnEntry": false,
             "args": [
                 "--network",
-                "goerli",
+                "holesky",
                 "--driver",
                 "erc20"
             ]

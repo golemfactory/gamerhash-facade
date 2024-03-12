@@ -143,6 +143,7 @@ namespace Golem.Tests
 
             var jobs = await golem.ListJobs(DateTime.MinValue);
             var job = jobs.SingleOrDefault(j => j.Id == jobId);
+
             Assert.True(job != null && job.Status == JobStatus.Finished);
             // Job? finishedCurrentJob = await SkipMatching(jobChannel, (Job? j) => { return j?.Status == JobStatus.Finished; });
             // _logger.LogInformation("No more jobs");
