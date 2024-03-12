@@ -148,14 +148,15 @@ class Jobs : IJobsUpdater
         return null;
     }
 
-    public Task<List<Job>> UpdateJobs(List<ActivityState> activityStates)
+    public async Task<List<Job>> UpdateJobs(List<ActivityState> activityStates)
     {
-        return Task.FromResult(activityStates
-            .Select(async state => await updateJob(state))
-                .Select(task => task.Result)
-                .Where(job => job != null)
-                .Cast<Job>()
-                .ToList());
+        var jobs = await Task.WhenAll(activityStates
+            .Select(updateJob));
+
+        return jobs
+            .Where(j => j != null)
+            .Cast<Job>()
+            .ToList();
     }
 
     /// <param name="activityState"></param>
