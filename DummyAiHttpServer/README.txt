@@ -11,4 +11,4 @@ returns json:
   "prompt": ""
 }
 
-where images contains base53 encoded img.png and prompt is compied from request
+where images contains base64 encoded img.png and prompt is compied from request
