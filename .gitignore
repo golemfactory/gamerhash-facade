@@ -47,3 +47,5 @@ Mock/obj/
 /example/ai-requestor/dist
 
 output.png
+
+/DummyAiHttpServer/__pycache__/
