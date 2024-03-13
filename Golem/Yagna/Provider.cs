@@ -175,7 +175,6 @@ namespace Golem.Yagna
                         cmd.Add("--account");
                         cmd.Add(value.Account);
                     }
-                    // TODO update payment network
                     ExecToText(cmd);
                 }
             }
