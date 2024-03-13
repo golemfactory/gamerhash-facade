@@ -186,7 +186,7 @@ namespace Golem.Yagna
 
         public void Init(string account)
         {
-            var yagnaOptions = _yagna.StartupOptions();
+            var yagnaOptions = _yagna.Options;
             _yagna.ExecToText("payment", "init", "--receiver", "--network", yagnaOptions.Network.Id, "--driver", yagnaOptions.PaymentDriver.Id, "--account", account);
         }
 

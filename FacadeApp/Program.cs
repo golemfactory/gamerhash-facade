@@ -2,7 +2,11 @@
 using System.Diagnostics;
 
 using CommandLine;
+
+using Golem;
+
 using GolemLib;
+
 using Microsoft.Extensions.Logging;
 
 namespace FacadeApp
@@ -13,8 +17,9 @@ namespace FacadeApp
         public string? GolemPath { get; set; }
         [Option('d', "data_dir", Required = false, HelpText = "Path to the provider's data directory")]
         public string? DataDir { get; set; }
+        [Option('m', "mainnet", Default = false, Required = false, HelpText = "Enables usage of mainnet")]
+        public required bool Mainnet { get; set; }
     }
-
 
 
     internal class Program
@@ -29,12 +34,14 @@ namespace FacadeApp
 
             string golemPath = "";
             string? dataDir = null;
+            bool mainnet = false;
 
             Parser.Default.ParseArguments<FacadeAppArguments>(args)
                .WithParsed<FacadeAppArguments>(o =>
                {
                    golemPath = o.GolemPath ?? "";
                    dataDir = o.DataDir;
+                   mainnet = o.Mainnet;
                });
 
             logger.LogInformation("Path: " + golemPath);
@@ -43,7 +50,7 @@ namespace FacadeApp
             var binaries = Path.Combine(golemPath, "golem");
             dataDir = Path.Combine(golemPath, "golem-data");
 
-            await using (var golem = new Golem.Golem(binaries, dataDir, loggerFactory))
+            await using (var golem = (Golem.Golem)await new Factory().Create(golemPath, loggerFactory, mainnet))
             {
                 golem.PropertyChanged += new PropertyChangedHandler(logger).For(nameof(IGolem.Status));
 
@@ -96,7 +103,7 @@ namespace FacadeApp
             {
                 case "Status": return Status_PropertyChangedHandler;
                 case "Activities": return Activities_PropertyChangedHandler;
-                default: return Empty_PropertyChangedHandler; 
+                default: return Empty_PropertyChangedHandler;
             }
         }
 

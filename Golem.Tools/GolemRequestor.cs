@@ -30,7 +30,9 @@ namespace Golem.Tools
 
         public string? AppKey;
 
-        private GolemRequestor(string dir, ILogger logger) : base(dir, logger)
+        private readonly bool _mainnet;
+
+        private GolemRequestor(string dir, bool mainnet, ILogger logger) : base(dir, logger)
         {
             var envBuilder = new EnvironmentBuilder();
             envBuilder.WithYagnaDataDir(Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")));
@@ -38,18 +40,19 @@ namespace Golem.Tools
             envBuilder.WithGsbUrl("tcp://127.0.0.1:7464");
             envBuilder.WithYaNetBindUrl("udp://0.0.0.0:11500");
             _env = envBuilder.Build();
+            _mainnet = mainnet;
         }
 
-        public async static Task<GolemRequestor> Build(string test_name, ILogger logger, bool cleanupData = true)
+        public async static Task<GolemRequestor> Build(string test_name, ILogger logger, bool cleanupData = true, bool mainnet = false)
         {
             var dir = await PackageBuilder.BuildRequestorDirectory(test_name, cleanupData);
-            return new GolemRequestor(dir, logger);
+            return new GolemRequestor(dir, mainnet, logger);
         }
 
-        public async static Task<GolemRequestor> BuildRelative(string datadir, ILogger logger, bool cleanupData = true)
+        public async static Task<GolemRequestor> BuildRelative(string datadir, ILogger logger, bool cleanupData = true, bool mainnet = false)
         {
             var dir = await PackageBuilder.BuildRequestorDirectoryRelative(datadir, cleanupData);
-            return new GolemRequestor(dir, logger);
+            return new GolemRequestor(dir, mainnet, logger);
         }
 
         public override bool Start()
@@ -70,9 +73,9 @@ namespace Golem.Tools
             {
                 return key;
             }
-            var keyPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", "test_key.plain");
-            var keyReader = new StreamReader(keyPath);
-            return keyReader.ReadLine() ?? throw new Exception($"Failed to read key from file {keyPath}");
+            var keyFilename = _mainnet ? "main_key.plain" : "test_key.plain";
+            var keyReader = PackageBuilder.ReadResource(keyFilename);
+            return keyReader.ReadLine() ?? throw new Exception($"Failed to read key from file {keyFilename}");
         }
 
         private string generateRandomAppkey()
@@ -102,7 +105,8 @@ namespace Golem.Tools
                 pathEnvVar = $"{pathEnvVar}:{binariesDir}";
             }
             env["PATH"] = pathEnvVar;
-            return new SampleApp(_dir, env, _logger, extraArgs);
+            var network = Factory.Network(_mainnet);
+            return new SampleApp(_dir, env, network, _logger, extraArgs);
         }
 
         public void InitPayment(double minFundThreshold = 100.0)
@@ -111,7 +115,8 @@ namespace Golem.Tools
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env.Add("RUST_LOG", "none");
 
-            var payment_status_process = WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment status --json", env));
+            var network = Factory.Network(_mainnet);
+            var payment_status_process = WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"payment status --json --network {network.Id}", env));
             var payment_status_output_json = String.Join("\n", payment_status_process.GetOutputAndErrorLines());
             var payment_status_output_obj = JObject.Parse(payment_status_output_json);
             var totalGlm = payment_status_output_obj.Value<float>("amount");
@@ -122,9 +127,9 @@ namespace Golem.Tools
                 WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment release-allocations", _env));
             }
 
-            if (totalGlm < minFundThreshold)
+            if (totalGlm < minFundThreshold && !_mainnet)
             {
-                WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment fund", _env));
+                WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"payment fund --network {network.Id}", _env));
             }
             return;
         }

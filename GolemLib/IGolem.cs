@@ -13,6 +13,15 @@ public interface IGolem : INotifyPropertyChanged
     /// </summary>
     /// <param name="speed"></param>
     public uint NetworkSpeed { get; set; }
+    /// <summary>
+    /// Indicates whether Mainnet network or a test payment network is used.
+    /// </summary>
+    public bool Mainnet { get; }
+    /// <summary>
+    /// Payment network name.
+    /// </summary>
+    public string Network { get; }
+
     public GolemStatus Status { get; }
     /// <summary>
     /// You can either listen to PropertyChanged notifications for this property
@@ -63,4 +72,3 @@ public interface IGolem : INotifyPropertyChanged
     /// <returns></returns>
     public Task<List<IJob>> ListJobs(DateTime since);
 }
-

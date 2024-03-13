@@ -6,7 +6,6 @@ namespace Golem.Yagna
         {
             { "GSB_URL", "tcp://127.0.0.1:12501" },
             { "YAGNA_API_URL", "http://127.0.0.1:12502" },
-            { "YA_PAYMENT_NETWORK_GROUP", "testnet" },
             { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
             { "YA_NET_BROADCAST_SIZE", "12" },
             { "YA_NET_RELAY_HOST", "yacn2.dev.golem.network:7477" },
@@ -31,12 +30,6 @@ namespace Golem.Yagna
         public EnvironmentBuilder WithYagnaAppKey(string s)
         {
             env["YAGNA_APPKEY"] = s;
-            return this;
-        }
-
-        public EnvironmentBuilder WithYaPaymentNetworkGroup(string s)
-        {
-            env["YA_PAYMENT_NETWORK_GROUP"] = s;
             return this;
         }
 

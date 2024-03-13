@@ -22,12 +22,13 @@ namespace Golem.Yagna
         public bool Debug { get; set; }
 
         public string YagnaApiUrl { get; set; } = "";
-        public Network Network { get; set; } = Network.Holesky;
+        public Network Network { get; set; } = Factory.Network(true);
         public PaymentDriver PaymentDriver { get; set; } = PaymentDriver.ERC20;
     }
 
     public class YagnaService
     {
+        public readonly YagnaStartupOptions Options;
         private readonly string _yaExePath;
         private readonly string? _dataDir;
         private Process? YagnaProcess { get; set; }
@@ -48,8 +49,9 @@ namespace Golem.Yagna
             }
         }
 
-        public YagnaService(string golemPath, string dataDir, ILoggerFactory? loggerFactory)
+        public YagnaService(string golemPath, string dataDir, YagnaStartupOptions startupOptions, ILoggerFactory? loggerFactory)
         {
+            Options = startupOptions;
             loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<YagnaService>();
             _yaExePath = Path.GetFullPath(Path.Combine(golemPath, ProcessFactory.BinName("yagna")));
@@ -87,11 +89,6 @@ namespace Golem.Yagna
                 .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
                 .Build();
             return JsonSerializer.Deserialize<T>(text, options);
-        }
-
-        internal YagnaStartupOptions StartupOptions()
-        {
-            return YagnaOptionsFactory.CreateStartupOptions();
         }
 
         public IdService Ids
@@ -143,9 +140,9 @@ namespace Golem.Yagna
 
         public bool HasExited => YagnaProcess?.HasExited ?? true;
 
-        public async Task Run(YagnaStartupOptions options, Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
+        public async Task Run(Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Options.AppKey);
             cancellationToken.Register(_httpClient.CancelPendingRequests);
 
             // Synchronizing of process creation is necessary to avoid scenario, when `YagnaSerice::Stop` is called
@@ -161,18 +158,18 @@ namespace Golem.Yagna
                     throw new GolemException("Yagna process is already running");
                 }
 
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Options.AppKey);
 
                 string debugFlag = "";
-                if (options.Debug)
+                if (Options.Debug)
                 {
                     debugFlag = "--debug";
                 }
 
                 EnvironmentBuilder environment = Env;
-                environment = options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(options.YagnaApiUrl) : environment;
-                environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
-                environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
+                environment = Options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(Options.YagnaApiUrl) : environment;
+                environment = Options.PrivateKey != null ? environment.WithPrivateKey(Options.PrivateKey) : environment;
+                environment = Options.AppKey != null ? environment.WithAppKey(Options.AppKey) : environment;
 
                 var args = $"service run {debugFlag}".Split();
 

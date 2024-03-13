@@ -19,7 +19,7 @@ namespace Golem.Tests
         {
             XunitContext.Register(outputHelper);
             // Log file directly in `tests` directory (like `tests/Jobtests-20231231.log )
-            var logfile = Path.Combine(PackageBuilder.TestDir(""), nameof(JobTests) + "-{Date}.log");
+            var logfile = Path.Combine(PackageBuilder.TestDir(""), nameof(PresetConfigServicesTests) + "-{Date}.log");
             var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
             _loggerFactory = LoggerFactory.Create(builder => builder
                 //// Console logger makes `dotnet test` hang on Windows
@@ -27,7 +27,7 @@ namespace Golem.Tests
                 .AddFile(logfile)
                 .AddProvider(loggerProvider)
             );
-            _logger = _loggerFactory.CreateLogger(nameof(JobTests));
+            _logger = _loggerFactory.CreateLogger(nameof(PresetConfigServicesTests));
         }
 
         [Fact]
