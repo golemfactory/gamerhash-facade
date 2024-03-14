@@ -106,7 +106,6 @@ class InvoiceEventsLoop
         if (invoice != null)
         {
             var paymentStatus = GetPaymentStatus(invoice.Status);
-            UpdatePaymentStatus(invoice.AgreementId, paymentStatus);
             if (paymentStatus == PaymentStatus.Settled)
             {
                 var payments = await GetPayments();
@@ -115,6 +114,7 @@ class InvoiceEventsLoop
                     .ToList();
                 updatePaymentConfirmation(invoice.AgreementId, paymentsForRecentJob);
             }
+            UpdatePaymentStatus(invoice.AgreementId, paymentStatus);
         }
     }
 
