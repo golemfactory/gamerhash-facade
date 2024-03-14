@@ -54,6 +54,7 @@ class Jobs : IJobsUpdater
             {
                 Id = jobId,
                 RequestorId = requestorId,
+                Timestamp = agreement.Timestamp
             };
             _jobs[jobId] = job;
         }
@@ -81,6 +82,7 @@ class Jobs : IJobsUpdater
         {
             _logger.LogInformation($"New payment status for job {job.Id}: {paymentStatus} requestor: {job.RequestorId}");
             job.PaymentStatus = paymentStatus;
+            job.OnPropertyChanged();
         }
         else
         {
@@ -95,6 +97,7 @@ class Jobs : IJobsUpdater
             _logger.LogInformation("Payments confirmation for job {0}:", job.Id);
 
             job.PaymentConfirmation = payments;
+            job.OnPropertyChanged();
         }
         else
         {
@@ -102,9 +105,72 @@ class Jobs : IJobsUpdater
         }
     }
 
-    public Task<List<IJob>> List()
+    public async Task<List<IJob>> List(DateTime since)
     {
-        return Task.FromResult(_jobs.Values.Select(job => job as IJob).ToList());
+        var activities = await _yagna.GetActivities();
+        var invoices = await _yagna.GetInvoices(since);
+        var payments = await _yagna.GetPayments(since);
+
+        var activityAgreements = new Dictionary<string, YagnaAgreement>();
+        var activityStates = new Dictionary<string, ActivityState>();
+
+        foreach(var activityId in activities)
+        {
+            var agreementId = await _yagna.GetActivityAgreement(activityId);
+            
+            var (agreement, state) = await GetAgreementAndState(agreementId, activityId);
+
+            if(agreement == null || state == null)
+                continue;
+
+            if (agreement.Timestamp < since)
+                continue;
+
+            activityAgreements[activityId] = agreement;
+
+            activityStates[activityId] = new ActivityState
+            {
+                AgreementId = agreementId,
+                Id = activityId,
+                State = state.currentState()
+            };
+        }
+
+        foreach(var activityAgreement in activityAgreements)
+        {    
+            var agreement = activityAgreement.Value;
+            var activityId = activityAgreement.Key;
+        
+            if(agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
+                continue;
+
+            var agreementId = agreement.AgreementID;
+
+            if(!_jobs.ContainsKey(agreementId))
+            {
+                _jobs[agreementId] = GetOrCreateJob(agreementId, agreement);
+            }
+            var job = _jobs[agreementId];
+
+            var agreementInvoices = invoices.Where(i => i.AgreementId == agreementId).ToList();
+
+            var invoiceStatus = agreementInvoices.Select(a => a.Status).First();
+            job.PaymentStatus = InvoiceEventsLoop.GetPaymentStatus(invoiceStatus);
+            if (job.PaymentStatus == GolemLib.Types.PaymentStatus.Settled)
+            {
+                var paymentsForRecentJob = payments
+                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == agreementId))
+                    .ToList();
+
+                job.PaymentConfirmation = paymentsForRecentJob;
+            }
+
+            _jobs[agreementId] = job;
+        }
+
+        await UpdateJobs(activityStates.Select(p => p.Value).ToList());
+
+        return _jobs.Values.Select(job => job as IJob).ToList();
     }
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
@@ -151,7 +217,7 @@ class Jobs : IJobsUpdater
     public async Task<List<Job>> UpdateJobs(List<ActivityState> activityStates)
     {
         var jobs = await Task.WhenAll(activityStates
-            .Select(updateJob));
+            .Select(UpdateJob));
 
         return jobs
             .Where(j => j != null)
@@ -162,15 +228,15 @@ class Jobs : IJobsUpdater
     /// <param name="activityState"></param>
     /// <param name="jobs"></param>
     /// <returns>optional current job</returns>
-    private async Task<Job?> updateJob(ActivityState activityState)
+    private async Task<Job?> UpdateJob(ActivityState activityState)
     {
         if (activityState.AgreementId == null || activityState.Id == null)
             return null;
-        var (agreement, state) = await getAgreementAndState(activityState.AgreementId, activityState.Id);
+        var (agreement, state) = await GetAgreementAndState(activityState.AgreementId, activityState.Id);
 
         if (agreement?.Demand?.RequestorId == null)
         {
-            _logger.LogDebug($"No agreement for activity: {activityState.Id} (agreement: {activityState.AgreementId})");
+            _logger.LogDebug("No agreement for activity: {activitId} (agreement: {agreementId})", activityState.Id, activityState.AgreementId);
             return null;
         }
 
@@ -186,13 +252,10 @@ class Jobs : IJobsUpdater
         if (agreement.State == "Terminated")
             job.Status = JobStatus.Finished;
 
-        if (job.Status == JobStatus.Finished)
-            return null;
-
-        return job;
+        return job.Status == JobStatus.Finished ? null : job;
     }
 
-    public async Task<(YagnaAgreement?, ActivityStatePair?)> getAgreementAndState(string agreementId, string activityId)
+    public async Task<(YagnaAgreement?, ActivityStatePair?)> GetAgreementAndState(string agreementId, string activityId)
     {
         try
         {
@@ -209,7 +272,7 @@ class Jobs : IJobsUpdater
         }
         catch (Exception e)
         {
-            _logger.LogError($"Failed get Agreement {agreementId} or Acitviy {activityId} information. {e}");
+            _logger.LogError("Failed get Agreement {agreementId} or Acitviy {activityId} information. {e}", agreementId, activityId, e);
             return (null, null);
         }
     }

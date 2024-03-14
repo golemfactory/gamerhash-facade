@@ -89,13 +89,30 @@ namespace Golem.Yagna.Types
             get
             {
                 return _paymentConfirmation;
-
             }
             set
             {
                 if (_paymentConfirmation != value)
                 {
                     _paymentConfirmation = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private DateTime? _timestamp = new DateTime();
+        public DateTime? Timestamp
+        {
+            get
+            {
+                return _timestamp;
+
+            }
+            set
+            {
+                if (_timestamp != value)
+                {
+                    _timestamp = value;
                     OnPropertyChanged();
                 }
             }

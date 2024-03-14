@@ -118,7 +118,7 @@ class InvoiceEventsLoop
         }
     }
 
-    private GolemLib.Types.PaymentStatus GetPaymentStatus(InvoiceStatus status)
+    public static GolemLib.Types.PaymentStatus GetPaymentStatus(InvoiceStatus status)
     {
         return status switch
         {
@@ -156,7 +156,30 @@ class InvoiceEventsLoop
         return invoice;
     }
 
-    private async Task<List<Payment>> GetPayments()
+    private async Task<List<Invoice>> GetInvoices()
+    {
+        List<Invoice> invoices = new List<Invoice>();
+
+        try
+        {
+            var invoiceResponse = await _httpClient.GetAsync($"/payment-api/v1/invoices", _token);
+
+            if (invoiceResponse.IsSuccessStatusCode)
+            {
+                var result = await invoiceResponse.Content.ReadAsStringAsync();
+                if (result != null)
+                {
+                    invoices = JsonSerializer.Deserialize<List<Invoice>>(result, _serializerOptions) ?? invoices;
+                    _logger.LogInformation("Invoices fetched: ", invoices.Count());
+                }
+            }
+        }
+        catch { }
+
+        return invoices;
+    }
+
+    public async Task<List<Payment>> GetPayments()
     {
         List<Payment>? payments = null;
         try

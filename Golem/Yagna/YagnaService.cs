@@ -10,6 +10,8 @@ using System.Net.Http.Headers;
 using Golem.Model;
 using System.Text;
 using System.Runtime.CompilerServices;
+using GolemLib.Types;
+using Microsoft.AspNetCore.Http.Extensions;
 
 namespace Golem.Yagna
 {
@@ -307,9 +309,19 @@ namespace Golem.Yagna
             return await RestCall<YagnaAgreement>($"/market-api/v1/agreements/{agreementId}", token);
         }
 
+        public async Task<List<YagnaAgreement>> GetAgreements(CancellationToken token = default)
+        {
+            return await RestCall<List<YagnaAgreement>>($"/market-api/v1/agreements", token);
+        }
+
         public async Task<ActivityStatePair> GetState(string activityId, CancellationToken token = default)
         {
             return await RestCall<ActivityStatePair>($"/activity-api/v1/activity/{activityId}/state", token);
+        }
+
+        public async Task<string> GetActivityAgreement(string activityId, CancellationToken token = default)
+        {
+            return await RestCall<string>($"/activity-api/v1/activity/{activityId}/agreement", token);
         }
 
         public async IAsyncEnumerable<TrackingEvent> ActivityMonitorStream([EnumeratorCancellation] CancellationToken token = default)
@@ -318,6 +330,34 @@ namespace Golem.Yagna
             {
                 yield return item;
             }
+        }
+
+        public async Task<List<string>> GetActivities(CancellationToken token = default)
+        {
+            var list =  await RestCall<List<string>>($"/activity-api/v1/activity", token);
+            return list;
+        }
+
+        public async Task<List<Invoice>> GetInvoices(DateTime? afterTimestamp = null, CancellationToken token = default)
+        {
+            var path = "/payment-api/v1/invoices";
+            if(afterTimestamp != null)
+                path += new QueryBuilder(new Dictionary<string, string>{
+                    {"after_timestamp", afterTimestamp.Value.ToUniversalTime().ToString()}
+                });
+            var list =  await RestCall<List<Invoice>>(path, token);
+            return list;
+        }
+
+        public async Task<List<Payment>> GetPayments(DateTime? afterTimestamp = null, CancellationToken token = default)
+        {
+            var path = "/payment-api/v1/payments";
+            if(afterTimestamp != null)
+                path += new QueryBuilder(new Dictionary<string, string>{
+                    {"after_timestamp", afterTimestamp.Value.ToUniversalTime().ToString()}
+                });
+            var list =  await RestCall<List<Payment>>(path, token);
+            return list;
         }
 
         public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken = default)

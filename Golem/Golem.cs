@@ -133,7 +133,7 @@ namespace Golem
 
         public Task<List<IJob>> ListJobs(DateTime since)
         {
-            return _jobs.List();
+            return _jobs.List(since);
         }
 
         public async Task Resume()
@@ -253,6 +253,7 @@ namespace Golem
             {
                 Provider.PresetConfig.InitilizeDefaultPresets();
                 await Provider.Run(Yagna.Options.AppKey, Yagna.Options.Network, exitHandler, cancellationToken, true);
+
             }
             catch (OperationCanceledException)
             {
