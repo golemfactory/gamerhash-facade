@@ -8,7 +8,7 @@ namespace Golem
 {
     public class Factory : IFactory
     {
-        public Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet = true)
+        public Task<IGolem> Create(string modulesDir, ILoggerFactory loggerFactory, bool mainnet = true)
         {
             var binaries = Path.Combine(modulesDir, "golem");
             var datadir = Path.Combine(modulesDir, "golem-data");

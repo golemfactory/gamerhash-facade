@@ -24,10 +24,10 @@ namespace Golem
 
             public Network Network { get; private set; }
 
-            public ProviderConfigService(Provider provider, Network network, ILoggerFactory? loggerFactory = null)
+            public ProviderConfigService(Provider provider, Network network, ILoggerFactory loggerFactory)
             {
                 _provider = provider;
-                loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+                loggerFactory ??= NullLoggerFactory.Instance;
                 _logger = loggerFactory.CreateLogger<ProviderConfigService>();
                 Network = network;
             }

@@ -10,7 +10,7 @@ namespace Golem.Tests
 {
     public class TestUtils
     {
-        public async static Task<IGolem> LoadBinaryLib(string dllPath, string modulesDir, ILoggerFactory? loggerFactory)
+        public async static Task<IGolem> LoadBinaryLib(string dllPath, string modulesDir, ILoggerFactory loggerFactory)
         {
             const string factoryType = "Golem.Factory";
 

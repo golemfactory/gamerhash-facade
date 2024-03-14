@@ -59,7 +59,7 @@ class ActivityLoop
 
                 try
                 {
-                    await foreach (var trackingEvent in _yagna.ActivityMonitorStream(token))
+                    await foreach (var trackingEvent in _yagna.Api.ActivityMonitorStream(token))
                     {
                         var activities = trackingEvent?.Activities ?? new List<ActivityState>();
                         List<Job> currentJobs = await jobs.UpdateJobs(activities);

@@ -307,7 +307,7 @@ namespace Golem
             }
         }
 
-        public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory, Network network)
+        public Golem(string golemPath, string? dataDir, ILoggerFactory loggerFactory, Network network)
         {
             var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : "./provider";
             var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : "./yagna";

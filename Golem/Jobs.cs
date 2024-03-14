@@ -107,16 +107,18 @@ class Jobs : IJobsUpdater
 
     public async Task<List<IJob>> List(DateTime since)
     {
-        var activities = await _yagna.GetActivities();
-        var invoices = await _yagna.GetInvoices(since);
-        var payments = await _yagna.GetPayments(since);
+        if(_yagna == null || _yagna.HasExited)
+            return new List<IJob>();
+        var activities = await _yagna.Api.GetActivities();
+        var invoices = await _yagna.Api.GetInvoices(since);
+        var payments = await _yagna.Api.GetPayments(since);
 
         var activityAgreements = new Dictionary<string, YagnaAgreement>();
         var activityStates = new Dictionary<string, ActivityState>();
 
         foreach(var activityId in activities)
         {
-            var agreementId = await _yagna.GetActivityAgreement(activityId);
+            var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
             
             var (agreement, state) = await GetAgreementAndState(agreementId, activityId);
 
@@ -259,8 +261,8 @@ class Jobs : IJobsUpdater
     {
         try
         {
-            var getAgreementTask = _yagna.GetAgreement(agreementId);
-            var getStateTask = _yagna.GetState(activityId);
+            var getAgreementTask = _yagna.Api.GetAgreement(agreementId);
+            var getStateTask = _yagna.Api.GetState(activityId);
             await Task.WhenAll(getAgreementTask, getStateTask);
             var agreement = await getAgreementTask;
             var state = await getStateTask;
