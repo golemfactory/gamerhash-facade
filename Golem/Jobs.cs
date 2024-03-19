@@ -1,17 +1,10 @@
-
-
 using System.Text.Json;
-
 using Golem.Model;
 using Golem.Yagna;
 using Golem.Yagna.Types;
-
 using GolemLib;
 using GolemLib.Types;
-
 using Microsoft.Extensions.Logging;
-
-using StateType = Golem.Model.ActivityState.StateType;
 
 
 public interface IJobsUpdater
@@ -45,10 +38,7 @@ class Jobs : IJobsUpdater
     {
         var requestorId = agreement.Demand?.RequestorId
                 ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
-        Job? job;
-        if (_jobs.TryGetValue(jobId, out var j))
-            job = j;
-        else
+        if (!_jobs.TryGetValue(jobId, out Job? job))
         {
             job = new Job
             {
@@ -109,45 +99,25 @@ class Jobs : IJobsUpdater
     {
         if(_yagna == null || _yagna.HasExited)
             return new List<IJob>();
+
         var activities = await _yagna.Api.GetActivities();
         var invoices = await _yagna.Api.GetInvoices(since);
         var payments = await _yagna.Api.GetPayments(since);
 
-        var activityAgreements = new Dictionary<string, YagnaAgreement>();
-        var activityStates = new Dictionary<string, ActivityState>();
+        var tasks = new List<Task>();
 
         foreach(var activityId in activities)
         {
             var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
             
-            var (agreement, state) = await GetAgreementAndState(agreementId, activityId);
+            var (agreement, activityStatePair) = await GetAgreementAndState(agreementId, activityId);
 
-            if(agreement == null || state == null)
+            if(agreement == null || activityStatePair == null || agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
                 continue;
 
             if (agreement.Timestamp < since)
                 continue;
-
-            activityAgreements[activityId] = agreement;
-
-            activityStates[activityId] = new ActivityState
-            {
-                AgreementId = agreementId,
-                Id = activityId,
-                State = state.currentState()
-            };
-        }
-
-        foreach(var activityAgreement in activityAgreements)
-        {    
-            var agreement = activityAgreement.Value;
-            var activityId = activityAgreement.Key;
         
-            if(agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
-                continue;
-
-            var agreementId = agreement.AgreementID;
-
             if(!_jobs.ContainsKey(agreementId))
             {
                 _jobs[agreementId] = GetOrCreateJob(agreementId, agreement);
@@ -166,13 +136,10 @@ class Jobs : IJobsUpdater
 
                 job.PaymentConfirmation = paymentsForRecentJob;
             }
-
-            _jobs[agreementId] = job;
+            UpdateJob(activityId, agreement, activityStatePair, null);
         }
 
-        await UpdateJobs(activityStates.Select(p => p.Value).ToList());
-
-        return _jobs.Values.Select(job => job as IJob).ToList();
+        return _jobs.Values.Cast<IJob>().ToList();
     }
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
@@ -218,8 +185,32 @@ class Jobs : IJobsUpdater
 
     public async Task<List<Job>> UpdateJobs(List<ActivityState> activityStates)
     {
-        var jobs = await Task.WhenAll(activityStates
-            .Select(UpdateJob));
+        return await UpdateJobs(
+            activityStates
+                .Where(a => a.AgreementId!=null && a.Id!=null)
+                .Select(a => (a.Id!, a.AgreementId!, a.Usage)
+            ).ToList());
+    }
+
+    public async Task<List<Job>> UpdateJobs(List<(string activityId, string agreementId, Dictionary<string, decimal>? usage)> activityDetails)
+    {
+        var jobs = await Task.WhenAll(activityDetails
+            .Select(async d => 
+            {
+                var (agreement, activityStatePair) = await GetAgreementAndState(d.agreementId, d.activityId);
+                if(activityStatePair == null)
+                {
+                    _logger.LogDebug("No activity: {activitId}", d.activityId);
+                    return null;
+                }
+                if(agreement == null)
+                {
+                    _logger.LogDebug("No agreement for activity: {activitId} (agreement: {agreementId})", d.activityId, d.agreementId);
+                    return null;
+                }
+
+                return UpdateJob(d.activityId, agreement, activityStatePair, d.usage);
+            }));
 
         return jobs
             .Where(j => j != null)
@@ -227,28 +218,20 @@ class Jobs : IJobsUpdater
             .ToList();
     }
 
-    /// <param name="activityState"></param>
-    /// <param name="jobs"></param>
-    /// <returns>optional current job</returns>
-    private async Task<Job?> UpdateJob(ActivityState activityState)
+    private Job? UpdateJob(string activityId, YagnaAgreement agreement, ActivityStatePair activityStatePair, Dictionary<string, decimal>? usage)
     {
-        if (activityState.AgreementId == null || activityState.Id == null)
-            return null;
-        var (agreement, state) = await GetAgreementAndState(activityState.AgreementId, activityState.Id);
-
-        if (agreement?.Demand?.RequestorId == null)
+        if (agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
         {
-            _logger.LogDebug("No agreement for activity: {activitId} (agreement: {agreementId})", activityState.Id, activityState.AgreementId);
+            _logger.LogDebug("No agreement for activity: {activitId} (agreement: {agreementId})", activityId, agreement.AgreementID);
             return null;
         }
 
-        var jobId = activityState.AgreementId;
-        var job = this.GetOrCreateJob(jobId, agreement);
+        var job = this.GetOrCreateJob(agreement.AgreementID, agreement);
 
-        if (activityState.Usage != null)
-            job.CurrentUsage = GolemUsage.From(activityState.Usage);
-        if (state != null)
-            job.UpdateActivityState(state);
+        if (usage != null)
+            job.CurrentUsage = GolemUsage.From(usage);
+        if (activityStatePair != null)
+            job.UpdateActivityState(activityStatePair);
 
         // In case activity state wasn't properly updated by Provider or ExeUnit.
         if (agreement.State == "Terminated")
