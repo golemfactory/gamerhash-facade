@@ -100,43 +100,46 @@ class Jobs : IJobsUpdater
         if(_yagna == null || _yagna.HasExited)
             return new List<IJob>();
 
-        var activities = await _yagna.Api.GetActivities();
+        var invoiceEvents = await _yagna.Api.GetInvoiceEvents(since);
         var invoices = await _yagna.Api.GetInvoices(since);
         var payments = await _yagna.Api.GetPayments(since);
 
         var tasks = new List<Task>();
 
-        foreach(var activityId in activities)
+        foreach(var invoice in invoices)
         {
-            var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
+            var agreementId = invoice.AgreementId;
             
-            var (agreement, activityStatePair) = await GetAgreementAndState(agreementId, activityId);
-
-            if(agreement == null || activityStatePair == null || agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
-                continue;
-
-            if (agreement.Timestamp < since)
-                continue;
-        
-            if(!_jobs.ContainsKey(agreementId))
+            foreach(var activityId in invoice.ActivityIds)
             {
-                _jobs[agreementId] = GetOrCreateJob(agreementId, agreement);
+                var (agreement, activityStatePair) = await GetAgreementAndState(agreementId, activityId);
+
+                if(agreement == null || activityStatePair == null || agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
+                    continue;
+
+                if (agreement.Timestamp < since)
+                    continue;
+            
+                if(!_jobs.ContainsKey(agreementId))
+                {
+                    _jobs[agreementId] = GetOrCreateJob(agreementId, agreement);
+                }
+                var job = _jobs[agreementId];
+
+                var agreementInvoices = invoices.Where(i => i.AgreementId == agreementId).ToList();
+
+                var invoiceStatus = agreementInvoices.Select(a => a.Status).First();
+                job.PaymentStatus = InvoiceEventsLoop.GetPaymentStatus(invoiceStatus);
+                if (job.PaymentStatus == GolemLib.Types.PaymentStatus.Settled)
+                {
+                    var paymentsForRecentJob = payments
+                        .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == agreementId))
+                        .ToList();
+
+                    job.PaymentConfirmation = paymentsForRecentJob;
+                }
+                UpdateJob(agreement, activityStatePair, null);
             }
-            var job = _jobs[agreementId];
-
-            var agreementInvoices = invoices.Where(i => i.AgreementId == agreementId).ToList();
-
-            var invoiceStatus = agreementInvoices.Select(a => a.Status).First();
-            job.PaymentStatus = InvoiceEventsLoop.GetPaymentStatus(invoiceStatus);
-            if (job.PaymentStatus == GolemLib.Types.PaymentStatus.Settled)
-            {
-                var paymentsForRecentJob = payments
-                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == agreementId))
-                    .ToList();
-
-                job.PaymentConfirmation = paymentsForRecentJob;
-            }
-            UpdateJob(activityId, agreement, activityStatePair, null);
         }
 
         return _jobs.Values.Cast<IJob>().ToList();
@@ -209,7 +212,7 @@ class Jobs : IJobsUpdater
                     return null;
                 }
 
-                return UpdateJob(d.activityId, agreement, activityStatePair, d.usage);
+                return UpdateJob(agreement, activityStatePair, d.usage);
             }));
 
         return jobs
@@ -218,11 +221,11 @@ class Jobs : IJobsUpdater
             .ToList();
     }
 
-    private Job? UpdateJob(string activityId, YagnaAgreement agreement, ActivityStatePair activityStatePair, Dictionary<string, decimal>? usage)
+    private Job? UpdateJob(YagnaAgreement agreement, ActivityStatePair activityStatePair, Dictionary<string, decimal>? usage)
     {
         if (agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
         {
-            _logger.LogDebug("No agreement for activity: {activitId} (agreement: {agreementId})", activityId, agreement.AgreementID);
+            _logger.LogDebug("No agreement {agreementId}", agreement.AgreementID);
             return null;
         }
 
