@@ -3,19 +3,20 @@ using Golem.Yagna.Types;
 using GolemLib;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
     public class Factory : IFactory
     {
-        public Task<IGolem> Create(string modulesDir, ILoggerFactory loggerFactory, bool mainnet = true)
+        public Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet = true)
         {
             var binaries = Path.Combine(modulesDir, "golem");
             var datadir = Path.Combine(modulesDir, "golem-data");
 
             var network = Factory.Network(mainnet);
 
-            return Task.FromResult(new Golem(binaries, datadir, loggerFactory, network) as IGolem);
+            return Task.FromResult(new Golem(binaries, datadir, loggerFactory ?? NullLoggerFactory.Instance, network) as IGolem);
         }
 
         public static Network Network(bool mainnet) {

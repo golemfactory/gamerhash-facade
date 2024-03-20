@@ -131,7 +131,7 @@ namespace Golem.Yagna
                 ?? throw new Exception($"Failed to deserialize REST call reponse to type: {typeof(T).Name}");
         }
 
-        public async Task<MeInfo> Me(CancellationToken token)
+        public async Task<MeInfo> Me(CancellationToken token = default)
         {
             return await RestCall<MeInfo>("/me", token);
         }
@@ -192,7 +192,7 @@ namespace Golem.Yagna
             return await RestCall<List<Payment>>(path, args, token);
         }
 
-        public async Task<Invoice?> GetInvoice(string id, CancellationToken token)
+        public async Task<Invoice?> GetInvoice(string id, CancellationToken token = default)
         {
             var path = $"/payment-api/v1/invoices/{id}";
             return await RestCall<Invoice>(path, token);
