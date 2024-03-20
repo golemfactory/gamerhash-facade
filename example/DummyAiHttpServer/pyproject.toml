@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "dummyaihttpserver"
+version = "0.1.0"
+description = "Simple http server that listens on port 7861 and endpoint /sdapi/v1/txt2img"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+blinker = "1.7.0"
+click = "8.1.7"
+colorama = "0.4.6"
+flask = "3.0.2"
+itsdangerous = "2.1.2"
+jinja2 = "3.1.3"
+markupsafe = "2.1.5"
+werkzeug = "3.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
