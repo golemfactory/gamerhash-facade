@@ -130,7 +130,7 @@ class Jobs : IJobsUpdater
             if (job.PaymentStatus == GolemLib.Types.PaymentStatus.Settled)
             {
                 var paymentsForRecentJob = payments
-                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == agreementId))
+                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == agreementId) || p.ActivityPayments.Exists(ap => ap.ActivityId == activityId))
                     .ToList();
 
                 job.PaymentConfirmation = paymentsForRecentJob;

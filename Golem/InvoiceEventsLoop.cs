@@ -56,7 +56,7 @@ class InvoiceEventsLoop
             {
                 var payments = await _yagnaApi.GetPayments(null, _token);
                 var paymentsForRecentJob = payments
-                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
+                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId) || p.ActivityPayments.Exists(ap => invoice.ActivityIds.Contains(ap.ActivityId)))
                     .ToList();
                 updatePaymentConfirmation(invoice.AgreementId, paymentsForRecentJob);
             }
