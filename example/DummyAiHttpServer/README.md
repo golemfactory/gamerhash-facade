@@ -4,10 +4,11 @@
 
 ```ps1
 python -m pip install virtualenv
-python -m virttualenv .venv
+python -m virtualenv .venv
 .\.venv\Scripts\activate
 # or linux equivalent
-pip install -r requirements.txt
+pip install poetry
+poetry shell
 ```
 
 ## Start
