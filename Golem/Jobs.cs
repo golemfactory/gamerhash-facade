@@ -100,46 +100,42 @@ class Jobs : IJobsUpdater
         if(_yagna == null || _yagna.HasExited)
             return new List<IJob>();
 
-        var invoiceEvents = await _yagna.Api.GetInvoiceEvents(since);
+        var activities = await _yagna.Api.GetActivities(since);
         var invoices = await _yagna.Api.GetInvoices(since);
         var payments = await _yagna.Api.GetPayments(since);
 
         var tasks = new List<Task>();
 
-        foreach(var invoice in invoices)
+        foreach(var activityId in activities)
         {
-            var agreementId = invoice.AgreementId;
-            
-            foreach(var activityId in invoice.ActivityIds)
+            var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
+            var (agreement, activityStatePair) = await GetAgreementAndState(agreementId, activityId);
+
+            if(agreement == null || activityStatePair == null || agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
+                continue;
+
+            if (agreement.Timestamp < since)
+                continue;
+        
+            if(!_jobs.ContainsKey(agreementId))
             {
-                var (agreement, activityStatePair) = await GetAgreementAndState(agreementId, activityId);
-
-                if(agreement == null || activityStatePair == null || agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
-                    continue;
-
-                if (agreement.Timestamp < since)
-                    continue;
-            
-                if(!_jobs.ContainsKey(agreementId))
-                {
-                    _jobs[agreementId] = GetOrCreateJob(agreementId, agreement);
-                }
-                var job = _jobs[agreementId];
-
-                var agreementInvoices = invoices.Where(i => i.AgreementId == agreementId).ToList();
-
-                var invoiceStatus = agreementInvoices.Select(a => a.Status).First();
-                job.PaymentStatus = InvoiceEventsLoop.GetPaymentStatus(invoiceStatus);
-                if (job.PaymentStatus == GolemLib.Types.PaymentStatus.Settled)
-                {
-                    var paymentsForRecentJob = payments
-                        .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == agreementId))
-                        .ToList();
-
-                    job.PaymentConfirmation = paymentsForRecentJob;
-                }
-                UpdateJob(agreement, activityStatePair, null);
+                _jobs[agreementId] = GetOrCreateJob(agreementId, agreement);
             }
+            var job = _jobs[agreementId];
+
+            var agreementInvoices = invoices.Where(i => i.AgreementId == agreementId).ToList();
+
+            var invoiceStatus = agreementInvoices.Select(a => a.Status).First();
+            job.PaymentStatus = InvoiceEventsLoop.GetPaymentStatus(invoiceStatus);
+            if (job.PaymentStatus == GolemLib.Types.PaymentStatus.Settled)
+            {
+                var paymentsForRecentJob = payments
+                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == agreementId))
+                    .ToList();
+
+                job.PaymentConfirmation = paymentsForRecentJob;
+            }
+            UpdateJob(agreement, activityStatePair, null);
         }
 
         return _jobs.Values.Cast<IJob>().ToList();

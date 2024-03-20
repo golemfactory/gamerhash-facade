@@ -60,6 +60,20 @@ namespace Golem.Yagna
             return Deserialize<T>(txt);
         }
 
+        public async Task<T> RestCall<T>(string path, Dictionary<string, string>? args = default, CancellationToken token = default) where T : class
+        {
+            if(args != null && args.Count > 0)
+            {
+                path += "?";
+                for (int i=0; i<args.Count; ++i)
+                {
+                    var (k, v) = args.ElementAt(i);
+                    path += $"{k}={v}" + (i==args.Count-1?"":"&");
+                }
+            }
+            return await RestCall<T>(path, token);
+        }
+
         public async IAsyncEnumerable<T> RestStream<T>(string path, [EnumeratorCancellation] CancellationToken token = default) where T : class
         {
             var stream = await _httpClient.GetStreamAsync(path, token);
@@ -150,80 +164,38 @@ namespace Golem.Yagna
             }
         }
 
-        public async Task<List<string>> GetActivities(CancellationToken token = default)
+        public async Task<List<string>> GetActivities(DateTime? afterTimestamp = null, CancellationToken token = default)
         {
-            var list =  await RestCall<List<string>>($"/activity-api/v1/activity", token);
-            return list;
+            var path = "/activity-api/v1/activity";
+            var args = afterTimestamp != null
+             ? new Dictionary<string, string> { {"afterTimestamp", afterTimestamp.Value.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'")} }
+             : null;
+            return await RestCall<List<string>>(path, args, token);
         }
 
         public async Task<List<Invoice>> GetInvoices(DateTime? afterTimestamp = null, CancellationToken token = default)
         {
             var path = "/payment-api/v1/invoices";
-            if(afterTimestamp != null)
-                path += new QueryBuilder(new Dictionary<string, string>{
-                    {"after_timestamp", afterTimestamp.Value.ToUniversalTime().ToString()}
-                });
-            var list =  await RestCall<List<Invoice>>(path, token);
-            return list;
+            var args = afterTimestamp != null
+             ? new Dictionary<string, string> { {"afterTimestamp", afterTimestamp.Value.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'")} }
+             : null;
+                
+            return await RestCall<List<Invoice>>(path, args, token);
         }
 
         public async Task<List<Payment>> GetPayments(DateTime? afterTimestamp = null, CancellationToken token = default)
         {
             var path = "/payment-api/v1/payments";
-            if(afterTimestamp != null)
-                path += new QueryBuilder(new Dictionary<string, string>{
-                    {"after_timestamp", afterTimestamp.Value.ToUniversalTime().ToString()}
-                });
-            var list =  await RestCall<List<Payment>>(path, token);
-            return list;
+            var args = afterTimestamp != null
+             ? new Dictionary<string, string> { {"afterTimestamp", afterTimestamp.Value.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'")} }
+             : null;
+            return await RestCall<List<Payment>>(path, args, token);
         }
 
         public async Task<Invoice?> GetInvoice(string id, CancellationToken token)
         {
-            Invoice? invoice = null;
-
-            try
-            {
-                var invoiceResponse = await _httpClient.GetAsync($"/payment-api/v1/invoices/{id}", token);
-
-                if (invoiceResponse.IsSuccessStatusCode)
-                {
-                    var result = await invoiceResponse.Content.ReadAsStringAsync();
-                    if (result != null)
-                    {
-                        invoice = JsonSerializer.Deserialize<Invoice>(result, _serializerOptions);
-                        _logger.LogInformation("Invoice[{0}]: {1}", id, invoice);
-                    }
-                }
-            }
-            catch { }
-
-            return invoice;
-        }
-
-        public async Task<List<Payment>> GetPayments(CancellationToken token = default)
-        {
-            List<Payment>? payments = null;
-            try
-            {
-                var paymentsResponse = await _httpClient.GetAsync($"/payment-api/v1/payments", token);
-
-                if (paymentsResponse.IsSuccessStatusCode)
-                {
-                    var result = await paymentsResponse.Content.ReadAsStringAsync();
-                    if (result != null)
-                    {
-                        payments = JsonSerializer.Deserialize<List<Payment>>(result, _serializerOptions);
-                        _logger.LogDebug("payments {0}", payments != null ? payments.SelectMany(x => x.AgreementPayments.Select(y => y.AgreementId + ": " + y.Amount)).ToList() : "(null)");
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("GetPayments error: {msg}", e.Message);
-            }
-
-            return payments ?? new List<Payment>();
+            var path = $"/payment-api/v1/invoices/{id}";
+            return await RestCall<Invoice>(path, token);
         }
 
         public async Task<List<InvoiceEvent>> GetInvoiceEvents(DateTime since, CancellationToken token = default)

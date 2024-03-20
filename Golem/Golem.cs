@@ -312,8 +312,6 @@ namespace Golem
             var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : "./provider";
             var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : "./yagna";
 
-            loggerFactory ??= NullLoggerFactory.Instance;
-
             _logger = loggerFactory.CreateLogger<Golem>();
             _yagnaCancellationtokenSource = new CancellationTokenSource();
             _providerCancellationtokenSource = new CancellationTokenSource();

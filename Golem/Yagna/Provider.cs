@@ -112,7 +112,7 @@ namespace Golem.Yagna
         public Provider(string golemPath, string? dataDir, ILoggerFactory loggerFactory)
         {
             golemPath = Path.GetFullPath(golemPath);
-            loggerFactory ??= NullLoggerFactory.Instance;
+
             _logger = loggerFactory.CreateLogger<Provider>();
             _yaProviderPath = Path.Combine(golemPath, ProcessFactory.BinName("ya-provider"));
             _pluginsPath = Path.Combine(golemPath, "..", "plugins");

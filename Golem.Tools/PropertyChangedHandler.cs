@@ -19,7 +19,6 @@ namespace Golem.Tools
             PropertyName = propertyName;
             Value = default;
 
-            loggerFactory ??= NullLoggerFactory.Instance;
             _logger = loggerFactory.CreateLogger<PropertyChangedHandler<T, V>>();
         }
 
@@ -29,7 +28,6 @@ namespace Golem.Tools
             PropertyName = propertyName;
             Value = default;
 
-            loggerFactory ??= NullLoggerFactory.Instance;
             _logger = loggerFactory.CreateLogger<PropertyChangedHandler<T, V>>();
         }
 

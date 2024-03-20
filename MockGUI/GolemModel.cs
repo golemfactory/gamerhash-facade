@@ -56,7 +56,7 @@ namespace MockGUI.ViewModels
 
         public GolemViewModel(string modulesDir, IGolem golem, GolemRelay? relay, ILoggerFactory loggerFactory)
         {
-            _loggerFactory ??= NullLoggerFactory.Instance;
+            _loggerFactory = loggerFactory;
             _logger = _loggerFactory.CreateLogger<GolemViewModel>();
             WorkDir = modulesDir;
             Golem = golem;

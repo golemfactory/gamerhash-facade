@@ -48,14 +48,13 @@ class InvoiceEventsLoop
 
     private async Task UpdatesForInvoice(InvoiceEvent invoiceEvent, Action<string, PaymentStatus> UpdatePaymentStatus, Action<string, List<Payment>> updatePaymentConfirmation)
     {
-
         var invoice = await _yagnaApi.GetInvoice(invoiceEvent.InvoiceId, _token);
         if (invoice != null)
         {
             var paymentStatus = GetPaymentStatus(invoice.Status);
             if (paymentStatus == PaymentStatus.Settled)
             {
-                var payments = await _yagnaApi.GetPayments(_token);
+                var payments = await _yagnaApi.GetPayments(null, _token);
                 var paymentsForRecentJob = payments
                     .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
                     .ToList();
