@@ -222,6 +222,7 @@ namespace Golem
 
             var account = await Yagna.WaitForIdentityAsync(cancellationToken);
 
+            Yagna.RegisterCancellationToken(cancellationToken);
             _ = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs);
             _ = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs);
 
@@ -253,7 +254,6 @@ namespace Golem
             {
                 Provider.PresetConfig.InitilizeDefaultPresets();
                 await Provider.Run(Yagna.Options.AppKey, Yagna.Options.Network, exitHandler, cancellationToken, true);
-
             }
             catch (OperationCanceledException)
             {

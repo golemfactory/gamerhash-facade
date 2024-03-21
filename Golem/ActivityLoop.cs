@@ -37,7 +37,7 @@ class ActivityLoop
 
     public async Task Start(
         Action<Job?> setCurrentJob,
-        IJobsUpdater jobs,
+        IJobs jobs,
         CancellationToken token)
     {
         _logger.LogInformation("Starting monitoring activities");
@@ -62,7 +62,7 @@ class ActivityLoop
                     await foreach (var trackingEvent in _yagna.Api.ActivityMonitorStream(token))
                     {
                         var activities = trackingEvent?.Activities ?? new List<ActivityState>();
-                        List<Job> currentJobs = await jobs.UpdateJobs(activities);
+                        List<Job> currentJobs = await UpdateJobs(jobs, activities);
 
                         if (currentJobs.Count == 0)
                         {
@@ -97,7 +97,7 @@ class ActivityLoop
                         }
                     }
                 }
-                catch (TaskCanceledException)
+                catch (OperationCanceledException)
                 {
                     _logger.LogDebug("Activity loop cancelled");
                     return;
@@ -119,5 +119,15 @@ class ActivityLoop
             jobs.SetAllJobsFinished();
             setCurrentJob(null);
         }
+    }
+
+    public async Task<List<Job>> UpdateJobs(IJobs jobs, List<ActivityState> activityStates)
+    {
+        var result = await Task.WhenAll(
+            activityStates
+                .Select(async d => await jobs.UpdateJob(d.Id, null, d.Usage))
+        );
+
+        return result.ToList();
     }
 }

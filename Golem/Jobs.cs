@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Golem.Model;
+using Golem.Tools;
 using Golem.Yagna;
 using Golem.Yagna.Types;
 using GolemLib;
@@ -7,24 +8,18 @@ using GolemLib.Types;
 using Microsoft.Extensions.Logging;
 
 
-public interface IJobsUpdater
+public interface IJobs
 {
-    Job GetOrCreateJob(string jobId, YagnaAgreement agreement);
+    Task<Job> GetOrCreateJob(string jobId);
     void SetAllJobsFinished();
-    void UpdatePaymentStatus(string id, GolemLib.Types.PaymentStatus paymentStatus);
-    void UpdatePaymentConfirmation(string jobId, List<Payment> payments);
-    Task<List<Job>> UpdateJobs(List<ActivityState> activityStates);
+    Task<Job> UpdateJob(string activityId, Invoice? invoice, Dictionary<string, decimal>? usage);
 }
 
-class Jobs : IJobsUpdater
+class Jobs : IJobs
 {
     private readonly Action<Job?> _setCurrentJob;
     private readonly YagnaService _yagna;
     private readonly ILogger _logger;
-
-    /// <summary>
-    /// Dictionary mapping AgreementId to aggregated `Job` with its `ActivityState`
-    /// </summary>
     private readonly Dictionary<string, Job> _jobs = new();
 
     public Jobs(YagnaService yagna, Action<Job?> setCurrentJob, ILoggerFactory loggerFactory)
@@ -34,23 +29,27 @@ class Jobs : IJobsUpdater
         _logger = loggerFactory.CreateLogger(nameof(Jobs));
     }
 
-    public Job GetOrCreateJob(string jobId, YagnaAgreement agreement)
+    public async Task<Job> GetOrCreateJob(string jobId)
     {
-        var requestorId = agreement.Demand?.RequestorId
-                ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
         if (!_jobs.TryGetValue(jobId, out Job? job))
         {
+            var agreement = await _yagna.Api.GetAgreement(jobId);
+            var requestorId = agreement.Demand?.RequestorId
+                ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
+
             job = new Job
             {
                 Id = jobId,
                 RequestorId = requestorId,
                 Timestamp = agreement.Timestamp
             };
+
+            var price = GetPriceFromAgreement(agreement);
+            job.Price = price ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
+
             _jobs[jobId] = job;
         }
-
-        var price = GetPriceFromAgreement(agreement);
-        job.Price = price ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
+        
         return job;
     }
 
@@ -66,39 +65,12 @@ class Jobs : IJobsUpdater
         }
     }
 
-    public void UpdatePaymentStatus(string id, GolemLib.Types.PaymentStatus paymentStatus)
-    {
-        if (_jobs.TryGetValue(id, out var job))
-        {
-            _logger.LogInformation($"New payment status for job {job.Id}: {paymentStatus} requestor: {job.RequestorId}");
-            job.PaymentStatus = paymentStatus;
-            job.OnPropertyChanged();
-        }
-        else
-        {
-            _logger.LogWarning($"Failed to update payment status. Job not found: {id}");
-        }
-    }
-
-    public void UpdatePaymentConfirmation(string jobId, List<Payment> payments)
-    {
-        if (_jobs.TryGetValue(jobId, out var job))
-        {
-            _logger.LogInformation("Payments confirmation for job {0}:", job.Id);
-
-            job.PaymentConfirmation = payments;
-            job.OnPropertyChanged();
-        }
-        else
-        {
-            _logger.LogWarning($"Failed to update payment confirmation. Job not found: {jobId}");
-        }
-    }
-
     public async Task<List<IJob>> List(DateTime since)
     {
         if(_yagna == null || _yagna.HasExited)
             return new List<IJob>();
+
+        _jobs.Clear();
 
         var activities = await _yagna.Api.GetActivities(since);
         var invoices = await _yagna.Api.GetInvoices(since);
@@ -109,33 +81,8 @@ class Jobs : IJobsUpdater
         foreach(var activityId in activities)
         {
             var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
-            var (agreement, activityStatePair) = await GetAgreementAndState(agreementId, activityId);
-
-            if(agreement == null || activityStatePair == null || agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
-                continue;
-
-            if (agreement.Timestamp < since)
-                continue;
-        
-            if(!_jobs.ContainsKey(agreementId))
-            {
-                _jobs[agreementId] = GetOrCreateJob(agreementId, agreement);
-            }
-            var job = _jobs[agreementId];
-
-            var agreementInvoices = invoices.Where(i => i.AgreementId == agreementId).ToList();
-
-            var invoiceStatus = agreementInvoices.Select(a => a.Status).First();
-            job.PaymentStatus = InvoiceEventsLoop.GetPaymentStatus(invoiceStatus);
-            if (job.PaymentStatus == GolemLib.Types.PaymentStatus.Settled)
-            {
-                var paymentsForRecentJob = payments
-                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == agreementId) || p.ActivityPayments.Exists(ap => ap.ActivityId == activityId))
-                    .ToList();
-
-                job.PaymentConfirmation = paymentsForRecentJob;
-            }
-            UpdateJob(agreement, activityStatePair, null);
+            var invoice = invoices.FirstOrDefault(i => i.AgreementId == agreementId);
+            await UpdateJob(activityId, invoice, null);
         }
 
         return _jobs.Values.Cast<IJob>().ToList();
@@ -182,82 +129,73 @@ class Jobs : IJobsUpdater
         return null;
     }
 
-    public async Task<List<Job>> UpdateJobs(List<ActivityState> activityStates)
+    public async Task<Job> UpdateJob(string activityId, Invoice? invoice, Dictionary<string, decimal>? usage)
     {
-        return await UpdateJobs(
-            activityStates
-                .Where(a => a.AgreementId!=null && a.Id!=null)
-                .Select(a => (a.Id!, a.AgreementId!, a.Usage)
-            ).ToList());
+        var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
+        await UpdateJobStatus(activityId);
+        if(invoice != null)
+            await UpdateJobPayment(invoice);
+        if(usage!=null)
+            await UpdateJobUsage(agreementId, usage);
+        return await GetOrCreateJob(agreementId);
     }
 
-    public async Task<List<Job>> UpdateJobs(List<(string activityId, string agreementId, Dictionary<string, decimal>? usage)> activityDetails)
+
+    public async Task<Job> UpdateJobPayment(Invoice invoice)
     {
-        var jobs = await Task.WhenAll(activityDetails
-            .Select(async d => 
-            {
-                var (agreement, activityStatePair) = await GetAgreementAndState(d.agreementId, d.activityId);
-                if(activityStatePair == null)
-                {
-                    _logger.LogDebug("No activity: {activitId}", d.activityId);
-                    return null;
-                }
-                if(agreement == null)
-                {
-                    _logger.LogDebug("No agreement for activity: {activitId} (agreement: {agreementId})", d.activityId, d.agreementId);
-                    return null;
-                }
+        var job = await GetOrCreateJob(invoice.AgreementId);
 
-                return UpdateJob(agreement, activityStatePair, d.usage);
-            }));
-
-        return jobs
-            .Where(j => j != null)
-            .Cast<Job>()
-            .ToList();
-    }
-
-    private Job? UpdateJob(YagnaAgreement agreement, ActivityStatePair activityStatePair, Dictionary<string, decimal>? usage)
-    {
-        if (agreement.AgreementID == null || agreement.Demand?.RequestorId == null)
+        var paymentStatus = GetPaymentStatus(invoice.Status);
+        if (paymentStatus == GolemLib.Types.PaymentStatus.Settled)
         {
-            _logger.LogDebug("No agreement {agreementId}", agreement.AgreementID);
-            return null;
+            var payments = await _yagna.Api.GetPayments(null);
+            var paymentsForRecentJob = payments
+                .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId) || p.ActivityPayments.Exists(ap => invoice.ActivityIds.Contains(ap.ActivityId)))
+                .ToList();
+            job.PaymentConfirmation = paymentsForRecentJob;
         }
+        job.PaymentStatus = paymentStatus;
 
-        var job = this.GetOrCreateJob(agreement.AgreementID, agreement);
+        return job;
+    }
 
-        if (usage != null)
-            job.CurrentUsage = GolemUsage.From(usage);
-        if (activityStatePair != null)
+    private async Task<Job> UpdateJobStatus(string activityId)
+    {
+        var activityStatePair = await _yagna.Api.GetState(activityId);
+        var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
+        var agreement = await _yagna.Api.GetAgreement(agreementId);
+        var job = await GetOrCreateJob(agreementId);
+
+         if (activityStatePair != null)
             job.UpdateActivityState(activityStatePair);
 
         // In case activity state wasn't properly updated by Provider or ExeUnit.
         if (agreement.State == "Terminated")
             job.Status = JobStatus.Finished;
 
-        return job.Status == JobStatus.Finished ? null : job;
+        return job;
     }
 
-    public async Task<(YagnaAgreement?, ActivityStatePair?)> GetAgreementAndState(string agreementId, string activityId)
+    private async Task<Job> UpdateJobUsage(string agreementId, Dictionary<string, decimal> usage)
     {
-        try
-        {
-            var getAgreementTask = _yagna.Api.GetAgreement(agreementId);
-            var getStateTask = _yagna.Api.GetState(activityId);
-            await Task.WhenAll(getAgreementTask, getStateTask);
-            var agreement = await getAgreementTask;
-            var state = await getStateTask;
+        var job = await GetOrCreateJob(agreementId);
+        if (usage != null)
+            job.CurrentUsage = GolemUsage.From(usage);
+        return job;
+    }
 
-            _logger.LogInformation($"Got agreement: {agreement}");
-            _logger.LogInformation($"Got activity state: {state}");
-
-            return (agreement, state);
-        }
-        catch (Exception e)
+    public static GolemLib.Types.PaymentStatus GetPaymentStatus(InvoiceStatus status)
+    {
+        return status switch
         {
-            _logger.LogError("Failed get Agreement {agreementId} or Acitviy {activityId} information. {e}", agreementId, activityId, e);
-            return (null, null);
-        }
+            InvoiceStatus.ISSUED => GolemLib.Types.PaymentStatus.InvoiceSent,
+            InvoiceStatus.RECEIVED => GolemLib.Types.PaymentStatus.InvoiceSent,
+            InvoiceStatus.ACCEPTED => GolemLib.Types.PaymentStatus.Accepted,
+            InvoiceStatus.REJECTED => GolemLib.Types.PaymentStatus.Rejected,
+            InvoiceStatus.FAILED => GolemLib.Types.PaymentStatus.Rejected,
+            InvoiceStatus.SETTLED => GolemLib.Types.PaymentStatus.Settled,
+            InvoiceStatus.CANCELLED => GolemLib.Types.PaymentStatus.Rejected,
+            _ => throw new Exception($"Unknown InvoiceStatus: {status}"),
+        };
     }
 }

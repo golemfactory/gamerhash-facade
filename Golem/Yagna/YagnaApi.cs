@@ -9,6 +9,7 @@ using Golem.Tools;
 
 using GolemLib.Types;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Logging;
 
@@ -48,19 +49,17 @@ namespace Golem.Yagna
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", key);
         }
 
-
-        public async Task<T> RestCall<T>(string path, CancellationToken token = default) where T : class
+        public async Task<T> RestGet<T>(string path, CancellationToken token = default) where T : class
         {
-            var response = _httpClient.GetAsync(path, token).Result;
-            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            {
-                throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
-            }
-            var txt = await response.Content.ReadAsStringAsync(token);
-            return Deserialize<T>(txt);
+            return await RestCall<T>(HttpMethod.Get, path, new Dictionary<string, string>(), token);
         }
 
-        public async Task<T> RestCall<T>(string path, Dictionary<string, string>? args = default, CancellationToken token = default) where T : class
+        public async Task<T> RestGet<T>(string path, Dictionary<string, string> args, CancellationToken token = default) where T : class
+        {
+            return await RestGet<T>(path, args, new Dictionary<string, string>(), token);
+        }
+
+        public async Task<T> RestGet<T>(string path, Dictionary<string, string> args, Dictionary<string, string> headers, CancellationToken token = default) where T : class
         {
             if(args != null && args.Count > 0)
             {
@@ -71,8 +70,30 @@ namespace Golem.Yagna
                     path += $"{k}={v}" + (i==args.Count-1?"":"&");
                 }
             }
-            return await RestCall<T>(path, token);
+            return await RestCall<T>(HttpMethod.Get, path, headers, token);
         }
+
+        private async Task<T> RestCall<T>(HttpMethod method, string path, Dictionary<string, string> headers, CancellationToken token = default) where T : class
+        {
+            using var requestMessage = new HttpRequestMessage(method, path);
+
+            foreach(var (k, v) in headers)
+                requestMessage.Headers.Add(k, v);
+
+            var response = _httpClient.SendAsync(requestMessage, token).Result;
+
+            if(!response.IsSuccessStatusCode)
+            {
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
+                }
+                throw new Exception($"Http call failed ({path}) code {response.StatusCode}: {response.ReasonPhrase}");
+            }
+            
+            var txt = await response.Content.ReadAsStringAsync(token);
+            return Deserialize<T>(txt);
+        }        
 
         public async IAsyncEnumerable<T> RestStream<T>(string path, [EnumeratorCancellation] CancellationToken token = default) where T : class
         {
@@ -133,27 +154,27 @@ namespace Golem.Yagna
 
         public async Task<MeInfo> Me(CancellationToken token = default)
         {
-            return await RestCall<MeInfo>("/me", token);
+            return await RestGet<MeInfo>("/me", token);
         }
 
         public async Task<YagnaAgreement> GetAgreement(string agreementId, CancellationToken token = default)
         {
-            return await RestCall<YagnaAgreement>($"/market-api/v1/agreements/{agreementId}", token);
+            return await RestGet<YagnaAgreement>($"/market-api/v1/agreements/{agreementId}", token);
         }
 
         public async Task<List<YagnaAgreement>> GetAgreements(CancellationToken token = default)
         {
-            return await RestCall<List<YagnaAgreement>>($"/market-api/v1/agreements", token);
+            return await RestGet<List<YagnaAgreement>>($"/market-api/v1/agreements", token);
         }
 
         public async Task<ActivityStatePair> GetState(string activityId, CancellationToken token = default)
         {
-            return await RestCall<ActivityStatePair>($"/activity-api/v1/activity/{activityId}/state", token);
+            return await RestGet<ActivityStatePair>($"/activity-api/v1/activity/{activityId}/state", token);
         }
 
         public async Task<string> GetActivityAgreement(string activityId, CancellationToken token = default)
         {
-            return await RestCall<string>($"/activity-api/v1/activity/{activityId}/agreement", token);
+            return await RestGet<string>($"/activity-api/v1/activity/{activityId}/agreement", token);
         }
 
         public async IAsyncEnumerable<TrackingEvent> ActivityMonitorStream([EnumeratorCancellation] CancellationToken token = default)
@@ -168,81 +189,68 @@ namespace Golem.Yagna
         {
             var path = "/activity-api/v1/activity";
             var args = afterTimestamp != null
-             ? new Dictionary<string, string> { {"afterTimestamp", afterTimestamp.Value.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'")} }
+             ? new Dictionary<string, string> { {"afterTimestamp", FormatTimestamp(afterTimestamp.Value)} }
              : null;
-            return await RestCall<List<string>>(path, args, token);
+            return await RestGet<List<string>>(path, args, token);
         }
 
         public async Task<List<Invoice>> GetInvoices(DateTime? afterTimestamp = null, CancellationToken token = default)
         {
             var path = "/payment-api/v1/invoices";
             var args = afterTimestamp != null
-             ? new Dictionary<string, string> { {"afterTimestamp", afterTimestamp.Value.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'")} }
+             ? new Dictionary<string, string> { {"afterTimestamp", FormatTimestamp(afterTimestamp.Value)} }
              : null;
                 
-            return await RestCall<List<Invoice>>(path, args, token);
+            return await RestGet<List<Invoice>>(path, args, token);
         }
 
         public async Task<List<Payment>> GetPayments(DateTime? afterTimestamp = null, CancellationToken token = default)
         {
             var path = "/payment-api/v1/payments";
             var args = afterTimestamp != null
-             ? new Dictionary<string, string> { {"afterTimestamp", afterTimestamp.Value.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'")} }
+             ? new Dictionary<string, string> { {"afterTimestamp", FormatTimestamp(afterTimestamp.Value)} }
              : null;
-            return await RestCall<List<Payment>>(path, args, token);
+            return await RestGet<List<Payment>>(path, args, token);
         }
 
-        public async Task<Invoice?> GetInvoice(string id, CancellationToken token = default)
+        public async Task<Invoice> GetInvoice(string id, CancellationToken token = default)
         {
             var path = $"/payment-api/v1/invoices/{id}";
-            return await RestCall<Invoice>(path, token);
+            return await RestGet<Invoice>(path, token);
         }
 
         public async Task<List<InvoiceEvent>> GetInvoiceEvents(DateTime since, CancellationToken token = default)
         {
             const int timeout = 10;
 
-            var url = $"/payment-api/v1/invoiceEvents?timeout[timeout]={timeout}&afterTimestamp={since.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture)}";
-            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            var args = new Dictionary<string, string> {
+                {"timeout[timeout]", $"{timeout}"},
+                {"afterTimestamp", FormatTimestamp(since)}
+            };
 
-            requestMessage.Headers.Add("X-Requestor-Events", string.Join(',', _monitorEventTypes));
-            requestMessage.Headers.Add("X-Provider-Events", string.Join(',', _monitorEventTypes));
+            var headers = new Dictionary<string, string> {
+                {"X-Requestor-Events", string.Join(',', _monitorEventTypes)},
+                {"X-Provider-Events", string.Join(',', _monitorEventTypes)}
+            };
 
-            try
-            {
-                var invoiceEventsResponse = await _httpClient.SendAsync(requestMessage, token);
-                if (invoiceEventsResponse.IsSuccessStatusCode)
-                {
-                    var result = await invoiceEventsResponse.Content.ReadAsStringAsync();
-                    if (result != null)
-                    {
-                        _logger.LogDebug("InvoiceEvent: {0}", result);
-                        var invoiceEvents = JsonSerializer.Deserialize<List<InvoiceEvent>>(result, _serializerOptions);
-                        return invoiceEvents ?? new List<InvoiceEvent>();
-                    }
-                }
-                else
-                {
-                    _logger.LogError("Got invoiceEvents {0}", invoiceEventsResponse);
-                    await Task.Delay(TimeSpan.FromSeconds(1), token);
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                _logger.LogDebug("Payment loop cancelled");
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Payment request failure");
-                await Task.Delay(TimeSpan.FromSeconds(5), token);
-            }
+            var result = await RestGet<List<InvoiceEvent>>("/payment-api/v1/invoiceEvents", args, headers, token);
 
-            return new List<InvoiceEvent>();
+            return result;
         }
 
         public void CancelPendingRequests()
         {
             _httpClient.CancelPendingRequests();
+        }
+
+        // private string FormatTimestamp(DateTime dateTime)
+        // {
+        //     return dateTime.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
+        // }
+
+        private string FormatTimestamp(DateTime dateTime)
+        {
+            return dateTime.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);
         }
     }
 }

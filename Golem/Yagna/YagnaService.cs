@@ -251,7 +251,7 @@ namespace Golem.Yagna
         }
 
         /// TODO: Reconsider API of this function.
-        public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobsUpdater jobs)
+        public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobs jobs)
         {
             return new ActivityLoop(this, token, _logger).Start(
                 setCurrentJob,
@@ -261,11 +261,14 @@ namespace Golem.Yagna
         }
 
         /// TODO: Reconsider API of this function.
-        public Task StartInvoiceEventsLoop(CancellationToken token, IJobsUpdater jobs)
+        public Task StartInvoiceEventsLoop(CancellationToken token, IJobs jobs)
+        {
+            return new InvoiceEventsLoop(Api, token, _logger, jobs).Start();
+        }
+
+        public void RegisterCancellationToken(CancellationToken token)
         {
             token.Register(Api.CancelPendingRequests);
-
-            return new InvoiceEventsLoop(Api, token, _logger).Start(jobs.UpdatePaymentStatus, jobs.UpdatePaymentConfirmation);
         }
     }
 }

@@ -18,9 +18,9 @@ namespace Golem.Model
             Unresponsive,
         }
 
-        public string? Id { get; set; }
+        public required string Id { get; set; }
 
-        public string? AgreementId { get; set; }
+        public required string AgreementId { get; set; }
 
         public StateType State { get; set; }
 
