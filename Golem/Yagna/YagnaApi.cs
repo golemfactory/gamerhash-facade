@@ -241,11 +241,6 @@ namespace Golem.Yagna
             _httpClient.CancelPendingRequests();
         }
 
-        // private string FormatTimestamp(DateTime dateTime)
-        // {
-        //     return dateTime.ToUniversalTime().ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fff'Z'");
-        // }
-
         private string FormatTimestamp(DateTime dateTime)
         {
             return dateTime.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);

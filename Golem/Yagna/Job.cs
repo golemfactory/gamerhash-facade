@@ -100,23 +100,7 @@ namespace Golem.Yagna.Types
             }
         }
 
-        private DateTime? _timestamp = new DateTime();
-        public DateTime? Timestamp
-        {
-            get
-            {
-                return _timestamp;
-
-            }
-            set
-            {
-                if (_timestamp != value)
-                {
-                    _timestamp = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
+        public DateTime Timestamp { get; init; }
 
         public void UpdateActivityState(ActivityStatePair activityState)
         {
