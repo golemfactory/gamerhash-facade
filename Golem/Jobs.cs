@@ -74,7 +74,6 @@ class Jobs : IJobs
 
         var activities = await _yagna.Api.GetActivities(since);
         var invoices = await _yagna.Api.GetInvoices(since);
-        var payments = await _yagna.Api.GetPayments(since);
 
         var tasks = new List<Task>();
 
@@ -133,10 +132,13 @@ class Jobs : IJobs
     {
         var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
         await UpdateJobStatus(activityId);
+        
         if(invoice != null)
             await UpdateJobPayment(invoice);
-        if(usage!=null)
+
+        if(usage != null)
             await UpdateJobUsage(agreementId, usage);
+
         return await GetOrCreateJob(agreementId);
     }
 
