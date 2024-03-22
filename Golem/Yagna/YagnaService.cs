@@ -265,10 +265,5 @@ namespace Golem.Yagna
         {
             return new InvoiceEventsLoop(Api, token, _logger, jobs).Start();
         }
-
-        public void RegisterCancellationToken(CancellationToken token)
-        {
-            token.Register(Api.CancelPendingRequests);
-        }
     }
 }
