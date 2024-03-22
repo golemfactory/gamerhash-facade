@@ -41,7 +41,7 @@ class Jobs : IJobs
             {
                 Id = jobId,
                 RequestorId = requestorId,
-                Timestamp = agreement.Timestamp
+                Timestamp = agreement.Timestamp ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}")
             };
 
             var price = GetPriceFromAgreement(agreement);
@@ -65,27 +65,50 @@ class Jobs : IJobs
         }
     }
 
+    
+
     public async Task<List<IJob>> List(DateTime since)
     {
         if(_yagna == null || _yagna.HasExited)
             return new List<IJob>();
 
+        string[] usageVector = new[]
+        {
+            "golem.usage.gpu-sec",
+            "golem.usage.duration_sec",
+            "ai-runtime.requests"
+        };
+
         _jobs.Clear();
 
-        var activities = await _yagna.Api.GetActivities(since);
+        var agreements = await _yagna.Api.GetAgreements(since);
+        //var activities = await _yagna.Api.GetActivities(since);
         var invoices = await _yagna.Api.GetInvoices(since);
 
         var tasks = new List<Task>();
 
-        foreach(var activityId in activities)
+        foreach(var agreement in agreements)
         {
-            var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
-            var invoice = invoices.FirstOrDefault(i => i.AgreementId == agreementId);
-            await UpdateJob(activityId, invoice, null);
+            var activities = await _yagna.Api.GetActivities(agreement.AgreementID);
+            // var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
+            var invoice = invoices.FirstOrDefault(i => i.AgreementId == agreement.AgreementID);
+            foreach(var activityId in activities)
+            {
+                var usage = await _yagna.Api.GetActivityUsage(activityId);
+                
+                var usageDict = usage
+                    .CurrentUsage
+                    .Zip(usageVector)
+                    .ToDictionary(x => x.Second, x => x.First);
+                
+                await UpdateJob(activityId, invoice, usageDict);
+            }            
         }
 
         return _jobs.Values.Cast<IJob>().ToList();
     }
+
+
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
     {

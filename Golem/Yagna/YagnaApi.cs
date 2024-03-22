@@ -160,9 +160,12 @@ namespace Golem.Yagna
             return await RestGet<YagnaAgreement>($"/market-api/v1/agreements/{agreementId}", token);
         }
 
-        public async Task<List<YagnaAgreement>> GetAgreements(CancellationToken token = default)
+        public async Task<List<YagnaAgreement>> GetAgreements(DateTime? afterDate = null, CancellationToken token = default)
         {
-            return await RestGet<List<YagnaAgreement>>($"/market-api/v1/agreements", token);
+            var args = afterDate != null
+             ? new Dictionary<string, string> { {"afterDate", FormatTimestamp(afterDate.Value)} }
+             : null;
+            return await RestGet<List<YagnaAgreement>>("/market-api/v1/agreements", args, token);
         }
 
         public async Task<ActivityStatePair> GetState(string activityId, CancellationToken token = default)
@@ -183,12 +186,10 @@ namespace Golem.Yagna
             }
         }
 
-        public async Task<List<string>> GetActivities(DateTime? afterTimestamp = null, CancellationToken token = default)
+        public async Task<List<string>> GetActivities(string agreementId, CancellationToken token = default)
         {
             var path = "/activity-api/v1/activity";
-            var args = afterTimestamp != null
-             ? new Dictionary<string, string> { {"afterTimestamp", FormatTimestamp(afterTimestamp.Value)} }
-             : null;
+            var args = new Dictionary<string, string> { {"agreementId", agreementId} };
             return await RestGet<List<string>>(path, args, token);
         }
 
@@ -215,6 +216,12 @@ namespace Golem.Yagna
         {
             var path = $"/payment-api/v1/invoices/{id}";
             return await RestGet<Invoice>(path, token);
+        }
+
+        public async Task<ActivityUsage> GetActivityUsage(string activityId, CancellationToken token = default)
+        {
+            var path = $"/activity-api/v1/activity/{activityId}/usage";
+            return await RestGet<ActivityUsage>(path, token);
         }
 
         public async Task<List<InvoiceEvent>> GetInvoiceEvents(DateTime since, CancellationToken token = default)

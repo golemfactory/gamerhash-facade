@@ -48,19 +48,6 @@ class InvoiceEventsLoop
                 _logger.LogInformation("Invoice events loop cancelled");
                 return;
             }
-            catch(AggregateException ae)
-            {
-                ae.Handle((x) =>
-                {
-                    if (x is TaskCanceledException)
-                    {
-                        _logger.LogInformation("Invoice events loop cancelled");
-                        return true;
-                    }
-                    return false; // Let anything else stop the application.
-                });
-                return;
-            }
             catch(Exception e)
             {
                 _logger.LogError("Error in invoice events loop: {e}", e.Message);
