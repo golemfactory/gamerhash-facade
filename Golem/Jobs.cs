@@ -12,7 +12,7 @@ public interface IJobs
 {
     Task<Job> GetOrCreateJob(string jobId);
     void SetAllJobsFinished();
-    Task<Job> UpdateJob(string activityId, Invoice? invoice, Dictionary<string, decimal>? usage);
+    Task<Job> UpdateJob(string activityId, Invoice? invoice, GolemUsage? usage);
 }
 
 class Jobs : IJobs
@@ -65,93 +65,85 @@ class Jobs : IJobs
         }
     }
 
-    
-
     public async Task<List<IJob>> List(DateTime since)
     {
         if(_yagna == null || _yagna.HasExited)
             return new List<IJob>();
 
-        string[] usageVector = new[]
-        {
-            "golem.usage.gpu-sec",
-            "golem.usage.duration_sec",
-            "ai-runtime.requests"
-        };
-
         _jobs.Clear();
 
         var agreements = await _yagna.Api.GetAgreements(since);
-        //var activities = await _yagna.Api.GetActivities(since);
         var invoices = await _yagna.Api.GetInvoices(since);
 
-        var tasks = new List<Task>();
-
-        foreach(var agreement in agreements)
+        foreach(var agreement in agreements.Where(a => a !=null && a.AgreementID!=null))
         {
-            var activities = await _yagna.Api.GetActivities(agreement.AgreementID);
-            // var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
+            var activities = await _yagna.Api.GetActivities(agreement!.AgreementID!);
             var invoice = invoices.FirstOrDefault(i => i.AgreementId == agreement.AgreementID);
             foreach(var activityId in activities)
             {
                 var usage = await _yagna.Api.GetActivityUsage(activityId);
-                
-                var usageDict = usage
-                    .CurrentUsage
-                    .Zip(usageVector)
-                    .ToDictionary(x => x.Second, x => x.First);
-                
-                await UpdateJob(activityId, invoice, usageDict);
+                if(usage.CurrentUsage != null)
+                {
+                    var price = GetPriceFromAgreementAndUsage(agreement, usage.CurrentUsage);
+                    await UpdateJob(
+                        activityId,
+                        invoice,
+                        price!=null ? new GolemUsage(price) : null);
+                }
             }            
         }
 
         return _jobs.Values.Cast<IJob>().ToList();
     }
 
-
-
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
     {
-        if (agreement?.Offer?.Properties != null && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector))
+        if (agreement?.Offer?.Properties != null && agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
         {
-            if (usageVector != null)
+            var vals = usageVectorValues is JsonElement valuesElement ? valuesElement.EnumerateArray().Select(x => x.GetDecimal()).ToList() : null;
+            if (vals != null)
             {
-                var list = usageVector is JsonElement element ? element.EnumerateArray().Select(e => e.ToString()).ToList() : null;
-                if (list != null)
+                return GetPriceFromAgreementAndUsage(agreement, vals);
+            }
+        }
+
+        return null;
+    }
+
+    private GolemPrice? GetPriceFromAgreementAndUsage(YagnaAgreement agreement, List<decimal> vals)
+    {
+        if (agreement?.Offer?.Properties != null 
+            && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector)
+            && usageVector != null)
+        {
+            var list = usageVector is JsonElement element ? element.EnumerateArray().Select(e => e.ToString()).ToList() : null;
+            if (list != null)
+            {
+                var gpuSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.gpu-sec"));
+                var durationSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.duration_sec"));
+                var requestsIdx = list.FindIndex(x => x.ToString().Equals("ai-runtime.requests"));
+
+                if (gpuSecIdx >= 0 && durationSecIdx >= 0 && requestsIdx >= 0)
                 {
-                    var gpuSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.gpu-sec"));
-                    var durationSecIdx = list.FindIndex(x => x.ToString().Equals("golem.usage.duration_sec"));
-                    var requestsIdx = list.FindIndex(x => x.ToString().Equals("ai-runtime.requests"));
+                    var gpuSec = vals[gpuSecIdx];
+                    var durationSec = vals[durationSecIdx];
+                    var requests = vals[requestsIdx];
+                    var initialPrice = vals.Last();
 
-                    if (gpuSecIdx >= 0 && durationSecIdx >= 0 && requestsIdx >= 0)
+                    return new GolemPrice
                     {
-                        if (agreement.Offer.Properties.TryGetValue("golem.com.pricing.model.linear.coeffs", out var usageVectorValues))
-                        {
-                            var vals = usageVectorValues is JsonElement valuesElement ? valuesElement.EnumerateArray().Select(x => x.GetDecimal()).ToList() : null;
-                            if (vals != null)
-                            {
-                                var gpuSec = vals[gpuSecIdx];
-                                var durationSec = vals[durationSecIdx];
-                                var requests = vals[requestsIdx];
-                                var initialPrice = vals.Last();
-
-                                return new GolemPrice
-                                {
-                                    StartPrice = initialPrice,
-                                    GpuPerSec = gpuSec,
-                                    EnvPerSec = durationSec,
-                                    NumRequests = requests,
-                                };
-                            }
-                        }
-                    }
+                        StartPrice = initialPrice,
+                        GpuPerSec = gpuSec,
+                        EnvPerSec = durationSec,
+                        NumRequests = requests,
+                    };
                 }
             }
         }
         return null;
     }
 
-    public async Task<Job> UpdateJob(string activityId, Invoice? invoice, Dictionary<string, decimal>? usage)
+    public async Task<Job> UpdateJob(string activityId, Invoice? invoice, GolemUsage? usage)
     {
         var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
         await UpdateJobStatus(activityId);
@@ -159,8 +151,9 @@ class Jobs : IJobs
         if(invoice != null)
             await UpdateJobPayment(invoice);
 
+        // update usage only if there was any change
         if(usage != null)
-            await UpdateJobUsage(agreementId, usage);
+            await UpdateJobUsage(agreementId);
 
         return await GetOrCreateJob(agreementId);
     }
@@ -201,11 +194,28 @@ class Jobs : IJobs
         return job;
     }
 
-    private async Task<Job> UpdateJobUsage(string agreementId, Dictionary<string, decimal> usage)
+    // the _usageUpdate is the usage of current activity but we need to gather usage for all activities for a given job
+    private async Task<Job> UpdateJobUsage(string agreementId)
     {
         var job = await GetOrCreateJob(agreementId);
-        if (usage != null)
-            job.CurrentUsage = GolemUsage.From(usage);
+        var agreement = await _yagna.Api.GetAgreement(agreementId);
+        var activities = await _yagna.Api.GetActivities(agreementId);
+        
+        var usage = new GolemUsage();
+        foreach(var activity in activities)
+        {
+            var activityUsage = await _yagna.Api.GetActivityUsage(activity);
+            if(activityUsage.CurrentUsage == null)
+                continue;
+
+            var price = GetPriceFromAgreementAndUsage(agreement, activityUsage.CurrentUsage);
+            if(price == null)
+                continue;
+
+            usage += new GolemUsage(price);
+        }
+
+        job.CurrentUsage = usage;
         return job;
     }
 

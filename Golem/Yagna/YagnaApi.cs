@@ -52,9 +52,11 @@ namespace Golem.Yagna
             return await RestCall<T>(HttpMethod.Get, path, new Dictionary<string, string>(), token);
         }
 
-        public async Task<T> RestGet<T>(string path, Dictionary<string, string> args, CancellationToken token = default) where T : class
+        public async Task<T> RestGet<T>(string path, Dictionary<string, string>? args, CancellationToken token = default) where T : class
         {
-            return await RestGet<T>(path, args, new Dictionary<string, string>(), token);
+            return args != null
+                ? await RestGet<T>(path, args, new Dictionary<string, string>(), token)
+                : await RestGet<T>(path, new Dictionary<string, string>(), token);
         }
 
         public async Task<T> RestGet<T>(string path, Dictionary<string, string> args, Dictionary<string, string> headers, CancellationToken token = default) where T : class

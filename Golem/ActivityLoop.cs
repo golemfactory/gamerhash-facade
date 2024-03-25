@@ -125,7 +125,14 @@ class ActivityLoop
     {
         var result = await Task.WhenAll(
             activityStates
-                .Select(async d => await jobs.UpdateJob(d.Id, null, d.Usage))
+                .Select(async d => 
+                    await jobs.UpdateJob(
+                        d.Id,
+                        null,
+                        d.Usage!=null
+                        ? GolemUsage.From(d.Usage)
+                        : null)
+                )
         );
 
         return result.ToList();
