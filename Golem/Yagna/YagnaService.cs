@@ -253,9 +253,8 @@ namespace Golem.Yagna
         /// TODO: Reconsider API of this function.
         public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobs jobs)
         {
-            return new ActivityLoop(this, token, _logger).Start(
+            return new ActivityLoop(Api, jobs, _logger).Start(
                 setCurrentJob,
-                jobs,
                 token
             );
         }

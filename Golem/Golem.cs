@@ -335,6 +335,8 @@ namespace Golem
 
         private void SetCurrentJob(Job? job)
         {
+            _logger.LogDebug($"Setting current job to {job?.Id}, status {job?.Status}");
+            
             if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
             {
                 CurrentJob = job;
