@@ -70,12 +70,10 @@ class Jobs : IJobs
         if(_yagna == null || _yagna.HasExited)
             return new List<IJob>();
 
-        _jobs.Clear();
-
         var agreements = await _yagna.Api.GetAgreements(since);
         var invoices = await _yagna.Api.GetInvoices(since);
 
-        foreach(var agreement in agreements.Where(a => a !=null && a.AgreementID!=null))
+        foreach(var agreement in agreements.Where(a => a!=null && a.AgreementID!=null))
         {
             var activities = await _yagna.Api.GetActivities(agreement!.AgreementID!);
             var invoice = invoices.FirstOrDefault(i => i.AgreementId == agreement.AgreementID);

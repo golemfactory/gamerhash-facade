@@ -17,12 +17,6 @@ class ActivityLoop
 {
     private const string _dataPrefix = "data:";
     private static readonly TimeSpan s_reconnectDelay = TimeSpan.FromSeconds(10);
-    private static readonly JsonSerializerOptions s_serializerOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
-    };
 
     private readonly YagnaApi _yagnaApi;
     private readonly IJobs _jobs;
