@@ -49,7 +49,6 @@ namespace Golem.Yagna
             Options = startupOptions;
             Api = new YagnaApi(loggerFactory);
 
-            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<YagnaService>();
             _yaExePath = Path.GetFullPath(Path.Combine(golemPath, ProcessFactory.BinName("yagna")));
             _dataDir = Path.GetFullPath(dataDir);
