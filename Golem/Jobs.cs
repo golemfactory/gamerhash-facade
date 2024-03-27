@@ -68,7 +68,7 @@ class Jobs : IJobs
     public async Task<List<IJob>> List(DateTime since)
     {
         if(_yagna == null || _yagna.HasExited)
-            return new List<IJob>();
+            throw new Exception("Invalid state: yagna is not started");
 
         var agreements = await _yagna.Api.GetAgreements(since);
         var invoices = await _yagna.Api.GetInvoices(since);

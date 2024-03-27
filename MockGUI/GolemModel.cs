@@ -12,6 +12,8 @@ using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Golem.Tools;
 using Golem;
+using System.Collections.Generic;
+using Golem.Yagna.Types;
 
 
 namespace MockGUI.ViewModels
@@ -74,7 +76,7 @@ namespace MockGUI.ViewModels
             return await Create(modulesDir, (loggerFactory) => new Factory().Create(modulesDir, loggerFactory, mainnet), relayType, mainnet);
         }
 
-        static async Task<GolemViewModel> Create(string modulesDir, Func<ILoggerFactory?, Task<IGolem>> createGolem, RelayType relayType, bool mainnet)
+        static async Task<GolemViewModel> Create(string modulesDir, Func<ILoggerFactory, Task<IGolem>> createGolem, RelayType relayType, bool mainnet)
         {
             var loggerFactory = createLoggerFactory(modulesDir);
             var golem = await createGolem(loggerFactory);
@@ -178,7 +180,15 @@ namespace MockGUI.ViewModels
         public async void OnListJobs()
         {
             var since = this.DateSince.Date + this.TimeSince;
-            var jobs = await this.Golem.ListJobs(since);
+            List<IJob> jobs;
+            try
+            {
+                jobs = await this.Golem.ListJobs(since);
+            } catch (Exception)
+            {
+                jobs = new List<IJob>();
+            }
+            
             this.JobsHistory = new ObservableCollection<IJob>(jobs);
         }
 

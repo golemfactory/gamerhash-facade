@@ -15,7 +15,6 @@ using Microsoft.Extensions.Logging;
 
 class ActivityLoop
 {
-    private const string _dataPrefix = "data:";
     private static readonly TimeSpan s_reconnectDelay = TimeSpan.FromSeconds(10);
 
     private readonly YagnaApi _yagnaApi;
