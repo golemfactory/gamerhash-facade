@@ -12,6 +12,8 @@ using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Golem.Tools;
 using Golem;
+using System.Collections.Generic;
+using Golem.Yagna.Types;
 
 
 namespace MockGUI.ViewModels
@@ -19,7 +21,7 @@ namespace MockGUI.ViewModels
     public class GolemViewModel : INotifyPropertyChanged, IAsyncDisposable
     {
         public IGolem Golem { get; init; }
-        public DateTime DateSince { get; set; } = DateTime.Now;
+        public DateTime DateSince { get; set; } = DateTime.Now.AddDays(-1);
         public TimeSpan TimeSince { get; set; } = DateTime.Now.TimeOfDay;
 
         private ObservableCollection<IJob> _jobsHistory;
@@ -54,9 +56,9 @@ namespace MockGUI.ViewModels
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-        public GolemViewModel(string modulesDir, IGolem golem, GolemRelay? relay, ILoggerFactory? loggerFactory = null)
+        public GolemViewModel(string modulesDir, IGolem golem, GolemRelay? relay, ILoggerFactory loggerFactory)
         {
-            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            _loggerFactory = loggerFactory;
             _logger = _loggerFactory.CreateLogger<GolemViewModel>();
             WorkDir = modulesDir;
             Golem = golem;
@@ -74,7 +76,7 @@ namespace MockGUI.ViewModels
             return await Create(modulesDir, (loggerFactory) => new Factory().Create(modulesDir, loggerFactory, mainnet), relayType, mainnet);
         }
 
-        static async Task<GolemViewModel> Create(string modulesDir, Func<ILoggerFactory?, Task<IGolem>> createGolem, RelayType relayType, bool mainnet)
+        static async Task<GolemViewModel> Create(string modulesDir, Func<ILoggerFactory, Task<IGolem>> createGolem, RelayType relayType, bool mainnet)
         {
             var loggerFactory = createLoggerFactory(modulesDir);
             var golem = await createGolem(loggerFactory);
@@ -117,7 +119,7 @@ namespace MockGUI.ViewModels
             return mainnetAddressReader.ReadLine() ?? throw new Exception($"Failed to read from file {mainnetAddressFilename}");
         }
 
-        public static async Task<IGolem> LoadLib(string lib, string modulesDir, ILoggerFactory? loggerFactory, bool mainnet)
+        public static async Task<IGolem> LoadLib(string lib, string modulesDir, ILoggerFactory loggerFactory, bool mainnet)
         {
             const string factoryType = "Golem.Factory";
 
@@ -178,7 +180,15 @@ namespace MockGUI.ViewModels
         public async void OnListJobs()
         {
             var since = this.DateSince.Date + this.TimeSince;
-            var jobs = await this.Golem.ListJobs(since);
+            List<IJob> jobs;
+            try
+            {
+                jobs = await this.Golem.ListJobs(since);
+            } catch (Exception)
+            {
+                jobs = new List<IJob>();
+            }
+            
             this.JobsHistory = new ObservableCollection<IJob>(jobs);
         }
 

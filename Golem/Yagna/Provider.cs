@@ -109,10 +109,10 @@ namespace Golem.Yagna
         private Process? ProviderProcess { get; set; }
         private SemaphoreSlim ProcLock { get; } = new SemaphoreSlim(1, 1);
 
-        public Provider(string golemPath, string? dataDir, ILoggerFactory? loggerFactory = null)
+        public Provider(string golemPath, string? dataDir, ILoggerFactory loggerFactory)
         {
             golemPath = Path.GetFullPath(golemPath);
-            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+
             _logger = loggerFactory.CreateLogger<Provider>();
             _yaProviderPath = Path.Combine(golemPath, ProcessFactory.BinName("ya-provider"));
             _pluginsPath = Path.Combine(golemPath, "..", "plugins");

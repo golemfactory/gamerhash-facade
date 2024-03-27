@@ -89,7 +89,6 @@ namespace Golem.Yagna.Types
             get
             {
                 return _paymentConfirmation;
-
             }
             set
             {
@@ -100,6 +99,8 @@ namespace Golem.Yagna.Types
                 }
             }
         }
+
+        public DateTime Timestamp { get; init; }
 
         public void UpdateActivityState(ActivityStatePair activityState)
         {

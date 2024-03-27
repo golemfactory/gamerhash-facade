@@ -3,6 +3,7 @@ using Golem.Yagna.Types;
 using GolemLib;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
@@ -15,7 +16,7 @@ namespace Golem
 
             var network = Factory.Network(mainnet);
 
-            return Task.FromResult(new Golem(binaries, datadir, loggerFactory, network) as IGolem);
+            return Task.FromResult(new Golem(binaries, datadir, loggerFactory ?? NullLoggerFactory.Instance, network) as IGolem);
         }
 
         public static Network Network(bool mainnet) {
