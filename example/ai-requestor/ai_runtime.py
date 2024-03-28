@@ -156,8 +156,8 @@ RUNTIME_NAME = "dummy"
 
 @dataclass
 class AiPayload(Payload):
-    image_url: str = prop("golem.ai.v1.srv.comp.ai.model")
-    image_fmt: str = prop("golem.ai.v1.srv.comp.ai.model-format", default="safetensors")
+    image_url: str = prop("golem.srv.comp.ai.model")
+    image_fmt: str = prop("golem.srv.comp.ai.model-format", default="safetensors")
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
 
