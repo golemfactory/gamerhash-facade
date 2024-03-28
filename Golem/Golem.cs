@@ -63,16 +63,29 @@ namespace Golem
             }
         }
 
-        public string Network {
+        public string Network
+        {
             get => Yagna.Options.Network.Id;
         }
 
-        public bool Mainnet { 
+        public bool Mainnet
+        {
             get => Yagna.Options.Network == Factory.Network(true);
         }
 
-        private GolemStatus status;
+        public bool BlacklistEnabled
+        {
+            get => Provider.Blacklist.Enabled;
+            set => Provider.Blacklist.Enabled = value;
+        }
 
+        public bool AllowListEnabled
+        {
+            get => Provider.AllowList.Enabled;
+            set => Provider.AllowList.Enabled = value;
+        }
+
+        private GolemStatus status;
         public GolemStatus Status
         {
             get { return status; }
@@ -126,9 +139,9 @@ namespace Golem
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
 
-        public Task BlacklistNode(string node_id)
+        public Task BlacklistNode(string nodeId)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(Provider.Blacklist.AddIdentity(nodeId));
         }
 
         public Task<List<IJob>> ListJobs(DateTime since)
@@ -336,7 +349,7 @@ namespace Golem
         private void SetCurrentJob(Job? job)
         {
             _logger.LogDebug($"Setting current job to {job?.Id}, status {job?.Status}");
-            
+
             if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
             {
                 CurrentJob = job;

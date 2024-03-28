@@ -72,17 +72,17 @@ namespace Golem.Yagna
             return _provider.ExecToText(args);
         }
 
+        public Rules? List()
+        {
+            var args = $"rule list --json".Split().ToList();
+            return _provider.Exec<Rules>(args);
+        }
+
         private string Enable(bool enable)
         {
             var enable_str = enable ? "enable" : "disable";
             var args = $"rule {enable_str} {GetRuleCommand()}".Split().ToList();
             return _provider.ExecToText(args);
-        }
-
-        public Rules? List()
-        {
-            var args = $"rule list --json".Split().ToList();
-            return _provider.Exec<Rules>(args);
         }
 
         private string GetRuleCommand()
