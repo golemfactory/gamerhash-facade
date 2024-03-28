@@ -78,6 +78,8 @@ namespace Golem.Yagna
     public class Provider : IProvider
     {
         public PresetConfigService PresetConfig { get; set; }
+        public Rule Blacklist { get; set; }
+        public Rule AllowList { get; set; }
 
         private readonly string _yaProviderPath;
         private readonly string _pluginsPath;
@@ -122,6 +124,8 @@ namespace Golem.Yagna
             _env = new Dictionary<string, string>();
 
             PresetConfig = new PresetConfigService(this);
+            Blacklist = new Rule(this, RuleCategory.Blacklist);
+            AllowList = new Rule(this, RuleCategory.AllowList);
 
             if (!File.Exists(_yaProviderPath))
             {
