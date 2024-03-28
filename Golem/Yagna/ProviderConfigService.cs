@@ -75,37 +75,6 @@ namespace Golem
                 }
             }
 
-            Dictionary<string, decimal> golemPriceToDict(GolemPrice price)
-            {
-                return new Dictionary<string, decimal>
-                    {
-                        { "ai-runtime.requests", price.NumRequests },
-                        { "golem.usage.duration_sec", price.EnvPerSec },
-                        { "golem.usage.gpu-sec", price.GpuPerSec },
-                        { "Initial", price.StartPrice }
-                    };
-            }
-
-            private GolemPrice presetIntoPrice(Preset preset)
-            {
-                if (!preset.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
-                    numRequests = 0;
-                if (!preset.UsageCoeffs.TryGetValue("golem.usage.duration_sec", out var duration))
-                    duration = 0;
-                if (!preset.UsageCoeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
-                    gpuSec = 0;
-
-                var initPrice = preset.InitialPrice ?? 0m;
-
-                return new GolemPrice
-                {
-                    EnvPerSec = duration,
-                    StartPrice = initPrice,
-                    GpuPerSec = gpuSec,
-                    NumRequests = numRequests
-                };
-            }
-
             public void UpdateAccount(string? account, Action update)
             {
                 _logger.LogInformation($"Updating provider account to {account}");

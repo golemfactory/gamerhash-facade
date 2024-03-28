@@ -21,7 +21,7 @@ namespace Golem.Yagna
                                     .Build();
 
         private readonly ILogger _logger;
-        
+
         private readonly string[] _monitorEventTypes =
         {
             "ISSUED",
@@ -61,13 +61,13 @@ namespace Golem.Yagna
 
         public async Task<T> RestGet<T>(string path, Dictionary<string, string> args, Dictionary<string, string> headers, CancellationToken token = default) where T : class
         {
-            if(args != null && args.Count > 0)
+            if (args != null && args.Count > 0)
             {
                 path += "?";
-                for (int i=0; i<args.Count; ++i)
+                for (int i = 0; i < args.Count; ++i)
                 {
                     var (k, v) = args.ElementAt(i);
-                    path += $"{k}={v}" + (i==args.Count-1?"":"&");
+                    path += $"{k}={v}" + (i == args.Count - 1 ? "" : "&");
                 }
             }
             return await RestCall<T>(HttpMethod.Get, path, headers, token);
@@ -77,12 +77,12 @@ namespace Golem.Yagna
         {
             using var requestMessage = new HttpRequestMessage(method, path);
 
-            foreach(var (k, v) in headers)
+            foreach (var (k, v) in headers)
                 requestMessage.Headers.Add(k, v);
 
             var response = _httpClient.SendAsync(requestMessage, token).Result;
 
-            if(!response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
@@ -90,10 +90,10 @@ namespace Golem.Yagna
                 }
                 throw new Exception($"Http call failed ({path}) code {response.StatusCode}: {response.ReasonPhrase}");
             }
-            
+
             var txt = await response.Content.ReadAsStringAsync(token);
             return Deserialize<T>(txt);
-        }        
+        }
 
         public async IAsyncEnumerable<T> RestStream<T>(string path, [EnumeratorCancellation] CancellationToken token = default) where T : class
         {
@@ -107,9 +107,9 @@ namespace Golem.Yagna
                 {
                     result = await Next<T>(reader, "data:", token);
                 }
-                catch (OperationCanceledException e)
+                catch (OperationCanceledException)
                 {
-                    throw e;
+                    throw;
                 }
                 catch (Exception error)
                 {
@@ -141,7 +141,7 @@ namespace Golem.Yagna
 
             return Deserialize<T>(messageBuilder.ToString());
         }
-        
+
         internal static T Deserialize<T>(string text) where T : class
         {
             var options = new JsonSerializerOptionsBuilder()
@@ -165,7 +165,7 @@ namespace Golem.Yagna
         public async Task<List<YagnaAgreement>> GetAgreements(DateTime? afterDate = null, CancellationToken token = default)
         {
             var args = afterDate != null
-             ? new Dictionary<string, string> { {"afterDate", FormatTimestamp(afterDate.Value)} }
+             ? new Dictionary<string, string> { { "afterDate", FormatTimestamp(afterDate.Value) } }
              : null;
             return await RestGet<List<YagnaAgreement>>("/market-api/v1/agreements", args, token);
         }
@@ -191,7 +191,7 @@ namespace Golem.Yagna
         public async Task<List<string>> GetActivities(string agreementId, CancellationToken token = default)
         {
             var path = "/activity-api/v1/activity";
-            var args = new Dictionary<string, string> { {"agreementId", agreementId} };
+            var args = new Dictionary<string, string> { { "agreementId", agreementId } };
             return await RestGet<List<string>>(path, args, token);
         }
 
@@ -199,9 +199,9 @@ namespace Golem.Yagna
         {
             var path = "/payment-api/v1/invoices";
             var args = afterTimestamp != null
-             ? new Dictionary<string, string> { {"afterTimestamp", FormatTimestamp(afterTimestamp.Value)} }
+             ? new Dictionary<string, string> { { "afterTimestamp", FormatTimestamp(afterTimestamp.Value) } }
              : null;
-                
+
             return await RestGet<List<Invoice>>(path, args, token);
         }
 
@@ -209,7 +209,7 @@ namespace Golem.Yagna
         {
             var path = "/payment-api/v1/payments";
             var args = afterTimestamp != null
-             ? new Dictionary<string, string> { {"afterTimestamp", FormatTimestamp(afterTimestamp.Value)} }
+             ? new Dictionary<string, string> { { "afterTimestamp", FormatTimestamp(afterTimestamp.Value) } }
              : null;
             return await RestGet<List<Payment>>(path, args, token);
         }
