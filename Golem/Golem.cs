@@ -79,7 +79,7 @@ namespace Golem
             set => Provider.Blacklist.Enabled = value;
         }
 
-        public bool AllowListEnabled
+        public bool FilterRequestors
         {
             get => Provider.AllowList.Enabled;
             set => Provider.AllowList.Enabled = value;
@@ -142,6 +142,21 @@ namespace Golem
         public Task BlacklistNode(string nodeId)
         {
             return Task.FromResult(Provider.Blacklist.AddIdentity(nodeId));
+        }
+
+        public Task AllowCertified(string cert)
+        {
+            return Task.FromResult(Provider.AllowList.AddCertificate(cert));
+        }
+
+        public Rule Blacklist
+        {
+            get => Provider.Blacklist;
+        }
+
+        public Rule AllowList
+        {
+            get => Provider.AllowList;
         }
 
         public Task<List<IJob>> ListJobs(DateTime since)

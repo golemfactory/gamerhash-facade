@@ -60,6 +60,16 @@ namespace Golem.Yagna
             set => Enable(value);
         }
 
+        public List<string> Identities
+        {
+            get => List(Type)?.Identity ?? new List<string>();
+        }
+
+        public List<string> Certificates
+        {
+            get => List(Type)?.Certified ?? new List<string>();
+        }
+
         public string AddCertificate(string certPath)
         {
             var args = $"rule add {GetRuleCommand()} certified import-cert {certPath}".Split().ToList();
@@ -76,6 +86,17 @@ namespace Golem.Yagna
         {
             var args = $"rule list --json".Split().ToList();
             return _provider.Exec<Rules>(args);
+        }
+
+        public RestrictRule? List(RuleCategory type)
+        {
+            return type switch
+            {
+                RuleCategory.Blacklist => List()?.Blacklist,
+                RuleCategory.AllowList => List()?.AllowOnly,
+                _ => throw new System.Exception("Invalid rule type")
+            };
+
         }
 
         private string Enable(bool enable)

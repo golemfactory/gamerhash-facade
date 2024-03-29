@@ -193,7 +193,7 @@
                             <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding Golem.BlacklistEnabled, Mode=TwoWay}" FontSize="12" FontWeight="Bold">Enabled</CheckBox>
 
                             <TextBlock Grid.Row="6" Grid.Column="0" Classes="Label">AllowList</TextBlock>
-                            <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding Golem.AllowListEnabled, Mode=TwoWay}" FontSize="12" FontWeight="Bold">Enabled</CheckBox>
+                            <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding Golem.FilterRequestors, Mode=TwoWay}" FontSize="12" FontWeight="Bold">Enabled</CheckBox>
                         </Grid>
                     </StackPanel>
                 </Border>

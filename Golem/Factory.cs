@@ -15,12 +15,28 @@ namespace Golem
             var datadir = Path.Combine(modulesDir, "golem-data");
 
             var network = Factory.Network(mainnet);
+            var golem = new Golem(binaries, datadir, loggerFactory ?? NullLoggerFactory.Instance, network);
 
-            return Task.FromResult(new Golem(binaries, datadir, loggerFactory ?? NullLoggerFactory.Instance, network) as IGolem);
+            ConfigureAccess(golem, mainnet);
+
+            return Task.FromResult(golem as IGolem);
         }
 
-        public static Network Network(bool mainnet) {
+        public static Network Network(bool mainnet)
+        {
             return mainnet ? Yagna.Types.Network.Polygon : Yagna.Types.Network.Holesky;
+        }
+
+        private static Task ConfigureAccess(Golem golem, bool mainnet)
+        {
+            // Requstors are filtered only on mainnet. We assume that on testnet Provider
+            // will work in developer mode for testing purposes, so blocking requestors
+            // would make testing harder.
+            golem.FilterRequestors = mainnet;
+            golem.BlacklistEnabled = true;
+
+
+            return Task.CompletedTask;
         }
     }
 
