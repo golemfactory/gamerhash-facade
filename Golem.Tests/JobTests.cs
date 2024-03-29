@@ -146,7 +146,7 @@ namespace Golem.Tests
 
             var jobs = await golem.ListJobs(DateTime.MinValue);
             var job = jobs.SingleOrDefault(j => j.Id == jobId);
-            Assert.Equal(JobStatus.Finished, job.Status);
+            Assert.Equal(JobStatus.Finished, job?.Status);
             Assert.Null(golem.CurrentJob);
 
             // Checking payments
