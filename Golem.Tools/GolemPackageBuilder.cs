@@ -216,7 +216,7 @@ namespace Golem.Tools
             return Path.Combine(ModulesDir(test_dir), "plugins");
         }
 
-        internal static async Task<string> Download(string url)
+        public static async Task<string> Download(string url)
         {
             var name = Path.GetFileName(url);
             var target_dir = Path.Combine(Path.GetTempPath(), "gamerhash_facade_tests");
