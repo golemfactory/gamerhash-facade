@@ -37,8 +37,9 @@ namespace App
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "app");
             Directory.CreateDirectory(working_dir);
-            
-            return StartProcess("app", working_dir, $"--network {_network.Id} --driver {PaymentDriver.ERC20.Id} --subnet-tag public {_extraArgs}", _env, true);
+
+            var args = $"--network {_network.Id} --driver {PaymentDriver.ERC20.Id} --subnet-tag public {_extraArgs}";
+            return StartProcess("app", working_dir, args, _env, true);
         }
     }
 
@@ -84,6 +85,21 @@ namespace App
             _mainnet = mainnet;
         }
 
+        private string GetNodeDescriptor()
+        {
+            return PackageBuilder.ResourcePath("example-runner.mainnet.signed.json");
+        }
+
+        private string ExtraArgs()
+        {
+            var args = $"--runtime {_runtime}";
+            if (_mainnet)
+            {
+                args += $" --descriptor {GetNodeDescriptor()}";
+            }
+            return args;
+        }
+
         public async Task Run()
         {
             try
@@ -101,7 +117,7 @@ namespace App
                 _logger.LogInformation("Creating requestor application: " + Name);
                 Message = "Starting Application";
 
-                App = Requestor?.CreateSampleApp(extraArgs: $"--runtime {_runtime}") 
+                App = Requestor?.CreateSampleApp(extraArgs: ExtraArgs())
                     ?? throw new Exception("Requestor '" + Name + "' not started yet");
                 await Task.Run(() => App.Start());
 

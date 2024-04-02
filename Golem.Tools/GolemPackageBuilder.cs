@@ -320,10 +320,14 @@ namespace Golem.Tools
             }
         }
 
+        public static string ResourcePath(string filename)
+        {
+            return Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", "resources", filename);
+        }
+
         public static StreamReader ReadResource(string filename)
         {
-            var path = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", "resources", filename);
-            return new StreamReader(path);
+            return new StreamReader(ResourcePath(filename));
         }
 
         static async Task<string> DownloadArchiveArtifact(string artifact, string tag, string repository)

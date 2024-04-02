@@ -1,0 +1,100 @@
+{
+  "$schema": "https://schemas.golem.network/v1/node-descriptor.schema.json",
+  "nodeDescriptor": {
+    "nodeId": "0x97d933147c6becb52c592685cf1fa28ffc7a1f56",
+    "permissions": {},
+    "validityPeriod": {
+      "notBefore": "2024-03-29T00:00:00Z",
+      "notAfter": "2024-05-29T00:00:00Z"
+    }
+  },
+  "signature": {
+    "algorithm": {
+      "hash": "sha512",
+      "encryption": "EdDSA"
+    },
+    "value": "d09ab81cc2992c33b2d5f34f39358aa691b6da1628eb0870ed112e60f7a177b4c18a3f9375c39c09bc0068ed95842b1bdc77e99d0e8114b77557586567451b09",
+    "signer": {
+      "$schema": "https://schemas.golem.network/v1/certificate.schema.json",
+      "certificate": {
+        "keyUsage": [
+          "signNode",
+          "signCertificate"
+        ],
+        "permissions": {},
+        "publicKey": {
+          "algorithm": "EdDSA",
+          "key": "dc701d8d9a5465b07b56914093afe037927379bb41030161f59dbc9bfe6d887e",
+          "parameters": {
+            "scheme": "Ed25519"
+          }
+        },
+        "subject": {
+          "displayName": "AI Windows Provider Team",
+          "contact": {
+            "email": "devops@golem.network"
+          },
+          "Description": "AI provider team testing certificate",
+          "Purpose": "Testing purposes only",
+          "Usage Policy": "Never enable by default; Always on demand for testing period",
+          "Remove Policy": "Always remove after testing period",
+          "Sign Policy": "Sign individual developer cert"
+        },
+        "validityPeriod": {
+          "notBefore": "2024-03-29T00:00:00Z",
+          "notAfter": "2024-05-29T00:00:00Z"
+        }
+      },
+      "signature": {
+        "algorithm": {
+          "hash": "sha512",
+          "encryption": "EdDSA"
+        },
+        "value": "0466cf4cad372f0c011a13198ecf78628f5c61fe84b94120e0ea9c1b32ced60b29bbddd0af9f7d39f750a459f4458cf35e3997e5b43887223fda2a12c7812e0b",
+        "signer": {
+          "$schema": "https://schemas.golem.network/v1/certificate.schema.json",
+          "certificate": {
+            "keyUsage": [
+              "signNode",
+              "signManifest",
+              "signCertificate"
+            ],
+            "permissions": {
+              "outbound": "unrestricted"
+            },
+            "publicKey": {
+              "algorithm": "EdDSA",
+              "key": "984933a1bd6a9a014028e04da794961d8569094150c323a3adb95e59c871ecc8",
+              "parameters": {
+                "scheme": "Ed25519"
+              }
+            },
+            "subject": {
+              "displayName": "Golem Developer Root",
+              "contact": {
+                "email": "devops@golem.network"
+              },
+              "Usage Policy": "Never enable by default; Always on demand for testing period",
+              "Sign Policy": "Sign intermediate certificates for internal teams",
+              "Purpose": "Testing purposes only",
+              "Description": "Root certificate for Golem Factory developers",
+              "Remove Policy": "Always remove after testing period"
+            },
+            "validityPeriod": {
+              "notBefore": "2024-03-29T00:00:00Z",
+              "notAfter": "2034-03-29T00:00:00Z"
+            }
+          },
+          "signature": {
+            "algorithm": {
+              "hash": "sha512",
+              "encryption": "EdDSA"
+            },
+            "value": "c3b966345e0f30343ccc3c1ddd670751afe33a3c8cdaeb2432c3aa3f0e0c17c4e1f4208e10905ffb63f8dbb3555bfcf1ea477ac7295f37c3a08314519d32750a",
+            "signer": "self"
+          }
+        }
+      }
+    }
+  }
+}
