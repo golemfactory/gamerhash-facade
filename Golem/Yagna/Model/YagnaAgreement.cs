@@ -25,7 +25,12 @@ namespace Golem.Model
             public string? ProviderID { get; set; }
             public DateTime? Timestamp { get; set; }
         }
-        public string? AgreementID { get; set; }
+        public string? AgreementID 
+        {
+            get => Id;
+            set => Id = value;
+        }
+        public string? Id { get; set; }
 
         public YagnaAgreementOffer? Offer { get; set; }
         public YagnaAgreementDemand? Demand { get; set; }

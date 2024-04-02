@@ -2,14 +2,9 @@
 using Golem.Yagna.Types;
 using System.Text.Json;
 using Golem.Tools;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
-using System.Data;
 using System.Net.Http.Headers;
-using Golem.Model;
-using System.Text;
-using System.Runtime.CompilerServices;
 
 namespace Golem.Yagna
 {
@@ -34,7 +29,7 @@ namespace Golem.Yagna
         private Process? YagnaProcess { get; set; }
         private SemaphoreSlim ProcLock { get; } = new SemaphoreSlim(1, 1);
 
-        private readonly HttpClient _httpClient;
+        public readonly YagnaApi Api;
         private readonly ILogger _logger;
 
         private EnvironmentBuilder Env
@@ -49,10 +44,11 @@ namespace Golem.Yagna
             }
         }
 
-        public YagnaService(string golemPath, string dataDir, YagnaStartupOptions startupOptions, ILoggerFactory? loggerFactory)
+        public YagnaService(string golemPath, string dataDir, YagnaStartupOptions startupOptions, ILoggerFactory loggerFactory)
         {
             Options = startupOptions;
-            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            Api = new YagnaApi(loggerFactory);
+
             _logger = loggerFactory.CreateLogger<YagnaService>();
             _yaExePath = Path.GetFullPath(Path.Combine(golemPath, ProcessFactory.BinName("yagna")));
             _dataDir = Path.GetFullPath(dataDir);
@@ -60,10 +56,6 @@ namespace Golem.Yagna
             {
                 throw new Exception($"File not found: {_yaExePath}");
             }
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
-            };
         }
 
         internal string ExecToText(params string[] arguments)
@@ -142,8 +134,8 @@ namespace Golem.Yagna
 
         public async Task Run(Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Options.AppKey);
-            cancellationToken.Register(_httpClient.CancelPendingRequests);
+            Api.Authorize(Options.AppKey);
+            cancellationToken.Register(Api.CancelPendingRequests);
 
             // Synchronizing of process creation is necessary to avoid scenario, when `YagnaSerice::Stop` is called
             // during `YagnaSerice::Run` execution. There is race condition possible, when `YagnaProcess`
@@ -158,7 +150,7 @@ namespace Golem.Yagna
                     throw new GolemException("Yagna process is already running");
                 }
 
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Options.AppKey);
+                Api.Authorize(Options.AppKey);
 
                 string debugFlag = "";
                 if (Options.Debug)
@@ -229,97 +221,6 @@ namespace Golem.Yagna
             YagnaProcess = null;
         }
 
-        public async Task<T> RestCall<T>(string path, CancellationToken token = default) where T : class
-        {
-            var response = _httpClient.GetAsync(path, token).Result;
-            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            {
-                throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
-            }
-            var txt = await response.Content.ReadAsStringAsync(token);
-            return Deserialize<T>(txt);
-        }
-
-        public async IAsyncEnumerable<T> RestStream<T>(string path, [EnumeratorCancellation] CancellationToken token = default) where T : class
-        {
-            var stream = await _httpClient.GetStreamAsync(path, token);
-            using StreamReader reader = new StreamReader(stream);
-
-            while (true)
-            {
-                T result;
-                try
-                {
-                    result = await Next<T>(reader, "data:", token);
-                }
-                catch (OperationCanceledException e)
-                {
-                    throw e;
-                }
-                catch (Exception error)
-                {
-                    _logger.LogError("Failed to get next stream event: {0}", error);
-                    break;
-                }
-                yield return result;
-            }
-            yield break;
-        }
-
-        private async Task<T> Next<T>(StreamReader reader, string dataPrefix = "data:", CancellationToken token = default) where T : class
-        {
-            StringBuilder messageBuilder = new StringBuilder();
-
-            string? line;
-            while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync(token)))
-            {
-                if (line.StartsWith(dataPrefix))
-                {
-                    messageBuilder.Append(line.Substring(dataPrefix.Length).TrimStart());
-                    _logger.LogDebug("got line {0}", line);
-                }
-                else
-                {
-                    _logger.LogError("Unable to deserialize message: {0}", line);
-                }
-            }
-
-            return Deserialize<T>(messageBuilder.ToString());
-        }
-
-        internal static T Deserialize<T>(string text) where T : class
-        {
-            var options = new JsonSerializerOptionsBuilder()
-                            .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
-                            .Build();
-
-            return JsonSerializer.Deserialize<T>(text, options)
-                ?? throw new Exception($"Failed to deserialize REST call reponse to type: {typeof(T).Name}");
-        }
-
-        public async Task<MeInfo> Me(CancellationToken token)
-        {
-            return await RestCall<MeInfo>("/me", token);
-        }
-
-        public async Task<YagnaAgreement> GetAgreement(string agreementId, CancellationToken token = default)
-        {
-            return await RestCall<YagnaAgreement>($"/market-api/v1/agreements/{agreementId}", token);
-        }
-
-        public async Task<ActivityStatePair> GetState(string activityId, CancellationToken token = default)
-        {
-            return await RestCall<ActivityStatePair>($"/activity-api/v1/activity/{activityId}/state", token);
-        }
-
-        public async IAsyncEnumerable<TrackingEvent> ActivityMonitorStream([EnumeratorCancellation] CancellationToken token = default)
-        {
-            await foreach (var item in RestStream<TrackingEvent>($"/activity-api/v1/_monitor", token))
-            {
-                yield return item;
-            }
-        }
-
         public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken = default)
         {
             //yagna is starting and /me won't work until all services are running
@@ -337,7 +238,7 @@ namespace Golem.Yagna
 
                 try
                 {
-                    MeInfo meInfo = await Me(cancellationToken);
+                    MeInfo meInfo = await Api.Me(cancellationToken);
                     return meInfo.Identity;
                 }
                 catch (Exception)
@@ -349,20 +250,18 @@ namespace Golem.Yagna
         }
 
         /// TODO: Reconsider API of this function.
-        public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobsUpdater jobs)
+        public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobs jobs)
         {
-            return new ActivityLoop(this, token, _logger).Start(
+            return new ActivityLoop(Api, jobs, _logger).Start(
                 setCurrentJob,
-                jobs,
                 token
             );
         }
 
         /// TODO: Reconsider API of this function.
-        public Task StartInvoiceEventsLoop(CancellationToken token, IJobsUpdater jobs)
+        public Task StartInvoiceEventsLoop(CancellationToken token, IJobs jobs)
         {
-            token.Register(_httpClient.CancelPendingRequests);
-            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(jobs.UpdatePaymentStatus, jobs.UpdatePaymentConfirmation);
+            return new InvoiceEventsLoop(Api, token, _logger, jobs).Start();
         }
     }
 }

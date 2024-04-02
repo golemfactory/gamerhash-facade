@@ -47,7 +47,7 @@
     <Window.DataTemplates>
         <DataTemplate DataType="{x:Type facade:IJob}">
             <Border Classes="Panel" ToolTip.ShowDelay="600">
-                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                     <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Id</TextBlock>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Id}"/>
 
@@ -60,13 +60,16 @@
                     <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Payment Status</TextBlock>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PaymentStatus}"/>
 
-                    <StackPanel Grid.Row="4" Grid.Column="0">
+                    <TextBlock Grid.Row="4" Grid.Column="0" Classes="Label">Timestamp</TextBlock>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Timestamp}"/>
+
+                    <StackPanel Grid.Row="5" Grid.Column="0">
                         <TextBlock FontSize="12" FontWeight="Bold"></TextBlock>
                         <TextBlock FontSize="12" FontWeight="Bold">Price</TextBlock>
                         <TextBlock FontSize="12" FontWeight="Bold">Usage</TextBlock>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                    <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
                         <StackPanel>
                             <TextBlock FontSize="12" FontWeight="Bold">Start Price</TextBlock>
                             <TextBlock Text="{Binding Price.StartPrice, Mode=TwoWay}" Width="120" />
@@ -92,8 +95,8 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <TextBlock Grid.Row="5" Grid.Column="0" Classes="Label">Current Reward</TextBlock>
-                    <TextBlock Grid.Row="5" Grid.Column="1" VerticalAlignment="Center" Text="{Binding CurrentReward}"/>
+                    <TextBlock Grid.Row="6" Grid.Column="0" Classes="Label">Current Reward</TextBlock>
+                    <TextBlock Grid.Row="6" Grid.Column="1" VerticalAlignment="Center" Text="{Binding CurrentReward}"/>
                 </Grid>
                 <ToolTip.Tip>
                     <StackPanel>

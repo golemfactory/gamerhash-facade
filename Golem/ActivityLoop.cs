@@ -15,29 +15,21 @@ using Microsoft.Extensions.Logging;
 
 class ActivityLoop
 {
-    private const string _dataPrefix = "data:";
     private static readonly TimeSpan s_reconnectDelay = TimeSpan.FromSeconds(10);
-    private static readonly JsonSerializerOptions s_serializerOptions = new JsonSerializerOptions()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
-    };
 
-    private readonly YagnaService _yagna;
-    private readonly CancellationToken _token;
+    private readonly YagnaApi _yagnaApi;
+    private readonly IJobs _jobs;
     private readonly ILogger _logger;
 
-    public ActivityLoop(YagnaService yagna, CancellationToken token, ILogger logger)
+    public ActivityLoop(YagnaApi yagnaApi, IJobs jobs, ILogger logger)
     {
-        _yagna = yagna;
-        _token = token;
+        _yagnaApi = yagnaApi;
+        _jobs = jobs;
         _logger = logger;
     }
 
     public async Task Start(
         Action<Job?> setCurrentJob,
-        IJobsUpdater jobs,
         CancellationToken token)
     {
         _logger.LogInformation("Starting monitoring activities");
@@ -49,55 +41,28 @@ class ActivityLoop
             while (!token.IsCancellationRequested)
             {
                 _logger.LogDebug("Monitoring activities");
-                var now = DateTime.Now;
-                if (newReconnect > now)
-                {
-                    await Task.Delay(newReconnect - now);
-                }
-                newReconnect = now + s_reconnectDelay;
+                newReconnect = await ReconnectDelay(newReconnect, token);
+
                 token.ThrowIfCancellationRequested();
 
                 try
                 {
-                    await foreach (var trackingEvent in _yagna.ActivityMonitorStream(token))
+                    await foreach (var trackingEvent in _yagnaApi.ActivityMonitorStream(token))
                     {
                         var activities = trackingEvent?.Activities ?? new List<ActivityState>();
-                        List<Job> currentJobs = await jobs.UpdateJobs(activities);
-
-                        if (currentJobs.Count == 0)
+                        
+                        List<Job> currentJobs = await UpdateJobs(_jobs, activities);
+                        
+                        var job = SelectCurrentJob(currentJobs);
+                        setCurrentJob(job);
+                        if(job == null)
                         {
-                            _logger.LogDebug("Cleaning current job field");
-                            setCurrentJob(null);
-                            //TODO why jobs terminated as Idle stay Idle?
-                            jobs.SetAllJobsFinished();
-                        }
-                        else if (currentJobs.Count == 1)
-                        {
-                            var job = currentJobs[0];
-                            _logger.LogDebug($"Setting current job to {job.Id}, status {job.Status}");
-                            setCurrentJob(job);
-                        }
-                        else
-                        {
-                            _logger.LogWarning($"Multiple ({currentJobs.Count}) non terminated jobs");
-                            currentJobs.ForEach(job => _logger.LogWarning($"Non terminated job {job.Id}, status {job.Status}"));
-                            Job? job = null;
-                            if ((job = currentJobs.First(job => job.Status == JobStatus.DownloadingModel || job.Status == JobStatus.Computing)) != null)
-                            {
-                                setCurrentJob(job);
-                            }
-                            else if ((job = currentJobs.First(job => job.Status == JobStatus.Idle)) != null)
-                            {
-                                setCurrentJob(job);
-                            }
-                            else
-                            {
-                                setCurrentJob(null);
-                            }
+                            // Sometimes finished jobs end up in Idle state
+                            _jobs.SetAllJobsFinished();
                         }
                     }
                 }
-                catch (TaskCanceledException)
+                catch (OperationCanceledException)
                 {
                     _logger.LogDebug("Activity loop cancelled");
                     return;
@@ -116,8 +81,67 @@ class ActivityLoop
         finally
         {
             _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
-            jobs.SetAllJobsFinished();
+            _jobs.SetAllJobsFinished();
             setCurrentJob(null);
         }
+    }
+
+    private Job? SelectCurrentJob(List<Job> currentJobs)
+    {
+        if (currentJobs.Count == 0)
+        {
+            _logger.LogDebug("Cleaning current job field");
+            
+            return null;
+        }
+        else if (currentJobs.Count == 1)
+        {
+            return currentJobs[0];
+        }
+        else
+        {
+            _logger.LogWarning($"Multiple ({currentJobs.Count}) non terminated jobs");
+            currentJobs.ForEach(job => _logger.LogWarning($"Non terminated job {job.Id}, status {job.Status}"));
+
+            var job = currentJobs
+                .Where(job => new[] {
+                                        JobStatus.DownloadingModel,
+                                        JobStatus.Computing,
+                                        JobStatus.Idle
+                    }.Contains(job.Status))
+                .OrderByDescending(job => job.Status == JobStatus.DownloadingModel)
+                .ThenByDescending(job => job.Status == JobStatus.Computing)
+                .ThenByDescending(job => job.Status == JobStatus.Idle)
+                .FirstOrDefault();
+
+            return job;
+        }
+    }
+
+    private static async Task<DateTime> ReconnectDelay(DateTime newReconnect, CancellationToken token)
+    {
+        var now = DateTime.Now;
+        if (newReconnect > now)
+        {
+            await Task.Delay(newReconnect - now, token);
+        }
+        newReconnect = now + s_reconnectDelay;
+        return newReconnect;
+    }
+
+    public async Task<List<Job>> UpdateJobs(IJobs jobs, List<ActivityState> activityStates)
+    {
+        var result = await Task.WhenAll(
+            activityStates
+                .Select(async d => {
+                        var usage = d.Usage!=null
+                                ? GolemUsage.From(d.Usage)
+                                : null;
+                        return await jobs.UpdateJob(d.Id, null, usage);
+                    }
+                )
+        );
+
+        return result.ToList();
     }
 }

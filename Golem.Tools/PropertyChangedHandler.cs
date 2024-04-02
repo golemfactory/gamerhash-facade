@@ -13,23 +13,21 @@ namespace Golem.Tools
 
         public V? Value { get; private set; }
 
-        public PropertyChangedHandler(string propertyName, Action<V?> handler, ILoggerFactory? loggerFactory = null)
+        public PropertyChangedHandler(string propertyName, Action<V?> handler, ILoggerFactory loggerFactory)
         {
             Handler = handler;
             PropertyName = propertyName;
             Value = default;
 
-            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
             _logger = loggerFactory.CreateLogger<PropertyChangedHandler<T, V>>();
         }
 
-        public PropertyChangedHandler(string propertyName, ILoggerFactory? loggerFactory = null)
+        public PropertyChangedHandler(string propertyName, ILoggerFactory loggerFactory)
         {
             Handler = (v) => { };
             PropertyName = propertyName;
             Value = default;
 
-            loggerFactory ??= NullLoggerFactory.Instance;
             _logger = loggerFactory.CreateLogger<PropertyChangedHandler<T, V>>();
         }
 

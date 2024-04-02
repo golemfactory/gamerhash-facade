@@ -133,7 +133,7 @@ namespace Golem
 
         public Task<List<IJob>> ListJobs(DateTime since)
         {
-            return _jobs.List();
+            return _jobs.List(since);
         }
 
         public async Task Resume()
@@ -306,12 +306,10 @@ namespace Golem
             }
         }
 
-        public Golem(string golemPath, string? dataDir, ILoggerFactory? loggerFactory, Network network)
+        public Golem(string golemPath, string? dataDir, ILoggerFactory loggerFactory, Network network)
         {
             var prov_datadir = dataDir != null ? Path.Combine(dataDir, "provider") : "./provider";
             var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : "./yagna";
-
-            loggerFactory ??= NullLoggerFactory.Instance;
 
             _logger = loggerFactory.CreateLogger<Golem>();
             _yagnaCancellationtokenSource = new CancellationTokenSource();
@@ -337,6 +335,8 @@ namespace Golem
 
         private void SetCurrentJob(Job? job)
         {
+            _logger.LogDebug($"Setting current job to {job?.Id}, status {job?.Status}");
+            
             if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
             {
                 CurrentJob = job;
