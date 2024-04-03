@@ -78,7 +78,7 @@ namespace Golem.Yagna
 
         public string AddIdentity(string nodeID)
         {
-            var args = $"rule add {GetRuleCommand()} by-node-id --address {nodeID}".Split().ToList();
+            var args = $"rule add {GetRuleCommand()} identity {nodeID}".Split().ToList();
             return _provider.ExecToText(args);
         }
 
