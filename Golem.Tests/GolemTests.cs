@@ -226,6 +226,22 @@ namespace Golem.Tests
             Assert.Equal(network, golem.Network);
         }
 
+        [Fact]
+        public async Task BlacklistNode()
+        {
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
+            output.WriteLine("Path: " + golemPath);
+
+            var golem = await TestUtils.Golem(golemPath, loggerFactory) as Golem;
+
+            await golem!.BlacklistNode("0x1234567890123456789012345678901234567890");
+            var rules = golem.Blacklist.List(Yagna.RuleCategory.Blacklist);
+
+            Assert.Contains("0x1234567890123456789012345678901234567890", rules!.Identity);
+            Assert.True(rules.Enabled);
+        }
+
         public void Dispose()
         {
             XunitContext.Flush();
