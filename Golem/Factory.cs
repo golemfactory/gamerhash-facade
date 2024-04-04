@@ -5,23 +5,78 @@ using GolemLib;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using System.Net.Http;
+
 namespace Golem
 {
     public class Factory : IFactory
     {
-        public Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet = true)
+        public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet = true)
         {
             var binaries = Path.Combine(modulesDir, "golem");
             var datadir = Path.Combine(modulesDir, "golem-data");
 
+            var logger = loggerFactory ?? NullLoggerFactory.Instance;
             var network = Factory.Network(mainnet);
+            var golem = new Golem(binaries, datadir, logger, network);
 
-            return Task.FromResult(new Golem(binaries, datadir, loggerFactory ?? NullLoggerFactory.Instance, network) as IGolem);
+            await ConfigureAccess(golem, binaries, mainnet, logger);
+
+            return golem as IGolem;
         }
 
-        public static Network Network(bool mainnet) {
+        public static Network Network(bool mainnet)
+        {
             return mainnet ? Yagna.Types.Network.Polygon : Yagna.Types.Network.Holesky;
         }
-    }
 
+        private static async Task ConfigureAccess(Golem golem, string dir, bool mainnet, ILoggerFactory loggerFactory)
+        {
+            // Requstors are filtered only on mainnet. We assume that on testnet Provider
+            // will work in developer mode for testing purposes, so blocking requestors
+            // would make testing harder.
+            golem.FilterRequestors = mainnet;
+            golem.BlacklistEnabled = true;
+
+            foreach (var url in CertificatesUrls())
+            {
+                try
+                {
+                    var path = Path.Combine(dir, Path.GetFileName(url));
+                    await DownloadCert(url, path);
+                    await golem.AllowCertified(path);
+                }
+                catch (Exception e)
+                {
+                    loggerFactory.CreateLogger<Factory>().LogError(e, $"Failed to download certificate: {url}");
+                }
+
+            }
+        }
+
+        private static List<string> CertificatesUrls()
+        {
+            return new List<string>
+            {
+                "https://ca.golem.network/cert/scalepoint.signed.json",
+            };
+        }
+
+        private static async Task DownloadCert(string url, string filePath)
+        {
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                using var fs = new FileStream(filePath, FileMode.OpenOrCreate);
+                fs.SetLength(0);
+                await response.Content.CopyToAsync(fs);
+            }
+            else
+            {
+                throw new Exception("Failed to download: " + response.ToString());
+            }
+        }
+
+    }
 }

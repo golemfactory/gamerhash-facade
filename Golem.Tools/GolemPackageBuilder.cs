@@ -18,7 +18,7 @@ namespace Golem.Tools
 {
     public class PackageBuilder
     {
-        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.16.0-ai-rc8";
+        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.16.0-ai-rc12";
         public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.2.0-rc8";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
@@ -216,7 +216,7 @@ namespace Golem.Tools
             return Path.Combine(ModulesDir(test_dir), "plugins");
         }
 
-        internal static async Task<string> Download(string url)
+        public static async Task<string> Download(string url)
         {
             var name = Path.GetFileName(url);
             var target_dir = Path.Combine(Path.GetTempPath(), "gamerhash_facade_tests");
@@ -320,9 +320,14 @@ namespace Golem.Tools
             }
         }
 
-        public  static StreamReader ReadResource(string filename) {
-            var path = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", "resources", filename);
-            return new StreamReader(path);
+        public static string ResourcePath(string filename)
+        {
+            return Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", "resources", filename);
+        }
+
+        public static StreamReader ReadResource(string filename)
+        {
+            return new StreamReader(ResourcePath(filename));
         }
 
         static async Task<string> DownloadArchiveArtifact(string artifact, string tag, string repository)
