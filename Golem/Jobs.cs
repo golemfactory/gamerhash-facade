@@ -161,16 +161,12 @@ class Jobs : IJobs
     {
         var job = await GetOrCreateJob(invoice.AgreementId);
 
-        var paymentStatus = GetPaymentStatus(invoice.Status);
-        if (paymentStatus == GolemLib.Types.PaymentStatus.Settled)
-        {
-            var payments = await _yagna.Api.GetPayments(null);
-            var paymentsForRecentJob = payments
-                .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId) || p.ActivityPayments.Exists(ap => invoice.ActivityIds.Contains(ap.ActivityId)))
-                .ToList();
-            job.PaymentConfirmation = paymentsForRecentJob;
-        }
-        job.PaymentStatus = paymentStatus;
+        var payments = await _yagna.Api.GetPayments(null);
+        var paymentsForRecentJob = payments
+            .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId) || p.ActivityPayments.Exists(ap => invoice.ActivityIds.Contains(ap.ActivityId)))
+            .ToList();
+        job.PaymentConfirmation = paymentsForRecentJob;
+        job.PaymentStatus = IntoPaymentStatus(invoice.Status);
 
         return job;
     }
@@ -217,7 +213,7 @@ class Jobs : IJobs
         return job;
     }
 
-    public static GolemLib.Types.PaymentStatus GetPaymentStatus(InvoiceStatus status)
+    private static GolemLib.Types.PaymentStatus IntoPaymentStatus(InvoiceStatus status)
     {
         return status switch
         {
