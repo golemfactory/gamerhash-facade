@@ -51,7 +51,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             output.WriteLine("Path: " + golemPath);
 
-            var golem =  await TestUtils.Golem(golemPath, loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
             var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
@@ -65,6 +65,34 @@ namespace Golem.Tests
             await stopTask;
 
             Assert.Equal(GolemStatus.Off, status.Value);
+        }
+
+        [Fact]
+        public async Task StartStop_ConfigurableDataDir()
+        {
+            var loggerFactory = CreateLoggerFactory();
+            string golemPath = await PackageBuilder.BuildTestDirectory();
+            output.WriteLine("Path: " + golemPath);
+
+            var dataDir = Path.Combine(golemPath, "test-data");
+            if (Directory.Exists(dataDir))
+                Directory.Delete(Path.Combine(golemPath, dataDir));
+            var dataDirDefault = Path.Combine(golemPath, "golem-data");
+            if (Directory.Exists(dataDirDefault))
+                Directory.Delete(Path.Combine(golemPath, dataDirDefault));
+
+            var golem = await TestUtils.Golem(golemPath, loggerFactory, dataDir);
+
+            var startTask = golem.Start();
+            await startTask;
+            var stopTask = golem.Stop();
+            await stopTask;
+
+            Assert.True(File.Exists(Path.Combine(dataDir, "yagna", "yagna.db")));
+            Assert.True(Directory.Exists(Path.Combine(dataDir, "provider", "exe-unit")));
+
+            Assert.False(File.Exists(Path.Combine(dataDirDefault, "yagna", "yagna.db")));
+            Assert.False(Directory.Exists(Path.Combine(dataDirDefault, "provider", "exe-unit")));
         }
 
         [Fact]
