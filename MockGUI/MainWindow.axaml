@@ -41,13 +41,13 @@
 
     <Window.Resources>
         <view:BytesListConverter x:Key="listConverter"/>
-        <view:SignatureVerificationConverter x:Key="signatureVerificationConverter"/>
+        <view:SignatureConverter x:Key="signatureConverter"/>
     </Window.Resources>
 
     <Window.DataTemplates>
         <DataTemplate DataType="{x:Type facade:IJob}">
             <Border Classes="Panel" ToolTip.ShowDelay="600">
-                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                     <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Id</TextBlock>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Id}"/>
 
@@ -60,13 +60,16 @@
                     <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Payment Status</TextBlock>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PaymentStatus}"/>
 
-                    <StackPanel Grid.Row="4" Grid.Column="0">
+                    <TextBlock Grid.Row="4" Grid.Column="0" Classes="Label">Timestamp</TextBlock>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Timestamp}"/>
+
+                    <StackPanel Grid.Row="5" Grid.Column="0">
                         <TextBlock FontSize="12" FontWeight="Bold"></TextBlock>
                         <TextBlock FontSize="12" FontWeight="Bold">Price</TextBlock>
                         <TextBlock FontSize="12" FontWeight="Bold">Usage</TextBlock>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                    <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
                         <StackPanel>
                             <TextBlock FontSize="12" FontWeight="Bold">Start Price</TextBlock>
                             <TextBlock Text="{Binding Price.StartPrice, Mode=TwoWay}" Width="120" />
@@ -92,8 +95,8 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <TextBlock Grid.Row="5" Grid.Column="0" Classes="Label">Current Reward</TextBlock>
-                    <TextBlock Grid.Row="5" Grid.Column="1" VerticalAlignment="Center" Text="{Binding CurrentReward}"/>
+                    <TextBlock Grid.Row="6" Grid.Column="0" Classes="Label">Current Reward</TextBlock>
+                    <TextBlock Grid.Row="6" Grid.Column="1" VerticalAlignment="Center" Text="{Binding CurrentReward}"/>
                 </Grid>
                 <ToolTip.Tip>
                     <StackPanel>
@@ -107,7 +110,7 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type types:Payment}">
             <Border Classes="Panel">
-                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                     <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Amount</TextBlock>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Amount}"/>
                 
@@ -125,25 +128,32 @@
                         Text="{Binding SignedBytes, Converter={StaticResource listConverter}, ConverterParameter=string}"/>
                     
                     <TextBlock Grid.Row="4" Grid.Column="0" Classes="Label">Verified</TextBlock>
-                    <TextBlock Grid.Row="4" Grid.Column="1"
-                        HorizontalAlignment="Left"
-                        MaxWidth="970"
-                        TextWrapping="Wrap"
-                        Text="{Binding, Converter={StaticResource signatureVerificationConverter}}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding, Converter={StaticResource signatureConverter}, ConverterParameter=Validate}"/>
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Classes="Label">Recovered NodeId</TextBlock>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding, Converter={StaticResource signatureConverter}, ConverterParameter=RetrieveNodeId}"/>
+
+                    <TextBlock Grid.Row="6" Grid.Column="0" Classes="Label">Recovered Public Key</TextBlock>
+                    <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding, Converter={StaticResource signatureConverter}, ConverterParameter=RetrievePubKey}"/>
                 </Grid>
             </Border>
         </DataTemplate>
     </Window.DataTemplates>
 
     <StackPanel Margin="40">
-        <TextBlock Margin="0 5" FontSize="34" FontWeight="Bold">AI Provider</TextBlock>
+        <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto">
+            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0 5" FontSize="34" FontWeight="Bold">AI Provider</TextBlock>
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="15" FontSize="18" VerticalAlignment="Center" IsVisible="{Binding Golem.Mainnet}">Mainnet:</TextBlock>
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="15" FontSize="18" VerticalAlignment="Center" IsVisible="{Binding !Golem.Mainnet}">Testnet:</TextBlock>
+            <TextBlock Grid.Row="0" Grid.Column="2" Margin="15" FontSize="18" VerticalAlignment="Center" Text="{Binding Golem.Network, Mode=OneWay}" />
+        </Grid>
         <StackPanel Orientation="Horizontal">
             <StackPanel>
                 <Border Classes="Panel">
                     <StackPanel Margin="20">
                         <TextBlock Classes="Section">Node Info</TextBlock>
 
-                        <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                        <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                             <TextBlock Grid.Row="0" Grid.Column="0" Classes="Label">Status</TextBlock>
                             <TextBlock Grid.Row="0" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.Status}"/>
 
@@ -151,7 +161,7 @@
                             <TextBlock Grid.Row="1" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NodeId}"/>
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Classes="Label">Wallet Address</TextBlock>
-                            <TextBox Grid.Row="2" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.WalletAddress, Mode=TwoWay}"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.WalletAddress, Mode=TwoWay}" IsEnabled="{Binding !Golem.Mainnet}" />
 
                             <TextBlock Grid.Row="3" Grid.Column="0" Classes="Label">Network Speed</TextBlock>
                             <TextBox Grid.Row="3" Grid.Column="1" Margin="0 5" FontSize="12" FontWeight="Bold" MinWidth="200" Text="{Binding Golem.NetworkSpeed, Mode=TwoWay}"/>
@@ -178,6 +188,12 @@
                                     <NumericUpDown Value="{Binding Golem.Price.NumRequests, Mode=TwoWay}" Width="150" Increment="0.001" Minimum="0" Maximum="10"/>
                                 </StackPanel>
                             </StackPanel>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Classes="Label">Blacklist</TextBlock>
+                            <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding Golem.BlacklistEnabled, Mode=TwoWay}" FontSize="12" FontWeight="Bold">Enabled</CheckBox>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Classes="Label">AllowList</TextBlock>
+                            <CheckBox Grid.Row="6" Grid.Column="1" IsChecked="{Binding Golem.FilterRequestors, Mode=TwoWay}" FontSize="12" FontWeight="Bold">Enabled</CheckBox>
                         </Grid>
                     </StackPanel>
                 </Border>

@@ -2,6 +2,7 @@ using System.IO;
 using System.IO.Compression;
 using System.IO.Enumeration;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.AccessControl;
@@ -17,8 +18,8 @@ namespace Golem.Tools
 {
     public class PackageBuilder
     {
-        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.16.0-ai-rc6";
-        public static string CURRENT_RUNTIME_VERSION = "v0.1.0";
+        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.16.0-ai-rc12";
+        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.2.0-rc8";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
@@ -55,7 +56,7 @@ namespace Golem.Tools
             return dir;
         }
 
-        public async static Task<string> BuildTestDirectory(string test_name)
+        public async static Task<string> BuildTestDirectory([CallerMemberName] string test_name = "test")
         {
             var dir = InitTestDirectory(test_name);
             var system = System();
@@ -187,12 +188,12 @@ namespace Golem.Tools
 
         public static string BinariesDir(string test_dir)
         {
-            return Path.Combine(test_dir, "modules", "golem");
+            return Path.Combine(ModulesDir(test_dir), "golem");
         }
 
         public static string DataDir(string test_dir)
         {
-            return Path.Combine(test_dir, "modules", "golem-data");
+            return Path.Combine(ModulesDir(test_dir), "golem-data");
         }
 
         public static string ModulesDir(string test_dir)
@@ -212,10 +213,10 @@ namespace Golem.Tools
 
         public static string ExeUnitsDir(string test_dir)
         {
-            return Path.Combine(test_dir, "modules", "plugins");
+            return Path.Combine(ModulesDir(test_dir), "plugins");
         }
 
-        internal static async Task<string> Download(string url)
+        public static async Task<string> Download(string url)
         {
             var name = Path.GetFileName(url);
             var target_dir = Path.Combine(Path.GetTempPath(), "gamerhash_facade_tests");
@@ -319,6 +320,15 @@ namespace Golem.Tools
             }
         }
 
+        public static string ResourcePath(string filename)
+        {
+            return Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? "", "resources", filename);
+        }
+
+        public static StreamReader ReadResource(string filename)
+        {
+            return new StreamReader(ResourcePath(filename));
+        }
 
         static async Task<string> DownloadArchiveArtifact(string artifact, string tag, string repository)
         {

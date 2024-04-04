@@ -18,9 +18,9 @@ namespace Golem.Model
             Unresponsive,
         }
 
-        public string? Id { get; set; }
+        public required string Id { get; set; }
 
-        public string? AgreementId { get; set; }
+        public required string AgreementId { get; set; }
 
         public StateType State { get; set; }
 
@@ -28,8 +28,8 @@ namespace Golem.Model
 
         public string? ExeUnit { get; set; }
     }
-    
-    class TrackingEvent
+
+    public class TrackingEvent
     {
         public DateTime Ts { get; set; }
 

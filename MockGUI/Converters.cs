@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
+using System.Linq;
 
 using Avalonia.Data;
 using Avalonia.Data.Converters;
-
-using CommandLine;
 
 using GolemLib.Types;
 
@@ -14,6 +12,8 @@ using Nethereum.Signer;
 using Nethereum.Util;
 
 using Newtonsoft.Json;
+
+using SHA3.Net;
 
 namespace MockGUI.View
 {
@@ -53,9 +53,9 @@ namespace MockGUI.View
         }
     }
 
-    public class SignatureVerificationConverter : IValueConverter
+    public class SignatureConverter : IValueConverter
     {
-        public static readonly SignatureVerificationConverter Instance = new();
+        public static readonly SignatureConverter Instance = new();
 
         public EthECDSASignature ExtractEcdsaSignature(byte[] signatureArray)
         {
@@ -72,29 +72,90 @@ namespace MockGUI.View
             return ecdaSignature;
         }
 
-        private bool VerifySignature(byte[] signature, byte[] signedBytes)
+        private static byte[] Sha3_256(byte[] signedBytes)
         {
-            byte[] msgHash = new Sha3Keccack().CalculateHash(signedBytes);
+            using var hasher = Sha3.Sha3256();
+            return hasher.ComputeHash(signedBytes);
+        }
 
-            EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
-            EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
-            bool verified = key.Verify(msgHash, ethSignature);
+        private bool VerifySignature(byte[] signature, byte[] signedBytes, string address)
+        {
+            try
+            {
+                byte[] msgHash = Sha3_256(signedBytes);
 
-            return verified;
+                EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
+                EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
+                bool verified = key.Verify(msgHash, ethSignature);
+
+                return verified && address == key.GetPublicAddress().ToLower();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        private string RecoverNodeId(byte[] signature, byte[] signedBytes)
+        {
+            try
+            {
+                byte[] msgHash = Sha3_256(signedBytes);
+
+                EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
+                EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
+                return key.GetPublicAddress();
+            }
+            catch (Exception e)
+            {
+                return $"Failed to recover: {e}";
+            }
+        }
+
+        private string RecoverPubKey(byte[] signature, byte[] signedBytes)
+        {
+            try
+            {
+                byte[] msgHash = Sha3_256(signedBytes);
+
+                EthECDSASignature ethSignature = ExtractEcdsaSignature(signature);
+                EthECKey key = EthECKey.RecoverFromSignature(ethSignature, msgHash);
+                return "0x" + System.Convert.ToHexString(key.GetPubKey());
+            }
+            catch (Exception e)
+            {
+                return $"Failed to recover: {e}";
+            }
         }
 
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            if (value is not null and Payment)
+            if (value is not null and Payment && parameter is string target)
             {
                 var payment = (Payment)value;
+                if (payment.Signature == null || payment.SignedBytes == null)
+                {
+                    return "No signature";
+                }
 
-                return payment.Signature != null && payment.SignedBytes != null
-                    ? VerifySignature(payment.Signature.ToArray(), payment.SignedBytes.ToArray()) ? "true" : "false"
-                    : (object)false;
+                try
+                {
+                    var signature = payment.Signature.ToArray();
+                    var signed = payment.SignedBytes.ToArray();
+
+                    return target switch
+                    {
+                        "RetrieveNodeId" => RecoverNodeId(signature, signed),
+                        "RetrievePubKey" => RecoverPubKey(signature, signed),
+                        "Validate" => VerifySignature(signature, signed, payment.PayerId) ? "true" : "false",
+                        _ => VerifySignature(signature, signed, payment.PayerId) ? "true" : "false",
+                    };
+                }
+                catch (Exception e)
+                {
+                    return $"Failed: {e}";
+                }
             }
-
-            // Converter used for the wrong type
             return new BindingNotification(new InvalidCastException(), BindingErrorType.Error);
         }
 

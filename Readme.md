@@ -66,6 +66,34 @@ Gracefully shutdown application should take a few seconds to stop python script 
 
 You can hit Ctrl-C for the second time to forcefully kill application.
 
+#### Running example tasks on Mainnnet
+
+Requestor's mainnet key is encrypted using [git-crypt](https://github.com/AGWA/git-crypt).
+
+Before running tasks on mainnet decrypt the key: `git-crypt unlock`
+
+Run both _MockGUI_ and _ExampleRunner_ with `--mainnet` param.
+
+```ps1
+dotnet run --project MockGUI --golem modules --mainnet
+dotnet run --project ExampleRunner -- --golem modules --framework Dummy --mainnet
+```
+
+Verify transactions on https://polygonscan.com/address/0x97D933147C6BECb52c592685Cf1fA28fFc7a1F56#tokentxns
+
+(on mainnet MockGUI Provider has a wallet address set to the address of Requestor to not loose transmitted GLMs)
+
+##### Adding new users to git-crypt
+
+Download user's public key.
+
+```sh
+# Import it (it will print its id (later it can be done with `gpg --list-keys`))
+gpg --import user_pubkey.gpg
+# Add new user using printed ID (It creates a commit. Use --no-commit when adding multiple users)
+git-crypt add-gpg-user --trusted ABC123XYZ
+```
+
 ### Statuses of finished jobs
 
 Although Requestor should accept Invoices immediately or short time after task was finished, the payments aren't done immediately. Payment driver can batch payments together to avoid paying higher gas fees.
@@ -115,7 +143,7 @@ To create Golem Package with Automatic runtime run:
 
 ```ps1
 dotnet publish --configuration Release
-dotnet run --project Golem.Package --configuration Release build --dont-clean --dll-file-patterns "*.dll" --dll-dir "$(Get-Location)\Golem\bin\Debug\net7.0\publish"
+dotnet run --project Golem.Package --configuration Release build --dont-clean --dll-file-patterns "*.dll" --dll-dir "$(Get-Location)\Golem\bin\Release\net7.0\publish"
 # use `-cleanup 0` to avoid downloading and unpacking again `bin\automatic_runtime_package.zip` archive
 # use `-compress 0` to skip archiving `package` dir into `bin\dist_package.zip`
  .\scripts\automatic.ps1 -compress 1 -cleanup 1

@@ -5,9 +5,9 @@ public class BuildArgs
 {
     [Option('t', "target", Default = "package", Required = false, HelpText = "Directory where binaries will be generated relative to working dir")]
     public required string Target { get; set; }
-    [Option('y', "yagna-version", Default = "pre-rel-v0.16.0-ai-rc6", Required = false, HelpText = "Yagna version github tag")]
+    [Option('y', "yagna-version", Default = "pre-rel-v0.16.0-ai-rc12", Required = false, HelpText = "Yagna version github tag")]
     public required string GolemVersion { get; set; }
-    [Option('r', "runtime-version", Default = "v0.1.0", Required = false, HelpText = "Runtime version github tag")]
+    [Option('r', "runtime-version", Default = "pre-rel-v0.2.0-rc8", Required = false, HelpText = "Runtime version github tag")]
     public required string RuntimeVersion { get; set; }
     [Option('c', "dont-clean", Default = false, Required = false, HelpText = "Remove temporary directories")]
     public required bool DontClean { get; set; }
@@ -23,6 +23,6 @@ public class DownloadArgs
 {
     [Option('t', "target", Default = "modules", Required = false, HelpText = "Directory where binaries will be generated relative to working dir")]
     public required string Target { get; set; }
-    [Option('p', "version", Default = "v0.1.4", Required = false, HelpText = "Yagna version github tag")]
+    [Option('p', "version", Default = "v2.1.0", Required = false, HelpText = "Gamerhash module integration package version")]
     public required string PackageVersion { get; set; }
 }

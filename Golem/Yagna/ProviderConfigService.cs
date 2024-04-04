@@ -24,10 +24,9 @@ namespace Golem
 
             public Network Network { get; private set; }
 
-            public ProviderConfigService(Provider provider, Network network, ILoggerFactory? loggerFactory = null)
+            public ProviderConfigService(Provider provider, Network network, ILoggerFactory loggerFactory)
             {
                 _provider = provider;
-                loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
                 _logger = loggerFactory.CreateLogger<ProviderConfigService>();
                 Network = network;
             }
@@ -74,37 +73,6 @@ namespace Golem
                     _provider.PresetConfig.InitilizeDefaultPresets();
                     _provider.PresetConfig.UpdateAllPrices(value);
                 }
-            }
-
-            Dictionary<string, decimal> golemPriceToDict(GolemPrice price)
-            {
-                return new Dictionary<string, decimal>
-                    {
-                        { "ai-runtime.requests", price.NumRequests },
-                        { "golem.usage.duration_sec", price.EnvPerSec },
-                        { "golem.usage.gpu-sec", price.GpuPerSec },
-                        { "Initial", price.StartPrice }
-                    };
-            }
-
-            private GolemPrice presetIntoPrice(Preset preset)
-            {
-                if (!preset.UsageCoeffs.TryGetValue("ai-runtime.requests", out var numRequests))
-                    numRequests = 0;
-                if (!preset.UsageCoeffs.TryGetValue("golem.usage.duration_sec", out var duration))
-                    duration = 0;
-                if (!preset.UsageCoeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
-                    gpuSec = 0;
-
-                var initPrice = preset.InitialPrice ?? 0m;
-
-                return new GolemPrice
-                {
-                    EnvPerSec = duration,
-                    StartPrice = initPrice,
-                    GpuPerSec = gpuSec,
-                    NumRequests = numRequests
-                };
             }
 
             public void UpdateAccount(string? account, Action update)

@@ -1,4 +1,6 @@
 global using Xunit;
+global using Xunit.Abstractions;
+
 [assembly: CollectionBehavior(
     CollectionBehavior.CollectionPerClass,
     DisableTestParallelization = true,

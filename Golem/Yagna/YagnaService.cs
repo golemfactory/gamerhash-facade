@@ -2,10 +2,8 @@
 using Golem.Yagna.Types;
 using System.Text.Json;
 using Golem.Tools;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
-using System.Data;
 using System.Net.Http.Headers;
 
 namespace Golem.Yagna
@@ -19,48 +17,19 @@ namespace Golem.Yagna
         public bool Debug { get; set; }
 
         public string YagnaApiUrl { get; set; } = "";
-        public Network Network { get; set; } = Network.Holesky;
+        public Network Network { get; set; } = Factory.Network(true);
         public PaymentDriver PaymentDriver { get; set; } = PaymentDriver.ERC20;
-    }
-
-
-
-    //[JsonObject(MemberSerialization.OptIn)]
-    public class IdInfo
-    {
-        // [JsonPropertyName("alias")]
-        public string? Alias { get; set; }
-
-        // [JsonPropertyName("default")]
-        public bool IsDefault { get; set; }
-
-        // [JsonPropertyName("locked")]
-        public bool IsLocked { get; set; }
-
-        // [JsonPropertyName("nodeId")]
-        public string NodeId { get; set; }
-
-        public IdInfo(bool _isDefault, bool _isLocked, string? _alias, string _nodeId)
-        {
-            IsDefault = _isDefault;
-            IsLocked = _isLocked;
-            Alias = _alias;
-            NodeId = _nodeId;
-        }
-
-        [JsonConstructor]
-        public IdInfo()
-        {
-            NodeId = "";
-        }
     }
 
     public class YagnaService
     {
+        public readonly YagnaStartupOptions Options;
         private readonly string _yaExePath;
         private readonly string? _dataDir;
-        private static Process? YagnaProcess { get; set; }
-        private readonly HttpClient _httpClient;
+        private Process? YagnaProcess { get; set; }
+        private SemaphoreSlim ProcLock { get; } = new SemaphoreSlim(1, 1);
+
+        public readonly YagnaApi Api;
         private readonly ILogger _logger;
 
         private EnvironmentBuilder Env
@@ -75,9 +44,11 @@ namespace Golem.Yagna
             }
         }
 
-        public YagnaService(string golemPath, string dataDir, ILoggerFactory? loggerFactory)
+        public YagnaService(string golemPath, string dataDir, YagnaStartupOptions startupOptions, ILoggerFactory loggerFactory)
         {
-            loggerFactory = loggerFactory == null ? NullLoggerFactory.Instance : loggerFactory;
+            Options = startupOptions;
+            Api = new YagnaApi(loggerFactory);
+
             _logger = loggerFactory.CreateLogger<YagnaService>();
             _yaExePath = Path.GetFullPath(Path.Combine(golemPath, ProcessFactory.BinName("yagna")));
             _dataDir = Path.GetFullPath(dataDir);
@@ -85,10 +56,6 @@ namespace Golem.Yagna
             {
                 throw new Exception($"File not found: {_yaExePath}");
             }
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
-            };
         }
 
         internal string ExecToText(params string[] arguments)
@@ -114,11 +81,6 @@ namespace Golem.Yagna
                 .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
                 .Build();
             return JsonSerializer.Deserialize<T>(text, options);
-        }
-
-        internal YagnaStartupOptions StartupOptions()
-        {
-            return YagnaOptionsFactory.CreateStartupOptions();
         }
 
         public IdService Ids
@@ -170,342 +132,136 @@ namespace Golem.Yagna
 
         public bool HasExited => YagnaProcess?.HasExited ?? true;
 
-        public bool Run(YagnaStartupOptions options, Action<int> exitHandler, CancellationToken cancellationToken)
+        public async Task Run(Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.AppKey);
+            Api.Authorize(Options.AppKey);
+            cancellationToken.Register(Api.CancelPendingRequests);
 
-            if (YagnaProcess != null || cancellationToken.IsCancellationRequested)
+            // Synchronizing of process creation is necessary to avoid scenario, when `YagnaSerice::Stop` is called
+            // during `YagnaSerice::Run` execution. There is race condition possible, when `YagnaProcess`
+            // is still null, but will be created in a moment and at the same time `YagnaSerice::Stop` will
+            // check that `YagnaProcess` is null and will not stop the process.
+            await ProcLock.WaitAsync(cancellationToken);
+            try
             {
-                return false;
-            }
-
-            string debugFlag = "";
-            if (options.Debug)
-            {
-                debugFlag = "--debug";
-            }
-
-            EnvironmentBuilder environment = Env;
-            environment = options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(options.YagnaApiUrl) : environment;
-            environment = options.PrivateKey != null ? environment.WithPrivateKey(options.PrivateKey) : environment;
-            environment = options.AppKey != null ? environment.WithAppKey(options.AppKey) : environment;
-
-            var args = $"service run {debugFlag}".Split();
-            YagnaProcess = ProcessFactory.StartProcess(_yaExePath, args, environment.Build());
-            ChildProcessTracker.AddProcess(YagnaProcess);
-
-            YagnaProcess.WaitForExitAsync(cancellationToken)
-                .ContinueWith(result =>
+                cancellationToken.ThrowIfCancellationRequested();
+                if (YagnaProcess != null)
                 {
-                    if(YagnaProcess!=null && YagnaProcess.HasExited)
+                    throw new GolemException("Yagna process is already running");
+                }
+
+                Api.Authorize(Options.AppKey);
+
+                string debugFlag = "";
+                if (Options.Debug)
+                {
+                    debugFlag = "--debug";
+                }
+
+                EnvironmentBuilder environment = Env;
+                environment = Options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(Options.YagnaApiUrl) : environment;
+                environment = Options.PrivateKey != null ? environment.WithPrivateKey(Options.PrivateKey) : environment;
+                environment = Options.AppKey != null ? environment.WithAppKey(Options.AppKey) : environment;
+
+                var args = $"service run {debugFlag}".Split();
+
+                YagnaProcess = await Task.Run(() => ProcessFactory.StartProcess(_yaExePath, args, environment.Build()));
+                ChildProcessTracker.AddProcess(YagnaProcess);
+
+                _ = YagnaProcess.WaitForExitAsync()
+                    .ContinueWith(async result =>
                     {
-                        var exitCode = YagnaProcess?.ExitCode ?? throw new GolemException("Unable to get Yagna process exit code");
-                        exitHandler(exitCode);
-                    }
-                    YagnaProcess = null;
-                });
-
-            cancellationToken.Register(async () =>
+                        // This code is not synchronized, to avoid deadlocks in case exitHandler will call any
+                        // functions on YagnaService.
+                        if (YagnaProcess != null && YagnaProcess.HasExited)
+                        {
+                            // If we can't acquire exitCode it is better to send any code to exiHandler,
+                            // than to throw an exception here. Otherwise exitHandler won't be called.
+                            var exitCode = YagnaProcess?.ExitCode ?? 1;
+                            await exitHandler(exitCode, "Yagna");
+                        }
+                        YagnaProcess = null;
+                    });
+            }
+            catch (Exception)
             {
-                _logger.LogInformation("Canceling Yagna process");
-                await Stop();
-            });
-
-            return !YagnaProcess.HasExited;
+                throw;
+            }
+            finally
+            {
+                ProcLock.Release();
+            }
         }
 
         public async Task Stop(int stopTimeoutMs = 30_000)
         {
-            if (YagnaProcess == null)
-                return;
-            if (YagnaProcess.HasExited)
+            // There is no symmetry in synchronization of `Run` and `Stop` methods. It is possible to call
+            // `YagnaService::Stop` multiple times, but `YagnaService::Run` can be called only once.
+            // We can't lock here for entire duration of `StopProcess`, because we would block another `Stop`.
+            //
+            // Spawning process and setting YagnaProcess should be atomic operation, but stopping process
+            // doesn't need to happen under the lock.
+            Process proc;
+            await ProcLock.WaitAsync();
+            try
             {
-                YagnaProcess = null;
-                return;
+                // Save reference to YagnaProcess under lock, because it can change before we will reach StopProcess.
+                if (YagnaProcess == null)
+                    return;
+                proc = YagnaProcess;
             }
+            finally
+            {
+                ProcLock.Release();
+            }
+
             _logger.LogInformation("Stopping Yagna process");
-            var cmd = YagnaProcess;
-            await ProcessFactory.StopProcess(cmd, stopTimeoutMs, _logger);
+
+            await ProcessFactory.StopProcess(proc, stopTimeoutMs, _logger);
             YagnaProcess = null;
         }
 
-        public async Task<MeInfo?> Me(CancellationToken cancellationToken)
+        public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken = default)
         {
-            var response = _httpClient.GetAsync($"/me", cancellationToken).Result;
-            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-            {
-                throw new Exception("Unauthorized call to yagna daemon - is another instance of yagna running?");
-            }
-            var txt = await response.Content.ReadAsStringAsync();
-            var options = new JsonSerializerOptionsBuilder()
-                            .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
-                            .Build();
-
-            return JsonSerializer.Deserialize<MeInfo>(txt, options) ?? null;
-        }
-
-        public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken)
-        {
-            string? identity = null;
-
             //yagna is starting and /me won't work until all services are running
-            for (int tries = 0; tries < 300; ++tries)
+            for (int tries = 0; tries < 200; ++tries)
             {
-                if (cancellationToken.IsCancellationRequested)
-                    return null;
-
                 Thread.Sleep(300);
+                cancellationToken.ThrowIfCancellationRequested();
 
                 if (HasExited) // yagna has stopped
                 {
-                    throw new Exception("Failed to start yagna ...");
+                    // In case there was race condition between HasExited and cancellation.
+                    cancellationToken.ThrowIfCancellationRequested();
+                    throw new Exception("Yagna failed to start when waiting for REST endpoints...");
                 }
 
                 try
                 {
-                    MeInfo? meInfo = await Me(cancellationToken);
-                    //sanity check
-                    if (meInfo != null)
-                    {
-                        if (String.IsNullOrEmpty(identity))
-                            identity = meInfo.Identity;
-                        break;
-                    }
-                    throw new Exception("Failed to get key");
-
+                    MeInfo meInfo = await Api.Me(cancellationToken);
+                    return meInfo.Identity;
                 }
                 catch (Exception)
                 {
                     // consciously swallow the exception... presumably REST call error...
                 }
             }
-            return identity;
+            return null;
         }
 
         /// TODO: Reconsider API of this function.
-        public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobsUpdater jobs)
+        public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobs jobs)
         {
-            token.Register(_httpClient.CancelPendingRequests);
-            return new ActivityLoop(_httpClient, token, _logger).Start(
+            return new ActivityLoop(Api, jobs, _logger).Start(
                 setCurrentJob,
-                jobs,
                 token
             );
         }
 
         /// TODO: Reconsider API of this function.
-        public Task StartInvoiceEventsLoop(CancellationToken token, IJobsUpdater jobs)
+        public Task StartInvoiceEventsLoop(CancellationToken token, IJobs jobs)
         {
-            token.Register(_httpClient.CancelPendingRequests);
-            return new InvoiceEventsLoop(_httpClient, token, _logger).Start(jobs.UpdatePaymentStatus, jobs.UpdatePaymentConfirmation);
+            return new InvoiceEventsLoop(Api, token, _logger, jobs).Start();
         }
-
-        private void BindOutputEventHandlers(Process proc)
-        {
-            proc.OutputDataReceived += OnOutputDataRecv;
-            proc.ErrorDataReceived += OnErrorDataRecv;
-            proc.BeginErrorReadLine();
-            proc.BeginOutputReadLine();
-        }
-
-        private void OnOutputDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            _logger.LogInformation($"{e.Data}");
-        }
-
-        private void OnErrorDataRecv(object sender, DataReceivedEventArgs e)
-        {
-            _logger.LogInformation($"{e.Data}");
-        }
-    }
-
-    public class KeyInfo
-    {
-        public string Name { get; set; }
-
-        public string? Key { get; set; }
-
-        public string Id { get; set; }
-
-        public string? Role { get; set; }
-
-        public DateTime? Created { get; set; }
-
-        [JsonConstructor]
-        public KeyInfo()
-        {
-            Name = "";
-            Id = "";
-        }
-    }
-
-    public class MeInfo
-    {
-        public string? Name { get; set; }
-        public string? Identity { get; set; }
-
-        public string? Role { get; set; }
-
-        [JsonConstructor]
-        public MeInfo()
-        {
-        }
-    }
-
-    public class AppKeyService
-    {
-        private readonly YagnaService _yagnaService;
-        private readonly string? _id;
-
-        internal AppKeyService(YagnaService yagnaService, string? id)
-        {
-            this._yagnaService = yagnaService;
-            this._id = id;
-        }
-
-        private string[] prepareArgs(params string[] arguments)
-        {
-            var execArgs = new List<string>(3 + arguments.Length);
-            execArgs.Add("--json");
-            if (_id != null)
-            {
-                execArgs.Add("--id");
-                execArgs.Add(_id);
-            }
-            execArgs.Add("app-key");
-            execArgs.AddRange(arguments);
-
-            return execArgs.ToArray();
-        }
-
-        private T? Exec<T>(params string[] arguments) where T : class
-        {
-            return _yagnaService.Exec<T>(prepareArgs(arguments));
-        }
-
-        private async Task<T?> ExecAsync<T>(params string[] arguments) where T : class
-        {
-            return await _yagnaService.ExecAsync<T>(prepareArgs(arguments));
-        }
-
-        public string? Create(string name)
-        {
-            return Exec<string>("create", name);
-        }
-        public async Task<string?> CreateAsync(string name)
-        {
-            return await ExecAsync<string>("create", name);
-        }
-
-        public void Drop(string name)
-        {
-            var opt = Exec<string>("drop", name);
-        }
-
-        public KeyInfo? Get(string name)
-        {
-            var keys = List();
-            if (keys is not null && keys.Count > 0)
-            {
-                if (keys.Count > 1)
-                {
-                    return keys.Where(x => x.Name.Equals(name)).FirstOrDefault();
-                }
-                else if (keys.Count == 1)
-                {
-                    return keys.First();
-                }
-            }
-            return null;
-        }
-
-        public List<KeyInfo> List()
-        {
-            var output = new List<KeyInfo>();
-            int tries = 0;
-            while (output.Count == 0)
-            {
-                List<KeyInfo>? o;
-                try
-                {
-                    o = Exec<List<KeyInfo>>("list");
-                }
-                catch (Exception e)
-                {
-                    Console.Error.WriteLine(e.ToString());
-                    o = null;
-                }
-                if (o != null)
-                    output.AddRange(o);
-                else
-                    Thread.Sleep(1000);
-                if (++tries == 10)
-                {
-                    throw new Exception("Failed to obtain key list from yagna service");
-                }
-            }
-            return output;
-        }
-
-        public async Task<List<KeyInfo>> ListAsync()
-        {
-            var output = await ExecAsync<List<KeyInfo>>("list");
-            return output ?? new List<KeyInfo>();
-        }
-
-
-    }
-
-    public class IdService
-    {
-        readonly YagnaService _yagna;
-
-        internal IdService(YagnaService yagna)
-        {
-            _yagna = yagna;
-        }
-
-        public List<IdInfo> List()
-        {
-            var table = _yagna.Exec<List<IdInfo>>("--json", "id", "list");
-            return table ?? new List<IdInfo>();
-        }
-    }
-
-
-    public class PaymentService
-    {
-        readonly YagnaService _yagna;
-
-        internal PaymentService(YagnaService yagna)
-        {
-            _yagna = yagna;
-        }
-
-        public void Init(string account)
-        {
-            var yagnaOptions = _yagna.StartupOptions();
-            _yagna.ExecToText("payment", "init", "--receiver", "--network", yagnaOptions.Network.Id, "--driver", yagnaOptions.PaymentDriver.Id, "--account", account);
-        }
-
-        public async Task<PaymentStatus?> Status(Network network, string driver, string account)
-        {
-            return await _yagna.ExecAsync<PaymentStatus>("--json", "payment", "status", "--network", network.Id, "--driver", driver, "--account", account);
-        }
-
-        public async Task<string?> ExitTo(Network network, string driver, string account, string? destination)
-        {
-            if (destination == null)
-            {
-                return null;
-            }
-            return await _yagna.ExecToTextAsync("--json", "payment", "exit", "--network", network.Id, "--driver", driver, "--account", account, "--to-address", destination);
-        }
-
-        public async Task<ActivityStatus?> ActivityStatus()
-        {
-            return await _yagna.ExecAsync<ActivityStatus>("--json", "activity", "status");
-        }
-
     }
 }

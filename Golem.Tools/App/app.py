@@ -1,5 +1,6 @@
 import asyncio
 import os
+import json
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,6 +17,7 @@ import asyncio
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 import colorama  # type: ignore
 
@@ -49,7 +51,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         "--payment-driver", "--driver", help="Payment driver name, for example `erc20`"
     )
     parser.add_argument(
-        "--payment-network", "--network", help="Payment network name, for example `goerli`"
+        "--payment-network", "--network", help="Payment network name, for example `holesky`"
     )
     parser.add_argument("--subnet-tag", help="Subnet name, for example `public`")
     parser.add_argument(
@@ -58,6 +60,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         help="Log file for YAPAPI; default: %(default)s",
     )
     parser.add_argument("--runtime", default="dummy", help="Runtime name, for example `automatic`")
+    parser.add_argument("--descriptor", default=None, help="Path to node descriptor file")
     return parser
 
 
@@ -145,27 +148,37 @@ class ProviderOnceStrategy(MarketStrategy):
 
 @dataclass
 class AiPayload(Payload):
-    image_url: str = prop("golem.!exp.ai.v1.srv.comp.ai.model")
-    image_fmt: str = prop("golem.!exp.ai.v1.srv.comp.ai.model-format", default="safetensors")
+    image_url: str = prop("golem.srv.comp.ai.model")
+    image_fmt: str = prop("golem.srv.comp.ai.model-format", default="safetensors")
+    
+    node_descriptor: Optional[dict] = prop("golem.!exp.gap-31.v0.node.descriptor", default=None)
 
     runtime: str = constraint(inf.INF_RUNTIME_NAME, default="dummy")
 
 
 class AiRuntimeService(Service):
     runtime: str
+    node_descriptor: Optional[str] = None
 
     @staticmethod
     async def get_payload():
-        # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
+        if AiRuntimeService.node_descriptor:
+            node_descriptor = json.loads(open(AiRuntimeService.node_descriptor, "r").read())
+        else:
+            node_descriptor = None
+        
         if AiRuntimeService.runtime == "dummy":
             return AiPayload(
                 image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
-                runtime="dummy"
+                runtime="dummy",
+                node_descriptor=node_descriptor
             )
         return AiPayload(
             image_url="hash:sha3:b2da48d618beddab1887739d75b50a3041c810bc73805a416761185998359b24:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true",
-            runtime="automatic"
+            runtime="automatic",
+            node_descriptor=node_descriptor
         )
+
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)
 
@@ -182,7 +195,7 @@ class AiRuntimeService(Service):
         self.strategy = strategy
 
 
-async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
+async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy"):
     strategy = ProviderOnceStrategy()
     async with Golem(
         budget=1.0,
@@ -192,6 +205,7 @@ async def main(subnet_tag, driver=None, network=None, runtime="dummy"):
         payment_network=network,
     ) as golem:
         AiRuntimeService.runtime = runtime
+        AiRuntimeService.node_descriptor = descriptor
         cluster = await golem.run_service(
             AiRuntimeService,
             instance_params=[
@@ -273,9 +287,10 @@ if __name__ == "__main__":
     run_golem_example(
         main(
             subnet_tag=args.subnet_tag,
+            descriptor=args.descriptor,
             driver=args.payment_driver,
             network=args.payment_network,
-            runtime=args.runtime
+            runtime=args.runtime,
         ),
         log_file=args.log_file,
     )

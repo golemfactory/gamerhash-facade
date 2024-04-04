@@ -1,185 +1,66 @@
-using System.Globalization;
-using System.Text.Json;
-
-using Golem.Tools;
-
+using Golem.Yagna;
 using GolemLib.Types;
-
 using Microsoft.Extensions.Logging;
 
 
 class InvoiceEventsLoop
 {
-    private readonly JsonSerializerOptions _serializerOptions = new JsonSerializerOptionsBuilder()
-                                    .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
-                                    .Build();
-
-    private readonly HttpClient _httpClient;
+    private readonly YagnaApi _yagnaApi;
     private readonly CancellationToken _token;
     private readonly ILogger _logger;
+    private readonly IJobs _jobs;
     private DateTime _since = DateTime.MinValue;
-    private readonly string[] _monitorEventTypes =
-    {
-        "ISSUED",
-        "RECEIVED",
-        "ACCEPTED",
-        "REJECTED",
-        "FAILED",
-        "SETTLED",
-        "CANCELLED"
-    };
+    
 
-    public InvoiceEventsLoop(HttpClient httpClient, CancellationToken token, ILogger logger)
+    public InvoiceEventsLoop(YagnaApi yagnaApi, CancellationToken token, ILogger logger, IJobs jobs)
     {
-        _httpClient = httpClient;
+        _yagnaApi = yagnaApi;
         _token = token;
         _logger = logger;
+        _jobs = jobs;
     }
 
-    public async Task Start(Action<string, GolemLib.Types.PaymentStatus> UpdatePaymentStatus, Action<string, List<Payment>> updatePaymentConfirmation)
+    public async Task Start()
     {
         _logger.LogInformation("Starting monitoring invoice events");
 
         DateTime newReconnect = DateTime.Now;
-        try
+
+        await Task.Yield();
+        
+        while (!_token.IsCancellationRequested)
         {
-            const int timeout = 10;
-
-
-            while (!_token.IsCancellationRequested)
+            try
             {
-                var url = $"/payment-api/v1/invoiceEvents?timeout={timeout}&afterTimestamp={_since.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture)}";
-                using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-
-                requestMessage.Headers.Add("X-Requestor-Events", string.Join(',', _monitorEventTypes));
-                requestMessage.Headers.Add("X-Provider-Events", string.Join(',', _monitorEventTypes));
-
-                try
+                var invoiceEvents = await _yagnaApi.GetInvoiceEvents(_since, _token);
+                if (invoiceEvents != null && invoiceEvents.Count > 0)
                 {
-                    var invoiceEventsResponse = await _httpClient.SendAsync(requestMessage, _token);
-                    if (invoiceEventsResponse.IsSuccessStatusCode)
-                    {
-                        var result = await invoiceEventsResponse.Content.ReadAsStringAsync();
-                        if (result != null)
-                        {
-                            _logger.LogInformation("InvoiceEvent: {0}", result);
-                            var invoiceEvents = JsonSerializer.Deserialize<List<InvoiceEvent>>(result, _serializerOptions);
-                            if (invoiceEvents != null && invoiceEvents.Count > 0)
-                            {
-                                _since = invoiceEvents.Max(x => x.EventDate);
+                    _since = invoiceEvents.Max(x => x.EventDate);
 
-                                invoiceEvents.ForEach(async i => await UpdatesForInvoice(i, UpdatePaymentStatus, updatePaymentConfirmation));
-                            }
-                        }
-                    }
-                    else
+                    foreach(var invoiceEvent in invoiceEvents.OrderBy(e => e.EventDate))
                     {
-                        _logger.LogError("Got invoiceEvents {0}", invoiceEventsResponse);
-                        await Task.Delay(TimeSpan.FromSeconds(1), _token);
+                        await UpdatesForInvoice(invoiceEvent);
                     }
                 }
-                catch (TaskCanceledException)
-                {
-                    _logger.LogDebug("Payment loop cancelled");
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Payment request failure");
-                    await Task.Delay(TimeSpan.FromSeconds(5), _token);
-                }
             }
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Payment monitoring loop failure");
-        }
-        finally
-        {
-            // UpdatePaymentStatus(GolemLib.Types.PaymentStatus.Rejected);
-        }
-    }
-
-    private async Task UpdatesForInvoice(InvoiceEvent invoiceEvent, Action<string, PaymentStatus> UpdatePaymentStatus, Action<string, List<Payment>> updatePaymentConfirmation)
-    {
-
-        var invoice = await GetInvoice(invoiceEvent.InvoiceId);
-        if (invoice != null)
-        {
-            var paymentStatus = GetPaymentStatus(invoice.Status);
-            UpdatePaymentStatus(invoice.AgreementId, paymentStatus);
-            if (paymentStatus == PaymentStatus.Settled)
+            catch(TaskCanceledException)
             {
-                var payments = await GetPayments();
-                var paymentsForRecentJob = payments
-                    .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId))
-                    .ToList();
-                updatePaymentConfirmation(invoice.AgreementId, paymentsForRecentJob);
+                _logger.LogInformation("Invoice events loop cancelled");
+                return;
             }
-        }
-    }
-
-    private GolemLib.Types.PaymentStatus GetPaymentStatus(InvoiceStatus status)
-    {
-        return status switch
-        {
-            InvoiceStatus.ISSUED => GolemLib.Types.PaymentStatus.InvoiceSent,
-            InvoiceStatus.RECEIVED => GolemLib.Types.PaymentStatus.InvoiceSent,
-            InvoiceStatus.ACCEPTED => GolemLib.Types.PaymentStatus.Accepted,
-            InvoiceStatus.REJECTED => GolemLib.Types.PaymentStatus.Rejected,
-            InvoiceStatus.FAILED => GolemLib.Types.PaymentStatus.Rejected,
-            InvoiceStatus.SETTLED => GolemLib.Types.PaymentStatus.Settled,
-            InvoiceStatus.CANCELLED => GolemLib.Types.PaymentStatus.Rejected,
-            _ => throw new Exception($"Unknown InvoiceStatus: {status}"),
-        };
-    }
-
-    private async Task<Invoice?> GetInvoice(string id)
-    {
-        Invoice? invoice = null;
-
-        try
-        {
-            var invoiceResponse = await _httpClient.GetAsync($"/payment-api/v1/invoices/{id}", _token);
-
-            if (invoiceResponse.IsSuccessStatusCode)
+            catch(Exception e)
             {
-                var result = await invoiceResponse.Content.ReadAsStringAsync();
-                if (result != null)
-                {
-                    invoice = JsonSerializer.Deserialize<Invoice>(result, _serializerOptions);
-                    _logger.LogInformation("Invoice[{0}]: {1}", id, invoice);
-                }
+                _logger.LogError("Error in invoice events loop: {e}", e.Message);
+                await Task.Delay(TimeSpan.FromSeconds(5), _token);
             }
-        }
-        catch { }
-
-        return invoice;
+        }        
     }
 
-    private async Task<List<Payment>> GetPayments()
+    private async Task UpdatesForInvoice(InvoiceEvent invoiceEvent)
     {
-        List<Payment>? payments = null;
-        try
-        {
-            var paymentsResponse = await _httpClient.GetAsync($"/payment-api/v1/payments", _token);
+        var invoice = await _yagnaApi.GetInvoice(invoiceEvent.InvoiceId, _token);
 
-            if (paymentsResponse.IsSuccessStatusCode)
-            {
-                var result = await paymentsResponse.Content.ReadAsStringAsync();
-                if (result != null)
-                {
-                    payments = JsonSerializer.Deserialize<List<Payment>>(result, _serializerOptions);
-                    _logger.LogDebug("payments {0}", payments != null ? payments.SelectMany(x => x.AgreementPayments.Select(y => y.AgreementId + ": " + y.Amount)).ToList() : "(null)");
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("GetPayments error: {msg}", e.Message);
-        }
-
-        return payments ?? new List<Payment>();
+        foreach(var activityId in invoice.ActivityIds)
+            await _jobs.UpdateJob(activityId, invoice, null);
     }
-
-
 }

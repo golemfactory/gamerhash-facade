@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 
+using Microsoft.Extensions.Options;
+
 /// <summary>
 /// Resources usage reported by ExeUnit.
 /// </summary>
@@ -15,6 +17,33 @@ public class GolemUsage : GolemPrice
             + prices.GpuPerSec * this.GpuPerSec
             + prices.NumRequests * this.NumRequests
             + prices.EnvPerSec * this.EnvPerSec;
+    }
+
+    // Constructor from GolemPrice
+    public GolemUsage(GolemPrice price)
+    {
+        StartPrice = 1;
+        GpuPerSec = price.GpuPerSec;
+        EnvPerSec = price.EnvPerSec;
+        NumRequests = price.NumRequests;
+    }
+
+    public GolemUsage() { }
+
+    public static GolemUsage From(Dictionary<string, decimal> coeffs)
+    {
+        return new GolemUsage(GolemPrice.From(1, coeffs));
+    }
+
+    public static GolemUsage operator +(GolemUsage a, GolemUsage b)
+    {
+        return new GolemUsage
+        {
+            EnvPerSec = a.EnvPerSec + b.EnvPerSec,
+            GpuPerSec = a.GpuPerSec + b.GpuPerSec,
+            NumRequests = a.NumRequests + b.NumRequests,
+            StartPrice = a.StartPrice + b.StartPrice
+        };
     }
 }
 

@@ -13,6 +13,15 @@ public interface IGolem : INotifyPropertyChanged
     /// </summary>
     /// <param name="speed"></param>
     public uint NetworkSpeed { get; set; }
+    /// <summary>
+    /// Indicates whether Mainnet network or a test payment network is used.
+    /// </summary>
+    public bool Mainnet { get; }
+    /// <summary>
+    /// Payment network name.
+    /// </summary>
+    public string Network { get; }
+
     public GolemStatus Status { get; }
     /// <summary>
     /// You can either listen to PropertyChanged notifications for this property
@@ -25,6 +34,12 @@ public interface IGolem : INotifyPropertyChanged
     /// Node identification in Golem network.
     /// </summary>
     public string NodeId { get; }
+
+    /// <summary>
+    /// Enable Requestors filtering based on certificate.
+    /// If set to false, all Requestors will be allowed to use this Provider.
+    /// </summary>
+    public bool FilterRequestors { get; set; }
 
     public Task Start();
     /// <summary>
@@ -51,9 +66,9 @@ public interface IGolem : INotifyPropertyChanged
     /// Don't accept tasks from this Node.
     /// Use in case of malicious Requestors.
     /// </summary>
-    /// <param name="node_id"></param>
+    /// <param name="nodeId"></param>
     /// <returns></returns>
-    public Task BlacklistNode(string node_id);
+    public Task BlacklistNode(string nodeId);
     /// <summary>
     /// List all jobs that were running during period of time.
     /// In normal flow events api should be used to track jobs, but in case of application
@@ -63,4 +78,3 @@ public interface IGolem : INotifyPropertyChanged
     /// <returns></returns>
     public Task<List<IJob>> ListJobs(DateTime since);
 }
-
