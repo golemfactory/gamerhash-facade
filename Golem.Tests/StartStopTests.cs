@@ -89,10 +89,10 @@ namespace Golem.Tests
             await stopTask;
 
             Assert.True(File.Exists(Path.Combine(dataDir, "yagna", "yagna.db")));
-            Assert.True(Directory.Exists(Path.Combine(dataDir, "provider", "exe-unit")));
+            Assert.True(Directory.Exists(Path.Combine(dataDir, "provider", "cert-dir")));
 
             Assert.False(File.Exists(Path.Combine(dataDirDefault, "yagna", "yagna.db")));
-            Assert.False(Directory.Exists(Path.Combine(dataDirDefault, "provider", "exe-unit")));
+            Assert.False(Directory.Exists(Path.Combine(dataDirDefault, "provider", "cert-dir")));
         }
 
         [Fact]
