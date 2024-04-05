@@ -10,5 +10,5 @@ public interface IFactory
     /// If not specified it will default to `golem-data` dir inside of Golem package directory.
     /// </param>
     /// <returns>Golem object</returns>
-    public Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory = null, bool mainnet = true, string? dataDir = null);
+    public Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet = true, string? dataDir = null);
 }
