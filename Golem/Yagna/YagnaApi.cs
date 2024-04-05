@@ -231,7 +231,7 @@ namespace Golem.Yagna
             const int timeout = 10;
 
             var args = new Dictionary<string, string> {
-                {"timeout[timeout]", $"{timeout}"},
+                {"timeout", $"{timeout}"},
                 {"afterTimestamp", FormatTimestamp(since)}
             };
 
