@@ -10,6 +10,7 @@ namespace Golem.Yagna
             { "YA_NET_BROADCAST_SIZE", "12" },
             { "YA_NET_RELAY_HOST", "yacn2.dev.golem.network:7477" },
             { "EXE_UNIT_FILE_LOG_LEVEL", "debug,h2=info" },
+            { "YAGNA_METRICS_GROUP", "GamerHash" },
             { "BCAST_NODE_BAN_TIMEOUT", "5s" },
         };
 
