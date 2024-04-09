@@ -252,12 +252,15 @@ async def main(subnet_tag, driver=None, network=None):
                 if s._ctx != None:
                     for id in [s._ctx._activity.id ]:
                         activity = await golem._engine._activity_api.use_activity(id)
-                        await trigger(
-                            activity,
-                            golem._engine._api_config.app_key,
-                            prompt,
-                            file_name
-                        )
+                        await activity.destroy()
+                    activity = await golem._engine._activity_api.new_activity(s._ctx._agreement.id);
+                    await trigger(
+                        activity,
+                        golem._engine._api_config.app_key,
+                        prompt,
+                        file_name
+                    )
+                    await activity.destroy()
                 else:
                     print(f'...gave up')
 
