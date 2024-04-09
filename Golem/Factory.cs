@@ -11,11 +11,11 @@ namespace Golem
 {
     public class Factory : IFactory
     {
-        public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory = null, bool mainnet = true, string? dataDir = null)
+        public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet = true)
         {
             var binaries = Path.Combine(modulesDir, "golem");
 
-            dataDir = dataDir ?? Path.Combine(modulesDir, "golem-data");
+            var dataDir = Path.Combine(modulesDir, "golem-data");
 
             var logger = loggerFactory ?? NullLoggerFactory.Instance;
             var network = Factory.Network(mainnet);
