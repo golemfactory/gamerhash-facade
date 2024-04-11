@@ -3,7 +3,7 @@ import os
 import json
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from yapapi import Golem
 from yapapi.payload import Payload
@@ -15,7 +15,6 @@ from yapapi.log import enable_default_logger
 import argparse
 import asyncio
 import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -195,6 +194,18 @@ class AiRuntimeService(Service):
         self.strategy = strategy
 
 
+async def reset_activities(golem, cluster):
+    for instance in cluster.instances:
+        if instance._ctx != None:
+            print(f"Resetting activity for {instance.provider_name}")
+
+            activity = await golem._engine._activity_api.use_activity(instance._ctx._activity.id)
+            await activity.destroy()
+
+            await asyncio.sleep(2)
+            await golem._engine._activity_api.new_activity(instance._ctx._agreement.id)
+        
+
 async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy"):
     strategy = ProviderOnceStrategy()
     async with Golem(
@@ -212,6 +223,7 @@ async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy
                 {"strategy": strategy}
             ],
             num_instances=1,
+            expiration=datetime.now(timezone.utc) + timedelta(days=10),
         )
 
         async def print_usage():
@@ -264,8 +276,8 @@ async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy
                 } for s in cluster.instances
             ]
 
-
         usage_printed = False
+        reset_counter = 0
         while True:
             await asyncio.sleep(3)
 
@@ -277,6 +289,12 @@ async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy
                 usage_printed = True
             
             print(f"""instances: {[f"{r['name']}: {r['state']}" for r in i]}""")
+        
+            reset_counter = reset_counter + 1
+            if reset_counter > 5:
+                await reset_activities(golem, cluster)
+                reset_counter = 0
+
 
 if __name__ == "__main__":
     parser = build_parser("Run AI runtime task")
