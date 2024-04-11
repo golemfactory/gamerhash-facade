@@ -73,8 +73,9 @@ class Jobs : IJobs
         var agreements = await _yagna.Api.GetAgreements(since);
         var invoices = await _yagna.Api.GetInvoices(since);
 
-        foreach(var agreement in agreements.Where(a => a!=null && a.AgreementID!=null))
+        foreach(var shallowAgreement in agreements.Where(a => a!=null && a.AgreementID!=null))
         {
+            var agreement = await _yagna.Api.GetAgreement(shallowAgreement.AgreementID!);
             var activities = await _yagna.Api.GetActivities(agreement!.AgreementID!);
             var invoice = invoices.FirstOrDefault(i => i.AgreementId == agreement.AgreementID);
             foreach(var activityId in activities)
