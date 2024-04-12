@@ -70,6 +70,10 @@ class Jobs : IJobs
         if(_yagna == null || _yagna.HasExited)
             throw new Exception("Invalid state: yagna is not started");
 
+        var oldJobs = _jobs.Where(pair => pair.Value.Timestamp < since).Select(pair => pair.Key).ToList();
+        foreach(var jobToBeRemoved in oldJobs)
+            _jobs.Remove(jobToBeRemoved);
+
         var agreements = await _yagna.Api.GetAgreements(since);
         var invoices = await _yagna.Api.GetInvoices(since);
 
