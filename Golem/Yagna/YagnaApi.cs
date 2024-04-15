@@ -214,6 +214,12 @@ namespace Golem.Yagna
             return await RestGet<List<Payment>>(path, args, token);
         }
 
+        public async Task<List<Payment>> GetInvoicePayments(string invoiceId, CancellationToken token = default)
+        {
+            var path = $"/payment-api/v1/invoices/{invoiceId}/payments";
+            return await RestGet<List<Payment>>(path, token);
+        }
+
         public async Task<Invoice> GetInvoice(string id, CancellationToken token = default)
         {
             var path = $"/payment-api/v1/invoices/{id}";

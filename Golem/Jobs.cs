@@ -164,7 +164,7 @@ class Jobs : IJobs
     {
         var job = await GetOrCreateJob(invoice.AgreementId);
 
-        var payments = await _yagna.Api.GetPayments(job.Timestamp);
+        var payments = await _yagna.Api.GetInvoicePayments(invoice.InvoiceId);
         var paymentsForRecentJob = payments
             .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId) || p.ActivityPayments.Exists(ap => invoice.ActivityIds.Contains(ap.ActivityId)))
             .ToList();
