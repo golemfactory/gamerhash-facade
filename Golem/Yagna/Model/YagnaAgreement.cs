@@ -32,8 +32,8 @@ namespace Golem.Model
         }
         public string? Id { get; set; }
 
-        public YagnaAgreementOffer? Offer { get; set; }
-        public YagnaAgreementDemand? Demand { get; set; }
+        public required YagnaAgreementOffer Offer { get; set; }
+        public required YagnaAgreementDemand Demand { get; set; }
 
         public DateTime? ValidTo { get; set; }
         public DateTime? ApprovedDate { get; set; }
