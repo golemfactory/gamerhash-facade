@@ -10,6 +10,8 @@ using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
 
+using static Golem.Model.ActivityState;
+
 
 public interface IJobs
 {
@@ -78,21 +80,12 @@ class Jobs : IJobs
 
         foreach (var agreementInfo in agreementInfos.Where(a => a != null && a.AgreementID != null))
         {
-            var agreement = await _yagna.Api.GetAgreement(agreementInfo.AgreementID!);
-            var activities = await _yagna.Api.GetActivities(agreement!.AgreementID!);
-            var invoice = invoices.FirstOrDefault(i => i.AgreementId == agreement.AgreementID);
-            foreach (var activityId in activities)
-            {
-                var usage = await _yagna.Api.GetActivityUsage(activityId);
-                if (usage.CurrentUsage != null)
-                {
-                    var price = GetPriceFromAgreementAndUsage(agreement, usage.CurrentUsage);
-                    await UpdateJob(
-                        activityId,
-                        invoice,
-                        price != null ? new GolemUsage(price) : null);
-                }
-            }
+            await UpdateJobStatus(agreementInfo.Id);
+            await UpdateJobUsage(agreementInfo.Id);
+
+            var invoice = invoices.FirstOrDefault(i => i.AgreementId == agreementInfo.Id);
+            if (invoice != null)
+                await UpdateJobPayment(invoice);
         }
 
         return _jobs.Values.Where(job => job.Timestamp >= since).Cast<IJob>().ToList();
@@ -148,7 +141,7 @@ class Jobs : IJobs
     public async Task<Job> UpdateJob(string activityId, Invoice? invoice, GolemUsage? usage)
     {
         var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
-        await UpdateJobStatus(activityId);
+        await UpdateJobStatus(agreementId);
 
         if (invoice != null)
             await UpdateJobPayment(invoice);
@@ -182,19 +175,31 @@ class Jobs : IJobs
         return job;
     }
 
-    private async Task<Job> UpdateJobStatus(string activityId)
+    private async Task<Job> UpdateJobStatus(string agreementId)
     {
-        var activityStatePair = await _yagna.Api.GetState(activityId);
-        var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
-        var agreement = await _yagna.Api.GetAgreement(agreementId);
         var job = await GetOrCreateJob(agreementId);
+        var agreement = await _yagna.Api.GetAgreement(agreementId);
 
-        if (activityStatePair != null)
-            job.UpdateActivityState(activityStatePair);
-
-        // In case activity state wasn't properly updated by Provider or ExeUnit.
+        // Agreement state has precedens over individual activity states.
         if (agreement.State == "Terminated")
+        {
             job.Status = JobStatus.Finished;
+        }
+        else
+        {
+            var activities = await _yagna.Api.GetActivities(agreementId);
+            foreach (var activity in activities)
+            {
+                var activityStatePair = await _yagna.Api.GetState(activity);
+
+                // Assumption: Only single activity is allowed at the same time and rest of
+                // them will be terminated properly by Reqestor or Provider agent.
+                // If assumption is not valid, then Job state will change in strange way depending on activities order.
+                // This won't rather happen in correct cases. In incorrect case we will have incorrect state anyway.
+                if (activityStatePair.currentState() != StateType.Terminated)
+                    job.UpdateActivityState(activityStatePair);
+            }
+        }
 
         return job;
     }
