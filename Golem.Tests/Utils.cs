@@ -1,12 +1,15 @@
 using System.ComponentModel;
 using System.Reflection;
 using System.Threading.Channels;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 using Golem.Tools;
-
 using GolemLib;
+using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
+
 
 namespace Golem.Tests
 {
@@ -23,7 +26,8 @@ namespace Golem.Tests
             return await factory.Create(modulesDir, loggerFactory, false, dataDir);
         }
 
-        public async static Task<IGolem> Golem(string golemPath, ILoggerFactory loggerFactory, string? dataDir = null) {
+        public async static Task<IGolem> Golem(string golemPath, ILoggerFactory loggerFactory, string? dataDir = null)
+        {
             var modulesDir = PackageBuilder.ModulesDir(golemPath);
             return await new Factory().Create(modulesDir, loggerFactory, false, dataDir);
         }
@@ -31,7 +35,8 @@ namespace Golem.Tests
         /// <summary>
         /// Waits for file up to `timeoutSec` and reads it as a text file. Throws Exception on timeout.
         /// </summary>
-        public async static Task<String> WaitForFileAndRead(String path, int timeoutSec = 15) {
+        public async static Task<String> WaitForFileAndRead(String path, int timeoutSec = 15)
+        {
             int i = 0;
             while (!File.Exists(path) && i < timeoutSec)
             {
@@ -62,7 +67,6 @@ namespace Golem.Tests
             return eventChannel;
         }
 
-        
         /// <summary>
         /// Reads from `channel` and returns first `T` for which `matcher` returns `false`
         /// </summary>
@@ -88,4 +92,73 @@ namespace Golem.Tests
             throw new Exception($"Failed to find matching {nameof(T)} within {timeoutMs} ms.");
         }
     }
+
+    public class JobsTestBase : IDisposable, IAsyncLifetime, IClassFixture<GolemFixture>
+    {
+        protected readonly ILoggerFactory _loggerFactory;
+        protected readonly ILogger _logger;
+        protected GolemRelay? _relay;
+        protected GolemRequestor? _requestor;
+        protected AppKey? _requestorAppKey;
+
+
+        public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture)
+        {
+            XunitContext.Register(outputHelper);
+            // Log file directly in `tests` directory (like `tests/Jobtests-20231231.log )
+            var logfile = Path.Combine(PackageBuilder.TestDir(""), nameof(ErrorHandlingTests) + "-{Date}.log");
+            var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
+            _loggerFactory = LoggerFactory.Create(builder => builder
+                //// Console logger makes `dotnet test` hang on Windows
+                // .AddSimpleConsole(options => options.SingleLine = true)
+                .AddFile(logfile)
+                .AddProvider(loggerProvider)
+            );
+            _logger = _loggerFactory.CreateLogger(nameof(ErrorHandlingTests));
+        }
+
+        public async Task InitializeAsync()
+        {
+            var testDir = PackageBuilder.TestDir($"{nameof(ErrorHandlingTests)}_relay");
+            _relay = await GolemRelay.Build(testDir, _loggerFactory.CreateLogger("Relay"));
+            Assert.True(_relay.Start());
+            System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:16464");
+            System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");
+
+            _requestor = await GolemRequestor.Build(nameof(ErrorHandlingTests), _loggerFactory.CreateLogger("Requestor"));
+            Assert.True(_requestor.Start());
+            _requestor.InitPayment();
+            _requestorAppKey = _requestor.getTestAppKey();
+        }
+
+        /// <summary>
+        /// Reads from `channel` and returns first `T` for which `matcher` returns `false`
+        /// </summary>
+        /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
+        public async Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? matcher = null, double timeoutMs = 10_000)
+        {
+            return await TestUtils.ReadChannel(channel, matcher, timeoutMs, _logger);
+        }
+
+        public Channel<T?> PropertyChangeChannel<OBJ, T>(OBJ? obj, string propName, Action<T?>? extraHandler = null) where OBJ : INotifyPropertyChanged
+        {
+            return TestUtils.PropertyChangeChannel(obj, propName, _loggerFactory, extraHandler);
+        }
+
+        public async Task DisposeAsync()
+        {
+            if (_requestor != null)
+                await _requestor.Stop(StopMethod.SigInt);
+
+            if (_relay != null)
+                await _relay.Stop(StopMethod.SigInt);
+        }
+
+        public void Dispose()
+        {
+            XunitContext.Flush();
+        }
+    }
+
+
 }

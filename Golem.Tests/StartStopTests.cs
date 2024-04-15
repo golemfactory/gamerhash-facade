@@ -98,36 +98,6 @@ namespace Golem.Tests
         }
 
         [Fact]
-        public async Task StartTriggerErrrStop_VerifyStatusAsync()
-        {
-            var loggerFactory = CreateLoggerFactory();
-            string golemPath = await PackageBuilder.BuildTestDirectory();
-            output.WriteLine("Path: " + golemPath);
-
-            var golem = await TestUtils.Golem(golemPath, loggerFactory);
-            var statusChannel = TestUtils.PropertyChangeChannel<Golem, GolemStatus?>((Golem)golem, nameof(Golem.Status), loggerFactory);
-
-            var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
-            await startTask;
-            Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
-
-            var providerPidFile = Path.Combine(golemPath, "modules", "golem-data", "provider", "ya-provider.pid");
-            var providerPidTxt = await TestUtils.WaitForFileAndRead(providerPidFile);
-            var providerPid = Int32.Parse(providerPidTxt);
-            var providerProcess = Process.GetProcessById(providerPid);
-            providerProcess.Kill();
-
-            Assert.Equal(GolemStatus.Error, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
-
-            var stopTask = golem.Stop();
-            Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
-            await stopTask;
-
-            Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
-        }
-
-        [Fact]
         public async Task LoadBinaryStartAndStop_VerifyStatusAsync()
         {
             var loggerFactory = CreateLoggerFactory();
