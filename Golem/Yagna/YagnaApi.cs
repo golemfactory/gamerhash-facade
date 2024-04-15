@@ -162,12 +162,12 @@ namespace Golem.Yagna
             return await RestGet<YagnaAgreement>($"/market-api/v1/agreements/{agreementId}", token);
         }
 
-        public async Task<List<YagnaAgreement>> GetAgreements(DateTime? afterDate = null, CancellationToken token = default)
+        public async Task<List<YagnaAgreementInfo>> GetAgreements(DateTime? afterDate = null, CancellationToken token = default)
         {
             var args = afterDate != null
              ? new Dictionary<string, string> { { "afterDate", FormatTimestamp(afterDate.Value) } }
              : null;
-            return await RestGet<List<YagnaAgreement>>("/market-api/v1/agreements", args, token);
+            return await RestGet<List<YagnaAgreementInfo>>("/market-api/v1/agreements", args, token);
         }
 
         public async Task<ActivityStatePair> GetState(string activityId, CancellationToken token = default)
