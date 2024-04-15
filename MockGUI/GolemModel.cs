@@ -80,7 +80,8 @@ namespace MockGUI.ViewModels
         {
             var loggerFactory = createLoggerFactory(modulesDir);
             var golem = await createGolem(loggerFactory);
-            if (mainnet) {
+            if (mainnet)
+            {
                 ((Golem.Golem)golem).WalletAddress = mainnetWalletAddr();
             }
             var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
@@ -183,12 +184,14 @@ namespace MockGUI.ViewModels
             List<IJob> jobs;
             try
             {
+                _logger.LogInformation("Listing jobs since: " + since);
                 jobs = await this.Golem.ListJobs(since);
-            } catch (Exception)
+            }
+            catch (Exception)
             {
                 jobs = new List<IJob>();
             }
-            
+
             this.JobsHistory = new ObservableCollection<IJob>(jobs);
         }
 

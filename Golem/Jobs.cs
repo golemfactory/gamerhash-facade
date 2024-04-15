@@ -95,7 +95,7 @@ class Jobs : IJobs
             }
         }
 
-        return _jobs.Values.SkipWhile(job => job.Timestamp < since).Cast<IJob>().ToList();
+        return _jobs.Values.Where(job => job.Timestamp >= since).Cast<IJob>().ToList();
     }
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
