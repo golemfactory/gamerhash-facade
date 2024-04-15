@@ -25,6 +25,7 @@ from yapapi import __version__ as yapapi_version
 from yapapi import windows_event_loop_fix
 from yapapi.log import enable_default_logger
 from yapapi.strategy import SCORE_TRUSTED, SCORE_REJECTED, MarketStrategy
+from yapapi.strategy.base import PropValueRange, PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEOUT_SEC
 
 # Utils
 
@@ -132,6 +133,10 @@ class ProviderOnceStrategy(MarketStrategy):
 
     def __init__(self):
         self.history = set(())
+        self.acceptable_prop_value_range_overrides =  {
+            PROP_DEBIT_NOTE_INTERVAL_SEC: PropValueRange(60, None),
+            PROP_PAYMENT_TIMEOUT_SEC: PropValueRange(180, None),
+        }
 
     async def score_offer(self, offer):
         if offer.issuer not in self.history:
@@ -192,24 +197,12 @@ class AiRuntimeService(Service):
     def __init__(self, strategy: ProviderOnceStrategy):
         super().__init__()
         self.strategy = strategy
-
-
-async def reset_activities(golem, cluster):
-    for instance in cluster.instances:
-        if instance._ctx != None:
-            print(f"Resetting activity for {instance.provider_name}")
-
-            activity = await golem._engine._activity_api.use_activity(instance._ctx._activity.id)
-            await activity.destroy()
-
-            await asyncio.sleep(2)
-            await golem._engine._activity_api.new_activity(instance._ctx._agreement.id)
         
 
 async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy"):
     strategy = ProviderOnceStrategy()
     async with Golem(
-        budget=1.0,
+        budget=4.0,
         subnet_tag=subnet_tag,
         strategy=strategy,
         payment_driver=driver,
@@ -277,7 +270,6 @@ async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy
             ]
 
         usage_printed = False
-        reset_counter = 0
         while True:
             await asyncio.sleep(3)
 
@@ -289,11 +281,6 @@ async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy
                 usage_printed = True
             
             print(f"""instances: {[f"{r['name']}: {r['state']}" for r in i]}""")
-        
-            reset_counter = reset_counter + 1
-            if reset_counter > 5:
-                await reset_activities(golem, cluster)
-                reset_counter = 0
 
 
 if __name__ == "__main__":
