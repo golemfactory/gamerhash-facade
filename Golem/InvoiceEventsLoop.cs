@@ -63,7 +63,6 @@ class InvoiceEventsLoop
         var invoice = await _yagnaApi.GetInvoice(invoiceEvent.InvoiceId, _token);
 
         _logger.LogDebug("Update Invoice info for Job: {}, status: {}", invoice.AgreementId, invoice.Status);
-        foreach (var activityId in invoice.ActivityIds)
-            await _jobs.UpdateJob(activityId, invoice, null);
+        await _jobs.UpdateJob(invoice.AgreementId, invoice, null);
     }
 }

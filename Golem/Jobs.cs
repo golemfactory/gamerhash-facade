@@ -17,7 +17,8 @@ public interface IJobs
 {
     Task<Job> GetOrCreateJob(string jobId);
     void SetAllJobsFinished();
-    Task<Job> UpdateJob(string activityId, Invoice? invoice, GolemUsage? usage);
+    Task<Job> UpdateJob(string agreementId, Invoice? invoice, GolemUsage? usage);
+    Task<Job> UpdateJobByActivity(string activityId, Invoice? invoice, GolemUsage? usage);
 }
 
 class Jobs : IJobs
@@ -88,7 +89,7 @@ class Jobs : IJobs
                 await UpdateJobPayment(invoice);
         }
 
-        return _jobs.Values.Where(job => job.Timestamp >= since).Cast<IJob>().ToList();
+        return _jobs.Values.Where(job => job.Timestamp >= since).OrderByDescending(job => job.Timestamp).Cast<IJob>().ToList();
     }
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
@@ -138,9 +139,14 @@ class Jobs : IJobs
         return null;
     }
 
-    public async Task<Job> UpdateJob(string activityId, Invoice? invoice, GolemUsage? usage)
+    public async Task<Job> UpdateJobByActivity(string activityId, Invoice? invoice, GolemUsage? usage)
     {
         var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
+        return await UpdateJob(agreementId, invoice, usage);
+    }
+
+    public async Task<Job> UpdateJob(string agreementId, Invoice? invoice, GolemUsage? usage)
+    {
         await UpdateJobStatus(agreementId);
 
         if (invoice != null)
