@@ -109,6 +109,14 @@ namespace Golem.Yagna.Types
             this.Status = ResolveStatus(currentState, nextState);
         }
 
+        public void PartialPayment(Payment payment)
+        {
+            if (!PaymentConfirmation.Exists(pay => pay.PaymentId == payment.PaymentId))
+            {
+                PaymentConfirmation.Add(payment);
+            }
+        }
+
         private JobStatus ResolveStatus(StateType currentState, StateType? nextState)
         {
             switch (currentState)

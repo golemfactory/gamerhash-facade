@@ -19,6 +19,7 @@ public interface IJobs
     void SetAllJobsFinished();
     Task<Job> UpdateJob(string agreementId, Invoice? invoice, GolemUsage? usage);
     Task<Job> UpdateJobByActivity(string activityId, Invoice? invoice, GolemUsage? usage);
+    Task UpdatePartialPayment(Payment payment);
 }
 
 class Jobs : IJobs
@@ -179,6 +180,16 @@ class Jobs : IJobs
         }
 
         return job;
+    }
+
+    public async Task UpdatePartialPayment(Payment payment)
+    {
+        foreach (var activityPayment in payment.ActivityPayments)
+        {
+            var agreementId = await this._yagna.Api.GetActivityAgreement(activityPayment.ActivityId);
+            var job = await GetOrCreateJob(agreementId);
+            job.PartialPayment(payment);
+        }
     }
 
     private async Task<Job> UpdateJobStatus(string agreementId)
