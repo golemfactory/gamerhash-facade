@@ -18,7 +18,7 @@ namespace Golem.Tests
 
         public JobTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
             : base(outputHelper, golemFixture)
-        {}
+        { }
 
         [Fact]
         public async Task CompleteScenario()
