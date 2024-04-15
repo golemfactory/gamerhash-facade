@@ -172,11 +172,15 @@ class Jobs : IJobs
         job.PaymentConfirmation = paymentsForRecentJob;
         job.PaymentStatus = IntoPaymentStatus(invoice.Status);
 
+        var confirmedSum = job.PaymentConfirmation.Sum(payment => Convert.ToDecimal(payment.Amount));
+
+        _logger.LogInformation($"Job: {job.Id}, confirmed sum: {confirmedSum}, job expected reward: {job.CurrentReward}");
+
         // Workaround for yagna unable to change status to SETTLED when using partial payments
         if (invoice.Status == InvoiceStatus.ACCEPTED
-            && job.CurrentReward == job.PaymentConfirmation.Sum(payment => Convert.ToDecimal(payment.Amount)))
+            && job.CurrentReward == confirmedSum)
         {
-            invoice.Status = InvoiceStatus.SETTLED;
+            job.PaymentStatus = IntoPaymentStatus(InvoiceStatus.SETTLED);
         }
 
         return job;
