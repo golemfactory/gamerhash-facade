@@ -1,5 +1,7 @@
 using Golem.Yagna;
+
 using GolemLib.Types;
+
 using Microsoft.Extensions.Logging;
 
 
@@ -10,7 +12,7 @@ class InvoiceEventsLoop
     private readonly ILogger _logger;
     private readonly IJobs _jobs;
     private DateTime _since = DateTime.MinValue;
-    
+
 
     public InvoiceEventsLoop(YagnaApi yagnaApi, CancellationToken token, ILogger logger, IJobs jobs)
     {
@@ -27,7 +29,7 @@ class InvoiceEventsLoop
         DateTime newReconnect = DateTime.Now;
 
         await Task.Yield();
-        
+
         while (!_token.IsCancellationRequested)
         {
             try
@@ -37,30 +39,31 @@ class InvoiceEventsLoop
                 {
                     _since = invoiceEvents.Max(x => x.EventDate);
 
-                    foreach(var invoiceEvent in invoiceEvents.OrderBy(e => e.EventDate))
+                    foreach (var invoiceEvent in invoiceEvents.OrderBy(e => e.EventDate))
                     {
                         await UpdatesForInvoice(invoiceEvent);
                     }
                 }
             }
-            catch(TaskCanceledException)
+            catch (TaskCanceledException)
             {
                 _logger.LogInformation("Invoice events loop cancelled");
                 return;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogError("Error in invoice events loop: {e}", e.Message);
                 await Task.Delay(TimeSpan.FromSeconds(5), _token);
             }
-        }        
+        }
     }
 
     private async Task UpdatesForInvoice(InvoiceEvent invoiceEvent)
     {
         var invoice = await _yagnaApi.GetInvoice(invoiceEvent.InvoiceId, _token);
 
-        foreach(var activityId in invoice.ActivityIds)
+        _logger.LogDebug("Update Invoice info for Job: {}, status: {}", invoice.AgreementId, invoice.Status);
+        foreach (var activityId in invoice.ActivityIds)
             await _jobs.UpdateJob(activityId, invoice, null);
     }
 }

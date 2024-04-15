@@ -1,10 +1,13 @@
 using System.Text.Json;
+
 using Golem.Model;
 using Golem.Tools;
 using Golem.Yagna;
 using Golem.Yagna.Types;
+
 using GolemLib;
 using GolemLib.Types;
+
 using Microsoft.Extensions.Logging;
 
 
@@ -49,7 +52,7 @@ class Jobs : IJobs
 
             _jobs[jobId] = job;
         }
-        
+
         return job;
     }
 
@@ -67,32 +70,32 @@ class Jobs : IJobs
 
     public async Task<List<IJob>> List(DateTime since)
     {
-        if(_yagna == null || _yagna.HasExited)
+        if (_yagna == null || _yagna.HasExited)
             throw new Exception("Invalid state: yagna is not started");
 
         var agreementInfos = await _yagna.Api.GetAgreements(since);
         var invoices = await _yagna.Api.GetInvoices(since);
 
-        foreach(var agreementInfo in agreementInfos.Where(a => a!=null && a.AgreementID!=null))
+        foreach (var agreementInfo in agreementInfos.Where(a => a != null && a.AgreementID != null))
         {
             var agreement = await _yagna.Api.GetAgreement(agreementInfo.AgreementID!);
             var activities = await _yagna.Api.GetActivities(agreement!.AgreementID!);
             var invoice = invoices.FirstOrDefault(i => i.AgreementId == agreement.AgreementID);
-            foreach(var activityId in activities)
+            foreach (var activityId in activities)
             {
                 var usage = await _yagna.Api.GetActivityUsage(activityId);
-                if(usage.CurrentUsage != null)
+                if (usage.CurrentUsage != null)
                 {
                     var price = GetPriceFromAgreementAndUsage(agreement, usage.CurrentUsage);
                     await UpdateJob(
                         activityId,
                         invoice,
-                        price!=null ? new GolemUsage(price) : null);
+                        price != null ? new GolemUsage(price) : null);
                 }
-            }            
+            }
         }
 
-        return _jobs.Values.Cast<IJob>().ToList();
+        return _jobs.Values.SkipWhile(job => job.Timestamp < since).Cast<IJob>().ToList();
     }
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
@@ -111,7 +114,7 @@ class Jobs : IJobs
 
     private GolemPrice? GetPriceFromAgreementAndUsage(YagnaAgreement agreement, List<decimal> vals)
     {
-        if (agreement?.Offer?.Properties != null 
+        if (agreement?.Offer?.Properties != null
             && agreement.Offer.Properties.TryGetValue("golem.com.usage.vector", out var usageVector)
             && usageVector != null)
         {
@@ -146,12 +149,12 @@ class Jobs : IJobs
     {
         var agreementId = await _yagna.Api.GetActivityAgreement(activityId);
         await UpdateJobStatus(activityId);
-        
-        if(invoice != null)
+
+        if (invoice != null)
             await UpdateJobPayment(invoice);
 
         // update usage only if there was any change
-        if(usage != null)
+        if (usage != null)
             await UpdateJobUsage(agreementId);
 
         return await GetOrCreateJob(agreementId);
@@ -162,12 +165,19 @@ class Jobs : IJobs
     {
         var job = await GetOrCreateJob(invoice.AgreementId);
 
-        var payments = await _yagna.Api.GetPayments(null);
+        var payments = await _yagna.Api.GetPayments();
         var paymentsForRecentJob = payments
             .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId) || p.ActivityPayments.Exists(ap => invoice.ActivityIds.Contains(ap.ActivityId)))
             .ToList();
         job.PaymentConfirmation = paymentsForRecentJob;
         job.PaymentStatus = IntoPaymentStatus(invoice.Status);
+
+        // Workaround for yagna unable to change status to SETTLED when using partial payments
+        if (invoice.Status == InvoiceStatus.ACCEPTED
+            && job.CurrentReward == job.PaymentConfirmation.Sum(payment => Convert.ToDecimal(payment.Amount)))
+        {
+            invoice.Status = InvoiceStatus.SETTLED;
+        }
 
         return job;
     }
@@ -179,7 +189,7 @@ class Jobs : IJobs
         var agreement = await _yagna.Api.GetAgreement(agreementId);
         var job = await GetOrCreateJob(agreementId);
 
-         if (activityStatePair != null)
+        if (activityStatePair != null)
             job.UpdateActivityState(activityStatePair);
 
         // In case activity state wasn't properly updated by Provider or ExeUnit.
@@ -195,16 +205,16 @@ class Jobs : IJobs
         var job = await GetOrCreateJob(agreementId);
         var agreement = await _yagna.Api.GetAgreement(agreementId);
         var activities = await _yagna.Api.GetActivities(agreementId);
-        
+
         var usage = new GolemUsage();
-        foreach(var activity in activities)
+        foreach (var activity in activities)
         {
             var activityUsage = await _yagna.Api.GetActivityUsage(activity);
-            if(activityUsage.CurrentUsage == null)
+            if (activityUsage.CurrentUsage == null)
                 continue;
 
             var price = GetPriceFromAgreementAndUsage(agreement, activityUsage.CurrentUsage);
-            if(price == null)
+            if (price == null)
                 continue;
 
             usage += new GolemUsage(price);
