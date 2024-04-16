@@ -25,6 +25,7 @@ namespace Golem.Tests
         [Fact]
         public async Task StartTriggerErrorStop_VerifyStatusAsync()
         {
+            // Having
             var logger = _loggerFactory.CreateLogger(nameof(StartTriggerErrorStop_VerifyStatusAsync));
 
             string golemPath = await PackageBuilder.BuildTestDirectory();
@@ -42,6 +43,7 @@ namespace Golem.Tests
 
             });
 
+            // Then
             var startTask = golem.Start();
             Assert.Equal(GolemStatus.Starting, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
             await startTask;
@@ -51,30 +53,33 @@ namespace Golem.Tests
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
-            // Await for current job in Computing state
+            // Await for current job to be in Computing state
             Job? currentJob = await ReadChannel<Job?>(jobChannel);
             var currentState = await ReadChannel(jobStatusChannel, (JobStatus s) => s != JobStatus.Computing, 30_000);
 
+            // Access Provider process
             var providerPidFile = Path.Combine(golemPath, "modules", "golem-data", "provider", "ya-provider.pid");
             var providerPidTxt = await TestUtils.WaitForFileAndRead(providerPidFile);
             var providerPid = Int32.Parse(providerPidTxt);
             var providerProcess = Process.GetProcessById(providerPid);
 
             var subprocesses = FindSubprocesses(providerPid);
-            Assert.NotEmpty(subprocesses);
-            Assert.True(IsRunning(subprocesses));
+            Assert.Contains("ya-runtime-ai.exe", RunningExecutablesNames(subprocesses));
 
-
+            // Kill Provider process
             providerProcess.Kill();
 
+            // Check if Provider failure triggered status change to Error
             Assert.Equal(GolemStatus.Error, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
 
-            Assert.False(IsRunning(subprocesses));
+            // Check if there are no remaining child processes alive
+            Assert.Empty(RunningExecutablesNames(subprocesses));
 
             var stopTask = golem.Stop();
             Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
             await stopTask;
 
+            // Check if status changed from Error to Off
             Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
         }
 
@@ -87,17 +92,22 @@ namespace Golem.Tests
             return searcher.Get();
         }
 
-        public static bool IsRunning(ManagementObjectCollection processes)
+        /// <returns>Sorted list of running binaries filenames</returns>
+        public static List<String> RunningExecutablesNames(ManagementObjectCollection processes)
         {
+            var executables = new List<String>();
             foreach (var proc in processes)
             {
                 var pid = (UInt32)proc["ProcessId"];
                 if (IsRunning(Convert.ToInt32(pid)))
                 {
-                    return true;
+                    var executable = (String)proc["ExecutablePath"];
+                    var executableFile = Path.GetFileName(executable);
+                    executables.Add(executableFile);
                 }
             }
-            return false;
+            executables.Sort();
+            return executables;
         }
 
         public static bool IsRunning(int pid)
