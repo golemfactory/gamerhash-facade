@@ -11,6 +11,7 @@ using GolemLib;
 using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
+using System.Runtime.InteropServices;
 
 namespace Golem.Tests
 {
@@ -22,7 +23,7 @@ namespace Golem.Tests
             : base(outputHelper, golemFixture)
         { }
 
-        [Fact]
+        [OsFact(nameof(OSPlatform.Windows))]
         public async Task StartTriggerErrorStop_VerifyStatusAsync()
         {
             // Having
@@ -83,6 +84,9 @@ namespace Golem.Tests
             Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
         }
 
+        /// <summary>
+        /// Returns subprocesses for given `pid`. Works only on Windows.
+        /// </summary>
         public ManagementObjectCollection FindSubprocesses(int pid)
         {
             var searcher = new ManagementObjectSearcher(

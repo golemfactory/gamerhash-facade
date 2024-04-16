@@ -9,6 +9,7 @@ using GolemLib;
 using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
+using System.Runtime.InteropServices;
 
 
 namespace Golem.Tests
@@ -157,6 +158,20 @@ namespace Golem.Tests
         public void Dispose()
         {
             XunitContext.Flush();
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public class OsFactAttribute : FactAttribute
+    {
+        public OsFactAttribute(params string[] platforms)
+        {
+            try
+            {
+                if (!Array.Exists(platforms, platform => RuntimeInformation.IsOSPlatform(OSPlatform.Create(platform))))
+                    Skip = $"Unsupported OS. Supported platforms: '{platforms}'";
+            }
+            catch { }
         }
     }
 
