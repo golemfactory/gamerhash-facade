@@ -20,6 +20,7 @@ namespace Golem
         private ProviderConfigService ProviderConfig { get; set; }
         private CancellationTokenSource _yagnaCancellationtokenSource;
         private CancellationTokenSource _providerCancellationtokenSource;
+        private EventsPublisher _events { get; set;}
 
         private readonly ILogger _logger;
 
@@ -159,6 +160,9 @@ namespace Golem
             get => Provider.AllowList;
         }
 
+        // private EventHandler<ApplicationEventArgs> _applicationEvents;
+        public EventHandler<ApplicationEventArgs> ApplicationEvents { get => _events.ApplicationEvent; set => _events.ApplicationEvent = value; }
+
         public Task<List<IJob>> ListJobs(DateTime since)
         {
             return _jobs.List(since);
@@ -250,8 +254,8 @@ namespace Golem
 
             var account = await Yagna.WaitForIdentityAsync(cancellationToken);
 
-            _ = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs);
-            _ = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs);
+            _ = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs, _events);
+            _ = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs, _events);
 
             try
             {
@@ -270,6 +274,7 @@ namespace Golem
             }
             catch (Exception e)
             {
+                _events.Raise(new ApplicationEventArgs($"Payment init failed: {e.Message}"));
                 _logger.LogError("Payment init failed: {0}", e);
                 throw new Exception("Payment init failed {0}", e);
             }
@@ -288,6 +293,7 @@ namespace Golem
             }
             catch (Exception e)
             {
+                _events.Raise(new ApplicationEventArgs($"StartupProvider failed: {e.Message}"));
                 throw new Exception($"Failed to start provider: {e}");
             }
         }
@@ -300,9 +306,11 @@ namespace Golem
         {
             return async (int exitCode, string which) =>
             {
+                _events.Raise(new ApplicationEventArgs($"[Golem.ExitCleanupHandler]: {which}, exitCode: {exitCode}"));
+
                 if (Status != GolemStatus.Stopping && Status != GolemStatus.Off)
                 {
-                    _logger.LogError($"Unexpected {which} shutdown. Exit code: {exitCode}");
+                    _logger.LogError("Unexpected {which} shutdown. Exit code: {exitCode}", which, exitCode);
 
                     if (!providerCancellationTokenSource.IsCancellationRequested || !Provider.HasExited)
                     {
@@ -340,11 +348,12 @@ namespace Golem
             var yagna_datadir = dataDir != null ? Path.Combine(dataDir, "yagna") : "./yagna";
 
             _logger = loggerFactory.CreateLogger<Golem>();
+            _events = new EventsPublisher();
             _yagnaCancellationtokenSource = new CancellationTokenSource();
             _providerCancellationtokenSource = new CancellationTokenSource();
             var options = YagnaOptionsFactory.CreateStartupOptions(network);
-            Yagna = new YagnaService(golemPath, yagna_datadir, options, loggerFactory);
-            Provider = new Provider(golemPath, prov_datadir, loggerFactory);
+            Yagna = new YagnaService(golemPath, yagna_datadir, options, _events, loggerFactory);
+            Provider = new Provider(golemPath, prov_datadir, _events, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, options.Network, loggerFactory);
             _golemPrice = ProviderConfig.GolemPrice;
             _jobs = new Jobs(Yagna, SetCurrentJob, loggerFactory);

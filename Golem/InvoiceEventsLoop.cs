@@ -1,3 +1,4 @@
+using Golem;
 using Golem.Yagna;
 using GolemLib.Types;
 using Microsoft.Extensions.Logging;
@@ -10,14 +11,16 @@ class InvoiceEventsLoop
     private readonly ILogger _logger;
     private readonly IJobs _jobs;
     private DateTime _since = DateTime.MinValue;
+    private readonly EventsPublisher _events;
     
 
-    public InvoiceEventsLoop(YagnaApi yagnaApi, CancellationToken token, ILogger logger, IJobs jobs)
+    public InvoiceEventsLoop(YagnaApi yagnaApi, IJobs jobs, CancellationToken token, EventsPublisher events, ILogger logger)
     {
         _yagnaApi = yagnaApi;
         _token = token;
         _logger = logger;
         _jobs = jobs;
+        _events = events;
     }
 
     public async Task Start()
@@ -28,8 +31,9 @@ class InvoiceEventsLoop
 
         await Task.Yield();
         
-        while (!_token.IsCancellationRequested)
+        while (true)
         {
+            _token.ThrowIfCancellationRequested();
             try
             {
                 var invoiceEvents = await _yagnaApi.GetInvoiceEvents(_since, _token);
@@ -43,13 +47,15 @@ class InvoiceEventsLoop
                     }
                 }
             }
-            catch(TaskCanceledException)
+            catch(OperationCanceledException)
             {
+                _events.Raise(new ApplicationEventArgs($"[ActivityLoop]: OperationCanceledException"));
                 _logger.LogInformation("Invoice events loop cancelled");
                 return;
             }
             catch(Exception e)
             {
+                _events.Raise(new ApplicationEventArgs($"[ActivityLoop]: Exception {e.Message}"));
                 _logger.LogError("Error in invoice events loop: {e}", e.Message);
                 await Task.Delay(TimeSpan.FromSeconds(5), _token);
             }

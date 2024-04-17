@@ -213,3 +213,13 @@ public class Payment
             ;
     }
 }
+
+public class ApplicationEventArgs : EventArgs
+{
+    public ApplicationEventArgs(string message)
+    {
+        Message = message;
+    }
+
+    public string Message { get; set; }
+}

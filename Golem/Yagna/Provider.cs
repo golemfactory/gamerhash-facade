@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Golem.Tools;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
+using GolemLib.Types;
 
 namespace Golem.Yagna
 {
@@ -106,16 +107,18 @@ namespace Golem.Yagna
         }
 
         private readonly ILogger _logger;
+        private readonly EventsPublisher _events;
 
 
         private Process? ProviderProcess { get; set; }
         private SemaphoreSlim ProcLock { get; } = new SemaphoreSlim(1, 1);
 
-        public Provider(string golemPath, string? dataDir, ILoggerFactory loggerFactory)
+        public Provider(string golemPath, string? dataDir, EventsPublisher events, ILoggerFactory loggerFactory)
         {
             golemPath = Path.GetFullPath(golemPath);
 
             _logger = loggerFactory.CreateLogger<Provider>();
+            _events = events;
             _yaProviderPath = Path.Combine(golemPath, ProcessFactory.BinName("ya-provider"));
             _pluginsPath = Path.Combine(golemPath, "..", "plugins");
             _pluginsPath = Path.GetFullPath(_pluginsPath);
@@ -228,6 +231,7 @@ namespace Golem.Yagna
                 _ = ProviderProcess.WaitForExitAsync()
                     .ContinueWith(async result =>
                 {
+                    _events.Raise(new ApplicationEventArgs($"[Provider]: process exited: {ProviderProcess.HasExited}, handle is {(ProviderProcess == null ? "" : "not ")}null"));
                     if (ProviderProcess != null && ProviderProcess.HasExited)
                     {
                         var exitCode = ProviderProcess?.ExitCode ?? 1;
@@ -235,10 +239,6 @@ namespace Golem.Yagna
                     }
                     ProviderProcess = null;
                 });
-            }
-            catch (Exception)
-            {
-                throw;
             }
             finally
             {

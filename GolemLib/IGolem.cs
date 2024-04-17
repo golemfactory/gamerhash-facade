@@ -77,4 +77,9 @@ public interface IGolem : INotifyPropertyChanged
     /// <param name="since">Only jobs started after this timestamp will be returned.</param>
     /// <returns></returns>
     public Task<List<IJob>> ListJobs(DateTime since);
+
+    /// <summary>
+    /// Event handler that can be used to subscribe to events raised by the application
+    /// </summary>
+    public EventHandler<ApplicationEventArgs> ApplicationEvents { get; set; }
 }
