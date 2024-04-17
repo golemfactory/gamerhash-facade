@@ -92,7 +92,10 @@ class Jobs : IJobs
             }            
         }
 
-        return _jobs.Values.Cast<IJob>().ToList();
+        return _jobs
+            .Values
+            .Where(j => j.Timestamp>=since)
+            .Cast<IJob>().ToList();
     }
 
     private GolemPrice? GetPriceFromAgreement(YagnaAgreement agreement)
