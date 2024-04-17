@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Threading.Channels;
 
 using Golem.Tools;
@@ -12,42 +13,12 @@ using Microsoft.Extensions.Logging;
 namespace Golem.Tests
 {
     [Collection(nameof(SerialTestCollection))]
-    public class JobTests : IDisposable, IAsyncLifetime, IClassFixture<GolemFixture>
+    public class JobTests : JobsTestBase
     {
-        private readonly ILoggerFactory _loggerFactory;
-        private readonly ILogger _logger;
-        private GolemRelay? _relay;
-        private GolemRequestor? _requestor;
-        private AppKey? _requestorAppKey;
 
         public JobTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
-        {
-            XunitContext.Register(outputHelper);
-            // Log file directly in `tests` directory (like `tests/Jobtests-20231231.log )
-            var logfile = Path.Combine(PackageBuilder.TestDir(""), nameof(JobTests) + "-{Date}.log");
-            var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
-            _loggerFactory = LoggerFactory.Create(builder => builder
-                //// Console logger makes `dotnet test` hang on Windows
-                // .AddSimpleConsole(options => options.SingleLine = true)
-                .AddFile(logfile)
-                .AddProvider(loggerProvider)
-            );
-            _logger = _loggerFactory.CreateLogger(nameof(JobTests));
-        }
-
-        public async Task InitializeAsync()
-        {
-            var testDir = PackageBuilder.TestDir($"{nameof(JobTests)}_relay");
-            _relay = await GolemRelay.Build(testDir, _loggerFactory.CreateLogger("Relay"));
-            Assert.True(_relay.Start());
-            System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:16464");
-            System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");
-
-            _requestor = await GolemRequestor.Build(nameof(JobTests), _loggerFactory.CreateLogger("Requestor"));
-            Assert.True(_requestor.Start());
-            _requestor.InitPayment();
-            _requestorAppKey = _requestor.getTestAppKey();
-        }
+            : base(outputHelper, golemFixture)
+        { }
 
         [Fact]
         public async Task CompleteScenario()
@@ -95,10 +66,10 @@ namespace Golem.Tests
             _logger.LogInformation("Starting Golem");
             await golem.Start();
             // On startup Golem status goes from `Off` to `Starting`
-            Assert.Equal(GolemStatus.Starting, await SkipMatching(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Off));
+            Assert.Equal(GolemStatus.Starting, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Off));
 
             // .. and then to `Ready`
-            Assert.Equal(GolemStatus.Ready, await SkipMatching(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Starting));
+            Assert.Equal(GolemStatus.Ready, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Starting));
 
             // `CurrentJob` after startup, before taking any Job should be null
             Assert.Null(golem.CurrentJob);
@@ -110,16 +81,16 @@ namespace Golem.Tests
             Assert.True(app.Start());
 
             // `CurrentJob` property update notification.
-            Job? currentJob = await SkipMatching<Job?>(jobChannel);
+            Job? currentJob = await ReadChannel<Job?>(jobChannel);
             // `CurrentJob` object property and object arriving as a property notification are the same.
             Assert.Same(currentJob, golem.CurrentJob);
             Assert.NotNull(currentJob);
 
             // Job starts with `Idle` it might switch into `DownloadingModel` state and then transitions to `Computing`
-            var currentState = await SkipMatching(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle, 30_000);
+            var currentState = await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle, 30_000);
             if (currentState == JobStatus.DownloadingModel)
             {
-                Assert.Equal(JobStatus.Computing, await SkipMatching(jobStatusChannel, (JobStatus s) => s == JobStatus.DownloadingModel, 30_000));
+                Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.DownloadingModel, 30_000));
             }
             else
             {
@@ -142,7 +113,7 @@ namespace Golem.Tests
             _logger.LogInformation("Stopping App");
             await app.Stop(StopMethod.SigInt);
 
-            Assert.Equal(JobStatus.Finished, await SkipMatching(currentJobStatusChannel, (JobStatus s) => s == JobStatus.Computing, 30_000));
+            Assert.Equal(JobStatus.Finished, await ReadChannel(currentJobStatusChannel, (JobStatus s) => s == JobStatus.Computing, 30_000));
 
             var jobs = await golem.ListJobs(DateTime.MinValue);
             var job = jobs.SingleOrDefault(j => j.Id == jobId);
@@ -151,10 +122,10 @@ namespace Golem.Tests
 
             // Checking payments
 
-            Assert.Equal(GolemLib.Types.PaymentStatus.Settled, await SkipMatching<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent));
+            Assert.Equal(GolemLib.Types.PaymentStatus.Settled, await ReadChannel<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent));
 
             //TODO payments is empty
-            var payments = await SkipMatching<List<GolemLib.Types.Payment>?>(currentJobPaymentConfirmationChannel);
+            var payments = await ReadChannel<List<GolemLib.Types.Payment>?>(currentJobPaymentConfirmationChannel);
             // Assert.Single(payments);
             // Assert.Equal(_requestorAppKey.Id, payments[0].PayerId);
             // _logger.LogInformation($"Invoice amount {payments[0].Amount}");
@@ -170,76 +141,11 @@ namespace Golem.Tests
             _logger.LogInformation("Stopping Golem");
             await golem.Stop();
 
-            var stoppingStatus = await SkipMatching(golemStatusChannel, (GolemStatus status) => { return status == GolemStatus.Ready; });
+            var stoppingStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => { return status == GolemStatus.Ready; });
             Assert.Equal(GolemStatus.Stopping, stoppingStatus);
 
-            var offStatus = await SkipMatching(golemStatusChannel, (GolemStatus status) => { return status == GolemStatus.Ready; });
+            var offStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => { return status == GolemStatus.Ready; });
             Assert.Equal(GolemStatus.Off, offStatus);
-        }
-
-        /// <summary>
-        /// Reads from `channel` and returns first `T` for which `matcher` returns `false`
-        /// </summary>
-        /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
-        public async Task<T> SkipMatching<T>(ChannelReader<T> channel, Func<T, bool>? matcher = null, double timeoutMs = 10_000)
-        {
-            var cancelTokenSource = new CancellationTokenSource();
-            cancelTokenSource.CancelAfter(TimeSpan.FromMilliseconds(timeoutMs));
-            static bool FalseMatcher(T x) => false;
-            matcher ??= FalseMatcher;
-            while (await channel.WaitToReadAsync(cancelTokenSource.Token))
-            {
-                if (channel.TryRead(out var value) && value is T tValue && !matcher.Invoke(tValue))
-                {
-                    return tValue;
-                }
-                else
-                {
-                    _logger.LogInformation($"Skipping element: {value}");
-                }
-            }
-
-            throw new Exception($"Failed to find matching {nameof(T)} within {timeoutMs} ms.");
-        }
-
-        /// <summary>
-        /// Creates channel of updated properties.
-        /// `extraHandler` is invoked each time property arrives.
-        /// </summary>
-        public Channel<T?> PropertyChangeChannel<OBJ, T>(OBJ? obj, string propName, Action<T?>? extraHandler = null) where OBJ : INotifyPropertyChanged
-        {
-            var eventChannel = Channel.CreateUnbounded<T?>();
-            Action<T?> emitEvent = async (v) =>
-            {
-                extraHandler?.Invoke(v);
-                await eventChannel.Writer.WriteAsync(v);
-            };
-            if (obj != null)
-            {
-                obj.PropertyChanged += new PropertyChangedHandler<OBJ, T>(propName, emitEvent, _loggerFactory).Subscribe();
-            }
-            else
-            {
-                _logger.LogInformation($"Property {typeof(OBJ)} is null. Event channel will be empty.");
-            }
-            return eventChannel;
-        }
-
-        public async Task DisposeAsync()
-        {
-            if (_requestor != null)
-            {
-                await _requestor.Stop(StopMethod.SigInt);
-            }
-            if (_relay != null)
-            {
-                await _relay.Stop(StopMethod.SigInt);
-            }
-        }
-
-        public void Dispose()
-        {
-            XunitContext.Flush();
         }
     }
 }

@@ -2,7 +2,7 @@ global using Xunit;
 global using Xunit.Abstractions;
 
 [assembly: CollectionBehavior(
-    CollectionBehavior.CollectionPerClass,
+    CollectionBehavior.CollectionPerAssembly,
     DisableTestParallelization = true,
     MaxParallelThreads = 1
 )]
