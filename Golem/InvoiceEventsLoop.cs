@@ -30,9 +30,7 @@ class InvoiceEventsLoop
     {
         _logger.LogInformation("Starting monitoring invoice events");
 
-        await Task.Yield();
         DateTime since = DateTime.Now;
-
         while (!_token.IsCancellationRequested)
         {
             try
@@ -65,8 +63,6 @@ class InvoiceEventsLoop
         _logger.LogInformation("Starting monitoring payments");
 
         DateTime since = DateTime.Now;
-        await Task.Yield();
-
         while (!_token.IsCancellationRequested)
         {
             try
