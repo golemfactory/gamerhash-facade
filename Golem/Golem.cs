@@ -160,7 +160,6 @@ namespace Golem
             get => Provider.AllowList;
         }
 
-        // private EventHandler<ApplicationEventArgs> _applicationEvents;
         public EventHandler<ApplicationEventArgs> ApplicationEvents { get => _events.ApplicationEvent; set => _events.ApplicationEvent = value; }
 
         public Task<List<IJob>> ListJobs(DateTime since)

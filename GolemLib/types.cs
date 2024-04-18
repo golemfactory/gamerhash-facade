@@ -218,16 +218,19 @@ public class ApplicationEventArgs : EventArgs
 {
     public enum SeverityLevel { Error, Warning };
 
-    public ApplicationEventArgs(string source, string message, SeverityLevel severity, Exception? exception)
+    public ApplicationEventArgs(string source, string message, SeverityLevel severity, Exception? exception, DateTime? timestamp = null)
     {
         Message = message;
         Source = source;
         Severity = severity;
         Exception = exception;
+        Timestamp = timestamp ?? DateTime.Now;
     }
 
     public string Message { get; set; }
     public string Source { get; set; }
     public SeverityLevel Severity { get; set; }
     public Exception? Exception { get; set; }
+    public DateTime Timestamp { get; set; }
+    public string Context { get; set; } = "";
 }

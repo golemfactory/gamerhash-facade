@@ -271,9 +271,13 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock>
                                         <TextBlock.Inlines>
-                                            <Run FontWeight="Bold" Text="{Binding Path=Source}" />
+                                            <Run FontStyle="Italic" Text="{Binding Path=Timestamp}" />
+                                            <Run FontStyle="Italic" Text=" # " />
                                         </TextBlock.Inlines>
-                                        :
+                                        <TextBlock.Inlines>
+                                            <Run FontWeight="Bold" Text="{Binding Path=Source}" />
+                                            <Run FontWeight="Bold" Text=": " />
+                                        </TextBlock.Inlines>
                                     </TextBlock>
                                     <TextBlock Text="{Binding Path=Message}" />
                                 </StackPanel>
