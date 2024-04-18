@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 using Golem.Model;
@@ -172,7 +173,7 @@ class Jobs : IJobs
         job.PaymentConfirmation = paymentsForRecentJob;
         job.PaymentStatus = IntoPaymentStatus(invoice.Status);
 
-        var confirmedSum = job.PaymentConfirmation.Sum(payment => Convert.ToDecimal(payment.Amount));
+        var confirmedSum = job.PaymentConfirmation.Sum(payment => Convert.ToDecimal(payment.Amount, CultureInfo.InvariantCulture));
 
         _logger.LogInformation($"Job: {job.Id}, confirmed sum: {confirmedSum}, job expected reward: {job.CurrentReward}");
 
