@@ -231,7 +231,7 @@ namespace Golem.Yagna
                 _ = ProviderProcess.WaitForExitAsync()
                     .ContinueWith(async result =>
                 {
-                    _events.Raise(new ApplicationEventArgs($"[Provider]: process exited: {ProviderProcess.HasExited}, handle is {(ProviderProcess == null ? "" : "not ")}null"));
+                    _events.Raise(new ApplicationEventArgs("Provider", $"Process exited: {ProviderProcess.HasExited}, handle is {(ProviderProcess == null ? "" : "not ")}null", ApplicationEventArgs.SeverityLevel.Error, null));
                     if (ProviderProcess != null && ProviderProcess.HasExited)
                     {
                         var exitCode = ProviderProcess?.ExitCode ?? 1;

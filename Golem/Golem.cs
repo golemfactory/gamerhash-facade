@@ -202,13 +202,15 @@ namespace Golem
                 await StartupProvider(exitHandler, providerCancellationTokenSource.Token);
                 Status = GolemStatus.Ready;
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e)
             {
+                _events.Raise(new ApplicationEventArgs("Golem", $"Start cancelled: {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
                 _logger.LogInformation("Golem startup canceled");
                 // Stopping function is responsible for setting the status.
             }
             catch (Exception e)
             {
+                _events.Raise(new ApplicationEventArgs("Golem", $"Failed to start: {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
                 _logger.LogError("Failed to start Golem: {0}", e);
 
                 // Cleanup to avoid leaving processes running.
@@ -274,7 +276,7 @@ namespace Golem
             }
             catch (Exception e)
             {
-                _events.Raise(new ApplicationEventArgs($"Payment init failed: {e.Message}"));
+                _events.Raise(new ApplicationEventArgs("Golem", $"Payment init failed: {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
                 _logger.LogError("Payment init failed: {0}", e);
                 throw new Exception("Payment init failed {0}", e);
             }
@@ -293,7 +295,7 @@ namespace Golem
             }
             catch (Exception e)
             {
-                _events.Raise(new ApplicationEventArgs($"StartupProvider failed: {e.Message}"));
+                _events.Raise(new ApplicationEventArgs("Golem", $"Payment init failed: {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
                 throw new Exception($"Failed to start provider: {e}");
             }
         }
@@ -306,7 +308,7 @@ namespace Golem
         {
             return async (int exitCode, string which) =>
             {
-                _events.Raise(new ApplicationEventArgs($"[Golem.ExitCleanupHandler]: {which}, exitCode: {exitCode}"));
+                _events.Raise(new ApplicationEventArgs("Golem", $"ExitCleanupHandler: {which} exited with code {exitCode}", ApplicationEventArgs.SeverityLevel.Error, null));
 
                 if (Status != GolemStatus.Stopping && Status != GolemStatus.Off)
                 {

@@ -265,10 +265,16 @@
             <Border Classes="Panel">
                 <StackPanel Margin="20">
                     <TextBlock Classes="Section">Events log</TextBlock>
-                    <ListBox ItemsSource="{Binding ApplicationEvents}">
+                    <ListBox ItemsSource="{Binding ApplicationEvents}" Height="240">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
+                                    <TextBlock>
+                                        <TextBlock.Inlines>
+                                            <Run FontWeight="Bold" Text="{Binding Path=Source}" />
+                                        </TextBlock.Inlines>
+                                        :
+                                    </TextBlock>
                                     <TextBlock Text="{Binding Path=Message}" />
                                 </StackPanel>
                             </DataTemplate>

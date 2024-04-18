@@ -65,15 +65,15 @@ class ActivityLoop
                         }
                     }
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException e)
                 {
-                    _events.Raise(new ApplicationEventArgs($"[ActivityLoop]: OperationCanceledException"));
+                    _events.Raise(new ApplicationEventArgs("ActivityLoop", "OperationCanceledException", ApplicationEventArgs.SeverityLevel.Error, e));
                     _logger.LogDebug("Activity loop cancelled");
                     return;
                 }
                 catch (Exception e)
                 {
-                    _events.Raise(new ApplicationEventArgs($"[ActivityLoop]: exception: {e.Message}"));
+                    _events.Raise(new ApplicationEventArgs("ActivityLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
                     _logger.LogError(e, "Activity monitoring request failure");
                     await Task.Delay(TimeSpan.FromSeconds(5), token);
                 }
@@ -81,7 +81,7 @@ class ActivityLoop
         }
         catch (Exception e)
         {
-            _events.Raise(new ApplicationEventArgs($"[ActivityLoop]: exception: {e.Message}"));
+            _events.Raise(new ApplicationEventArgs("ActivityLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
             _logger.LogError(e, "Activity monitoring loop failure");
         }
         finally

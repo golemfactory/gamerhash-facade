@@ -35,8 +35,15 @@ namespace MockGUI.ViewModels
         private ObservableCollection<ApplicationEventArgs> _applicationEvents;
         public ObservableCollection<ApplicationEventArgs> ApplicationEvents
         {
-            get { return _applicationEvents; }
-            set { _applicationEvents = value; OnPropertyChanged(); }
+            get
+            { 
+                return _applicationEvents;
+            }
+            set
+            {
+                _applicationEvents = value; 
+                OnPropertyChanged();
+            }
         }
 
         private FullExample? _app;
@@ -237,7 +244,7 @@ namespace MockGUI.ViewModels
 
         void ApplicationEventsHandler(object? sender, ApplicationEventArgs e)
         {
-            _applicationEvents.Add(e);
+            ApplicationEvents.Add(e);
         }
     }
 }

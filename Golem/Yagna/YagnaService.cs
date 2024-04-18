@@ -49,7 +49,7 @@ namespace Golem.Yagna
         public YagnaService(string golemPath, string dataDir, YagnaStartupOptions startupOptions, EventsPublisher events, ILoggerFactory loggerFactory)
         {
             Options = startupOptions;
-            Api = new YagnaApi(loggerFactory);
+            Api = new YagnaApi(loggerFactory, events);
 
             _logger = loggerFactory.CreateLogger<YagnaService>();
             _events = events;
@@ -174,7 +174,7 @@ namespace Golem.Yagna
                 _ = YagnaProcess.WaitForExitAsync()
                     .ContinueWith(async result =>
                     {
-                        _events.Raise(new ApplicationEventArgs($"[Yagna]: process exited: {YagnaProcess.HasExited}, handle is {(YagnaProcess == null ? "" : "not ")}null"));
+                        _events.Raise(new ApplicationEventArgs("Yagna", $"Process exited: {YagnaProcess.HasExited}, handle is {(YagnaProcess == null ? "" : "not ")}null", ApplicationEventArgs.SeverityLevel.Error, null));
                         // This code is not synchronized, to avoid deadlocks in case exitHandler will call any
                         // functions on YagnaService.
                         if (YagnaProcess != null && YagnaProcess.HasExited)

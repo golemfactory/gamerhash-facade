@@ -216,10 +216,18 @@ public class Payment
 
 public class ApplicationEventArgs : EventArgs
 {
-    public ApplicationEventArgs(string message)
+    public enum SeverityLevel { Error, Warning };
+
+    public ApplicationEventArgs(string source, string message, SeverityLevel severity, Exception? exception)
     {
         Message = message;
+        Source = source;
+        Severity = severity;
+        Exception = exception;
     }
 
     public string Message { get; set; }
+    public string Source { get; set; }
+    public SeverityLevel Severity { get; set; }
+    public Exception? Exception { get; set; }
 }
