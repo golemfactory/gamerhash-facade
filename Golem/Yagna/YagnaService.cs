@@ -5,6 +5,7 @@ using Golem.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
+using GolemLib.Types;
 
 namespace Golem.Yagna
 {
@@ -31,6 +32,7 @@ namespace Golem.Yagna
 
         public readonly YagnaApi Api;
         private readonly ILogger _logger;
+        private readonly EventsPublisher _events;
 
         private EnvironmentBuilder Env
         {
@@ -44,12 +46,13 @@ namespace Golem.Yagna
             }
         }
 
-        public YagnaService(string golemPath, string dataDir, YagnaStartupOptions startupOptions, ILoggerFactory loggerFactory)
+        public YagnaService(string golemPath, string dataDir, YagnaStartupOptions startupOptions, EventsPublisher events, ILoggerFactory loggerFactory)
         {
             Options = startupOptions;
-            Api = new YagnaApi(loggerFactory);
+            Api = new YagnaApi(loggerFactory, events);
 
             _logger = loggerFactory.CreateLogger<YagnaService>();
+            _events = events;
             _yaExePath = Path.GetFullPath(Path.Combine(golemPath, ProcessFactory.BinName("yagna")));
             _dataDir = Path.GetFullPath(dataDir);
             if (!File.Exists(_yaExePath))
@@ -171,6 +174,7 @@ namespace Golem.Yagna
                 _ = YagnaProcess.WaitForExitAsync()
                     .ContinueWith(async result =>
                     {
+                        _events.Raise(new ApplicationEventArgs("Yagna", $"Process exited: {YagnaProcess.HasExited}, handle is {(YagnaProcess == null ? "" : "not ")}null", ApplicationEventArgs.SeverityLevel.Error, null));
                         // This code is not synchronized, to avoid deadlocks in case exitHandler will call any
                         // functions on YagnaService.
                         if (YagnaProcess != null && YagnaProcess.HasExited)
@@ -182,10 +186,6 @@ namespace Golem.Yagna
                         }
                         YagnaProcess = null;
                     });
-            }
-            catch (Exception)
-            {
-                throw;
             }
             finally
             {
@@ -250,18 +250,18 @@ namespace Golem.Yagna
         }
 
         /// TODO: Reconsider API of this function.
-        public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobs jobs)
+        public Task StartActivityLoop(CancellationToken token, Action<Job?> setCurrentJob, IJobs jobs, EventsPublisher events)
         {
-            return new ActivityLoop(Api, jobs, _logger).Start(
+            return new ActivityLoop(Api, jobs, events, _logger).Start(
                 setCurrentJob,
                 token
             );
         }
 
         /// TODO: Reconsider API of this function.
-        public Task StartInvoiceEventsLoop(CancellationToken token, IJobs jobs)
+        public Task StartInvoiceEventsLoop(CancellationToken token, IJobs jobs, EventsPublisher events)
         {
-            return new InvoiceEventsLoop(Api, token, _logger, jobs).Start();
+            return new InvoiceEventsLoop(Api, jobs, token, events, _logger).Start();
         }
     }
 }

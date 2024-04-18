@@ -14,6 +14,7 @@ using Golem.Tools;
 using Golem;
 using System.Collections.Generic;
 using Golem.Yagna.Types;
+using GolemLib.Types;
 
 
 namespace MockGUI.ViewModels
@@ -30,6 +31,21 @@ namespace MockGUI.ViewModels
             get { return _jobsHistory; }
             set { _jobsHistory = value; OnPropertyChanged(); }
         }
+
+        private ObservableCollection<ApplicationEventArgs> _applicationEvents;
+        public ObservableCollection<ApplicationEventArgs> ApplicationEvents
+        {
+            get
+            { 
+                return _applicationEvents;
+            }
+            set
+            {
+                _applicationEvents = value; 
+                OnPropertyChanged();
+            }
+        }
+
         private FullExample? _app;
         public FullExample? App
         {
@@ -64,6 +80,8 @@ namespace MockGUI.ViewModels
             Golem = golem;
             Relay = relay;
             _jobsHistory = new ObservableCollection<IJob>();
+            _applicationEvents = new ObservableCollection<ApplicationEventArgs>();
+            golem.ApplicationEvents += ApplicationEventsHandler;
         }
 
         public static async Task<GolemViewModel> Load(string modulesDir, RelayType relayType, bool mainnet)
@@ -222,6 +240,11 @@ namespace MockGUI.ViewModels
             await Shutdown();
             // Suppress finalization.
             GC.SuppressFinalize(this);
+        }
+
+        void ApplicationEventsHandler(object? sender, ApplicationEventArgs e)
+        {
+            ApplicationEvents.Add(e);
         }
     }
 }
