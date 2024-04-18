@@ -227,7 +227,7 @@ async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy
             for id in activities:
                 activity = await golem._engine._activity_api.use_activity(id)
                 custom_url = "/sdapi/v1/txt2img"
-                url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
+                url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy-http" + custom_url
 
                 print('Request example:\n')
                 if os.name == 'nt':
