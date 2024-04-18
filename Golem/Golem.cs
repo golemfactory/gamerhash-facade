@@ -219,7 +219,7 @@ namespace Golem
         /// </summary>
         public async Task Stop()
         {
-            if (!IsRunning())
+            if (!IsRunning() && Status != GolemStatus.Error)
                 return;
 
             _logger.LogInformation("Stopping Golem");
@@ -275,7 +275,7 @@ namespace Golem
             }
         }
 
-        public async Task StartupProvider(Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
+        private async Task StartupProvider(Func<int, string, Task> exitHandler, CancellationToken cancellationToken)
         {
             try
             {
