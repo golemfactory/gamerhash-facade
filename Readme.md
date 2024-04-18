@@ -106,6 +106,21 @@ For this reason Payment Status won't be displayed, when the job is finished. To 
 > Current imlementation of `List Jobs` displays only tasks computed during current session of `MockGUI` application.
 > This is temporary behavior which will be reimplemented according to specification later.
 
+### Partial payments
+
+Example runner is configured to use partial payments.
+You can configure payments interval using command:
+```
+dotnet run --project ExampleRunner -- --golem modules --framework Dummy --pay-interval 120
+```
+
+Interval controls how often Provider will send payable DebitNotes.
+Note that this doesn't mean that you will get payments in these regular intervals. First payment should be done between 120s-240s, but yagna payment driver can batch transactions to optimize gas costs, so later we can expect different intervals than requested.
+
+`pay-interval` can have lowest value of 120s. Lower value will not be permitted and it is generally dicouraged to set too low value because blockchain has it's inertion. It is hard to ensure that payments are made in time.
+
+Provider can break Agreement if it doesn't receive payment. Since it is only example application, these case are not handled, but setting high enough interval value (which is understood as payment timeout as well) should solve this problem if it is too anoying.
+
 ## Troublshooting
 
 ### Provider doesn't pick up tasks

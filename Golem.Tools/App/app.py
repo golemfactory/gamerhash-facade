@@ -61,6 +61,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
     )
     parser.add_argument("--runtime", default="dummy", help="Runtime name, for example `automatic`")
     parser.add_argument("--descriptor", default=None, help="Path to node descriptor file")
+    parser.add_argument("--pay-interval", default=180, help="Interval of making partial payments")
     return parser
 
 
@@ -131,11 +132,11 @@ class ProviderOnceStrategy(MarketStrategy):
     """Hires provider only once.
     """
 
-    def __init__(self):
+    def __init__(self, pay_interval=180):
         self.history = set(())
         self.acceptable_prop_value_range_overrides =  {
             PROP_DEBIT_NOTE_INTERVAL_SEC: PropValueRange(60, None),
-            PROP_PAYMENT_TIMEOUT_SEC: PropValueRange(180, None),
+            PROP_PAYMENT_TIMEOUT_SEC: PropValueRange(int(pay_interval), None),
         }
 
     async def score_offer(self, offer):
@@ -199,8 +200,8 @@ class AiRuntimeService(Service):
         self.strategy = strategy
         
 
-async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy"):
-    strategy = ProviderOnceStrategy()
+async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy", args=None):
+    strategy = ProviderOnceStrategy(pay_interval=args.pay_interval)
     async with Golem(
         budget=4.0,
         subnet_tag=subnet_tag,
@@ -296,6 +297,7 @@ if __name__ == "__main__":
             driver=args.payment_driver,
             network=args.payment_network,
             runtime=args.runtime,
+            args=args
         ),
         log_file=args.log_file,
     )
