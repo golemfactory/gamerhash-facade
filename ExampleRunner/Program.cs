@@ -23,7 +23,7 @@ public class AppArguments
     public required Framework AiFramework { get; set; }
     [Option('m', "mainnet", Default = false, Required = false, HelpText = "Enables usage of mainnet")]
     public required bool Mainnet { get; set; }
-    [Option('p', "pay-interval", Default = false, Required = false, HelpText = "Interval between partial payments in seconds")]
+    [Option('p', "pay-interval", Default = null, Required = false, HelpText = "Interval between partial payments in seconds")]
     public UInt32? PaymentInterval { get; set; }
 }
 
