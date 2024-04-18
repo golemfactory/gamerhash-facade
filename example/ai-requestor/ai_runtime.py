@@ -188,7 +188,7 @@ class AiRuntimeService(Service):
 async def trigger(activity: RequestorControlApi, token, prompt, output_file):
 
     custom_url = "/sdapi/v1/txt2img"
-    url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy_http_request" + custom_url
+    url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy-http" + custom_url
     headers = {"Authorization": "Bearer "+token}
 
     payload = {
