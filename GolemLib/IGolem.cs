@@ -79,7 +79,7 @@ public interface IGolem : INotifyPropertyChanged
     public Task<List<IJob>> ListJobs(DateTime since);
 
     /// <summary>
-    /// Event handler that can be used to subscribe to events raised by the application
+    /// Event handler that can be used to subscribe to errors and warnings raised by the application
     /// </summary>
     public EventHandler<ApplicationEventArgs> ApplicationEvents { get; set; }
 }
