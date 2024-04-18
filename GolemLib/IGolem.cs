@@ -82,4 +82,10 @@ public interface IGolem : INotifyPropertyChanged
     /// Event handler that can be used to subscribe to errors and warnings raised by the application
     /// </summary>
     public EventHandler<ApplicationEventArgs> ApplicationEvents { get; set; }
+
+    /// <summary>
+    /// Log files list
+    /// </summary>
+    /// <returns>List of Golem apps log files paths</returns>
+    public List<string> LogFiles();
 }

@@ -20,7 +20,7 @@ namespace Golem
         private ProviderConfigService ProviderConfig { get; set; }
         private CancellationTokenSource _yagnaCancellationtokenSource;
         private CancellationTokenSource _providerCancellationtokenSource;
-        private EventsPublisher _events { get; set;}
+        private EventsPublisher _events { get; set; }
 
         private readonly ILogger _logger;
 
@@ -406,6 +406,15 @@ namespace Golem
             return Status == GolemStatus.Starting ||
                 Status == GolemStatus.Ready ||
                 Status == GolemStatus.Stopping;
+        }
+
+        public List<String> LogFiles()
+        {
+            var yagnaLogFiles = Yagna.LogFiles();
+            var providerLogFiles = Provider.LogFiles();
+            var logFiles = yagnaLogFiles.Concat(providerLogFiles).ToList();
+            logFiles.Sort();
+            return logFiles;
         }
     }
 }

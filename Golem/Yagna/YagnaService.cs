@@ -263,5 +263,15 @@ namespace Golem.Yagna
         {
             return new InvoiceEventsLoop(Api, jobs, token, events, _logger).Start();
         }
+
+        internal IEnumerable<string> LogFiles()
+        {
+            if (!Directory.Exists(_dataDir)) {
+                return new List<string>();
+            }
+            var logFiles = Directory.GetFiles(_dataDir, "yagna_*.log");
+            var logGzFiles = Directory.GetFiles(_dataDir, "yagna_*.log.gz");
+            return logFiles.Concat(logGzFiles);
+        }
     }
 }

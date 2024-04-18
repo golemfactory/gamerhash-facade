@@ -17,7 +17,7 @@ namespace Golem.Tests
     {
 
         public JobTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
-            : base(outputHelper, golemFixture)
+            : base(outputHelper, golemFixture, nameof(JobTests))
         { }
 
         [Fact]
