@@ -36,12 +36,12 @@ namespace MockGUI.ViewModels
         public ObservableCollection<ApplicationEventArgs> ApplicationEvents
         {
             get
-            { 
+            {
                 return _applicationEvents;
             }
             set
             {
-                _applicationEvents = value; 
+                _applicationEvents = value;
                 OnPropertyChanged();
             }
         }
@@ -205,7 +205,7 @@ namespace MockGUI.ViewModels
                 _logger.LogInformation("Listing jobs since: " + since);
                 jobs = await this.Golem.ListJobs(since);
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 _logger.LogWarning(e, "Listing jobs failure");
                 jobs = new List<IJob>();
