@@ -218,6 +218,12 @@ namespace Golem.Yagna
             return await RestGet<List<Payment>>(path, args, token);
         }
 
+        public async Task<List<Payment>> GetInvoicePayments(string invoiceId, CancellationToken token = default)
+        {
+            var path = $"/payment-api/v1/invoices/{invoiceId}/payments";
+            return await RestGet<List<Payment>>(path, token);
+        }
+
         public async Task<Invoice> GetInvoice(string id, CancellationToken token = default)
         {
             var path = $"/payment-api/v1/invoices/{id}";
@@ -244,9 +250,7 @@ namespace Golem.Yagna
                 {"X-Provider-Events", string.Join(',', _monitorEventTypes)}
             };
 
-            var result = await RestGet<List<InvoiceEvent>>("/payment-api/v1/invoiceEvents", args, headers, token);
-
-            return result;
+            return await RestGet<List<InvoiceEvent>>("/payment-api/v1/invoiceEvents", args, headers, token);
         }
 
         public void CancelPendingRequests()
