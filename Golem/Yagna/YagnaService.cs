@@ -223,6 +223,8 @@ namespace Golem.Yagna
 
         public async Task<string?> WaitForIdentityAsync(CancellationToken cancellationToken = default)
         {
+            _logger.LogDebug("Waiting for yagna to start... Checking /me endpoint.");
+
             //yagna is starting and /me won't work until all services are running
             for (int tries = 0; tries < 200; ++tries)
             {
@@ -239,6 +241,8 @@ namespace Golem.Yagna
                 try
                 {
                     MeInfo meInfo = await Api.Me(cancellationToken);
+
+                    _logger.LogDebug("Yagna started; REST API is available.");
                     return meInfo.Identity;
                 }
                 catch (Exception)
@@ -261,7 +265,7 @@ namespace Golem.Yagna
         /// TODO: Reconsider API of this function.
         public Task StartInvoiceEventsLoop(CancellationToken token, IJobs jobs, EventsPublisher events)
         {
-            return new InvoiceEventsLoop(Api, jobs, token, events, _logger).Start();
+            return Task.Run(async () => await new InvoiceEventsLoop(Api, jobs, token, events, _logger).Start());
         }
 
         internal IEnumerable<string> LogFiles()
