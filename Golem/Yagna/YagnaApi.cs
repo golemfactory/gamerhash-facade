@@ -246,9 +246,7 @@ namespace Golem.Yagna
                 {"X-Provider-Events", string.Join(',', _monitorEventTypes)}
             };
 
-            var result = await RestGet<List<InvoiceEvent>>("/payment-api/v1/invoiceEvents", args, headers, token);
-
-            return result;
+            return await RestGet<List<InvoiceEvent>>("/payment-api/v1/invoiceEvents", args, headers, token);
         }
 
         public void CancelPendingRequests()

@@ -373,7 +373,7 @@ namespace Golem
             }
             else
             {
-                _logger.LogInformation("Job has not changed.");
+                _logger.LogDebug("Job has not changed.");
             }
         }
 

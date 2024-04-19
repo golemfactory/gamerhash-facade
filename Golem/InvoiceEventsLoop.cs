@@ -23,7 +23,7 @@ class InvoiceEventsLoop
 
     public Task Start()
     {
-        return Task.WhenAll(PaymentsLoop(), InvoiceLoop());
+        return Task.WhenAll(Task.Run(PaymentsLoop), Task.Run(InvoiceLoop));
     }
 
     public async Task InvoiceLoop()
@@ -31,21 +31,26 @@ class InvoiceEventsLoop
         _logger.LogInformation("Starting monitoring invoice events");
 
         DateTime since = DateTime.Now;
-        while (!_token.IsCancellationRequested)
+        while (true)
         {
             try
             {
+                _token.ThrowIfCancellationRequested();
+                _logger.LogDebug("Checking for new invoice events since: {}", since);
+
                 var invoiceEvents = await _yagnaApi.GetInvoiceEvents(since, _token);
                 if (invoiceEvents != null && invoiceEvents.Count > 0)
                 {
                     foreach (var invoiceEvent in invoiceEvents.OrderBy(e => e.EventDate))
                     {
+                        _logger.LogDebug("Invoice event for: {}", invoiceEvent.InvoiceId);
+
                         await UpdatesForInvoice(invoiceEvent);
                         since = invoiceEvent.EventDate;
                     }
                 }
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
                 _logger.LogInformation("Invoice events loop cancelled");
                 return;
@@ -63,18 +68,24 @@ class InvoiceEventsLoop
         _logger.LogInformation("Starting monitoring payments");
 
         DateTime since = DateTime.Now;
-        while (!_token.IsCancellationRequested)
+        while (true)
         {
             try
             {
+
+                _token.ThrowIfCancellationRequested();
+                _logger.LogDebug("Checking for new payments since: {}", since);
+
                 var payments = await _yagnaApi.GetPayments(since, _token);
                 foreach (var payment in payments.OrderBy(pay => pay.Timestamp))
                 {
+                    _logger.LogDebug("New Payment, id: {}", payment.PaymentId);
+
                     await _jobs.UpdatePartialPayment(payment);
                     since = payment.Timestamp;
                 }
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
                 _logger.LogInformation("Payments loop cancelled");
                 return;
