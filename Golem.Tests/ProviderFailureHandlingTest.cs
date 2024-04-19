@@ -17,10 +17,11 @@ namespace Golem.Tests
 {
     [Collection(nameof(SerialTestCollection))]
     public class ErrorHandlingTests : JobsTestBase
+
     {
 
         public ErrorHandlingTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
-            : base(outputHelper, golemFixture)
+            : base(outputHelper, golemFixture, nameof(ErrorHandlingTests))
         { }
 
         [OsFact(nameof(OSPlatform.Windows))]
@@ -41,7 +42,6 @@ namespace Golem.Tests
             {
                 jobStatusChannel = PropertyChangeChannel(currentJob, nameof(currentJob.Status),
                     (JobStatus v) => _logger.LogInformation($"Current job Status update: {v}"));
-
             });
 
             // Then

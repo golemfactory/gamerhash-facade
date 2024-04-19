@@ -265,5 +265,23 @@ namespace Golem.Yagna
             await ProcessFactory.StopProcess(proc, stopTimeoutMs, _logger);
             ProviderProcess = null;
         }
+
+        internal IEnumerable<string> LogFiles()
+        {
+            if (!Directory.Exists(_dataDir))
+            {
+                return new List<string>();
+            }
+            var logFiles = Directory.GetFiles(_dataDir, "ya-provider_*.log");
+            var logGzFiles = Directory.GetFiles(_dataDir, "ya-provider_*.log.gz");
+            var workDir = Path.Combine(_dataDir, "exe-unit", "work");
+            if (!Path.Exists(workDir))
+            {
+                return logFiles.Concat(logGzFiles);
+            }
+            var runtimeLogFiles = Directory.GetFiles(workDir, "*.log", SearchOption.AllDirectories);
+            var runtimeLogGzFiles = Directory.GetFiles(workDir, "*.log.gz", SearchOption.AllDirectories);
+            return logFiles.Concat(logGzFiles).Concat(runtimeLogFiles).Concat(runtimeLogGzFiles);
+        }
     }
 }
