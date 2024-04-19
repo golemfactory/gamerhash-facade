@@ -207,6 +207,7 @@ namespace MockGUI.ViewModels
             }
             catch (Exception)
             {
+                _logger.LogWarning(e, "Listing jobs failure");
                 jobs = new List<IJob>();
             }
 
