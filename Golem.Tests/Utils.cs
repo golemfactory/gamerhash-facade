@@ -24,13 +24,13 @@ namespace Golem.Tests
             Type? t = ass.GetType(factoryType) ?? throw new Exception("Factory Type not found. Lib not loaded: " + dllPath);
             var obj = Activator.CreateInstance(t) ?? throw new Exception("Creating Factory instance failed. Lib not loaded: " + dllPath);
             var factory = obj as IFactory ?? throw new Exception("Cast to IFactory failed.");
-            return await factory.Create(modulesDir, loggerFactory, false);
+            return await factory.Create(modulesDir, loggerFactory, false, dataDir);
         }
 
         public async static Task<IGolem> Golem(string golemPath, ILoggerFactory loggerFactory, string? dataDir = null)
         {
             var modulesDir = PackageBuilder.ModulesDir(golemPath);
-            return await new Factory().Create(modulesDir, loggerFactory, false);
+            return await new Factory().Create(modulesDir, loggerFactory, false, dataDir);
         }
 
         /// <summary>
