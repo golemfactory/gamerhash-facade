@@ -21,6 +21,7 @@ namespace Golem.Yagna
                                     .Build();
 
         private readonly ILogger _logger;
+        private readonly EventsPublisher _events;
 
         private readonly string[] _monitorEventTypes =
         {
@@ -33,13 +34,14 @@ namespace Golem.Yagna
             "CANCELLED"
         };
 
-        public YagnaApi(ILoggerFactory loggerFactory)
+        public YagnaApi(ILoggerFactory loggerFactory, EventsPublisher events)
         {
             _httpClient = new HttpClient
             {
                 BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
             };
             _logger = loggerFactory.CreateLogger<YagnaApi>();
+            _events = events;
         }
 
         public void Authorize(string key)
@@ -111,9 +113,10 @@ namespace Golem.Yagna
                 {
                     throw;
                 }
-                catch (Exception error)
+                catch (Exception e)
                 {
-                    _logger.LogError("Failed to get next stream event: {0}", error);
+                    _events.Raise(new ApplicationEventArgs("YagnaApi", $"Failed to get next stream event: {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e));
+                    _logger.LogError("Failed to get next stream event: {0}", e);
                     break;
                 }
                 yield return result;
@@ -135,6 +138,7 @@ namespace Golem.Yagna
                 }
                 else
                 {
+                    _events.Raise(new ApplicationEventArgs("YagnaApi", $"Unable to deserialize message: {line}", ApplicationEventArgs.SeverityLevel.Warning, null));
                     _logger.LogError("Unable to deserialize message: {0}", line);
                 }
             }

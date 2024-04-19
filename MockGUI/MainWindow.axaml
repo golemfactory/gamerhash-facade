@@ -261,5 +261,31 @@
                 </StackPanel>
             </Border>
         </StackPanel>
+        <StackPanel>
+            <Border Classes="Panel">
+                <StackPanel Margin="20">
+                    <TextBlock Classes="Section">Events log</TextBlock>
+                    <ListBox ItemsSource="{Binding ApplicationEvents}" Height="240">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock>
+                                        <TextBlock.Inlines>
+                                            <Run FontStyle="Italic" Text="{Binding Path=Timestamp}" />
+                                            <Run FontStyle="Italic" Text=" # " />
+                                        </TextBlock.Inlines>
+                                        <TextBlock.Inlines>
+                                            <Run FontWeight="Bold" Text="{Binding Path=Source}" />
+                                            <Run FontWeight="Bold" Text=": " />
+                                        </TextBlock.Inlines>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Path=Message}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+        </StackPanel>
     </StackPanel>
 </Window>

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using Golem;
 using Golem.Model;
 using Golem.Yagna;
 using Golem.Yagna.Types;
@@ -20,12 +21,14 @@ class ActivityLoop
     private readonly YagnaApi _yagnaApi;
     private readonly IJobs _jobs;
     private readonly ILogger _logger;
+    private readonly EventsPublisher _events;
 
-    public ActivityLoop(YagnaApi yagnaApi, IJobs jobs, ILogger logger)
+    public ActivityLoop(YagnaApi yagnaApi, IJobs jobs, EventsPublisher events, ILogger logger)
     {
         _yagnaApi = yagnaApi;
         _jobs = jobs;
         _logger = logger;
+        _events = events;
     }
 
     public async Task Start(
@@ -38,7 +41,7 @@ class ActivityLoop
 
         try
         {
-            while (!token.IsCancellationRequested)
+            while (true)
             {
                 _logger.LogDebug("Monitoring activities");
                 newReconnect = await ReconnectDelay(newReconnect, token);
@@ -62,13 +65,15 @@ class ActivityLoop
                         }
                     }
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException e)
                 {
+                    _events.Raise(new ApplicationEventArgs("ActivityLoop", "OperationCanceledException", ApplicationEventArgs.SeverityLevel.Error, e));
                     _logger.LogDebug("Activity loop cancelled");
                     return;
                 }
                 catch (Exception e)
                 {
+                    _events.Raise(new ApplicationEventArgs("ActivityLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
                     _logger.LogError(e, "Activity monitoring request failure");
                     await Task.Delay(TimeSpan.FromSeconds(5), token);
                 }
@@ -76,6 +81,7 @@ class ActivityLoop
         }
         catch (Exception e)
         {
+            _events.Raise(new ApplicationEventArgs("ActivityLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
             _logger.LogError(e, "Activity monitoring loop failure");
         }
         finally

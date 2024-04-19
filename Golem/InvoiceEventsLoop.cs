@@ -1,3 +1,4 @@
+using Golem;
 using Golem.Yagna;
 
 using GolemLib.Types;
@@ -11,14 +12,16 @@ class InvoiceEventsLoop
     private readonly CancellationToken _token;
     private readonly ILogger _logger;
     private readonly IJobs _jobs;
+    private readonly EventsPublisher _events;
 
 
-    public InvoiceEventsLoop(YagnaApi yagnaApi, CancellationToken token, ILogger logger, IJobs jobs)
+    public InvoiceEventsLoop(YagnaApi yagnaApi, IJobs jobs, CancellationToken token, EventsPublisher events, ILogger logger)
     {
         _yagnaApi = yagnaApi;
         _token = token;
         _logger = logger;
         _jobs = jobs;
+        _events = events;
     }
 
     public Task Start()
@@ -33,6 +36,7 @@ class InvoiceEventsLoop
         DateTime since = DateTime.Now;
         while (true)
         {
+            _token.ThrowIfCancellationRequested();
             try
             {
                 _token.ThrowIfCancellationRequested();
@@ -57,6 +61,7 @@ class InvoiceEventsLoop
             }
             catch (Exception e)
             {
+                _events.Raise(new ApplicationEventArgs("InvoiceLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
                 _logger.LogError("Error in invoice events loop: {e}", e.Message);
                 await Task.Delay(TimeSpan.FromSeconds(5), _token);
             }
@@ -92,6 +97,7 @@ class InvoiceEventsLoop
             }
             catch (Exception e)
             {
+                _events.Raise(new ApplicationEventArgs("PaymentsLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
                 _logger.LogError("Error in payments loop: {e}", e.Message);
                 await Task.Delay(TimeSpan.FromSeconds(5), _token);
             }
