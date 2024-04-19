@@ -174,7 +174,7 @@ namespace Golem.Yagna
                 _ = YagnaProcess.WaitForExitAsync()
                     .ContinueWith(async result =>
                     {
-                        _events.Raise(new ApplicationEventArgs("Yagna", $"Process exited: {YagnaProcess.HasExited}, handle is {(YagnaProcess == null ? "" : "not ")}null", ApplicationEventArgs.SeverityLevel.Error, null));
+                        _events.Raise(new ApplicationEventArgs("Yagna", $"Process exited: {YagnaProcess?.HasExited ?? true}, handle is {(YagnaProcess == null ? "" : "not ")}null", ApplicationEventArgs.SeverityLevel.Error, null));
                         // This code is not synchronized, to avoid deadlocks in case exitHandler will call any
                         // functions on YagnaService.
                         if (YagnaProcess != null && YagnaProcess.HasExited)

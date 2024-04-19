@@ -170,19 +170,24 @@ namespace Golem.Yagna
 
         public string ExecToText(IEnumerable<object> args)
         {
+            string stdOutput;
+            string stdError;
+            Process process;
             try
             {
-                var process = StartProcess(Executable, args, Env, true);
-                var result = process.StandardOutput.ReadToEnd();
-                var err = process.StandardError.ReadToEnd();
-                Logger?.LogInformation("Execution result. StdOut: {0}\nStdErr {1}", result, err);
-                return result;
+                process = StartProcess(Executable, args, Env, true);
+                stdOutput = process.StandardOutput.ReadToEnd();
+                stdError = process.StandardError.ReadToEnd();
+                Logger?.LogInformation("Execution result. StdOut: {0}\nStdErr {1}", stdOutput, stdError);
             }
             catch (Exception e)
             {
                 Logger?.LogError(e, "Failed to execute cmd. Args: {0}", args);
-                throw new GolemProcessException(string.Format("Failed to execute command: {0}", e.Message));
+                throw new GolemProcessException(string.Format("Failed to execute command: {0} {1}", Executable, e.Message));
             }
+            if (process.HasExited && process.ExitCode!=0)
+                throw new GolemProcessException(string.Format("Failed to execute command: {0}, error code: {1}, stderr: {2}", Executable, process.ExitCode, stdError));
+            return stdOutput;
         }
 
         public T? Exec<T>(IEnumerable<object> args) where T : class

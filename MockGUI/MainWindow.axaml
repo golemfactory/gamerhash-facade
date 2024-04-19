@@ -265,7 +265,7 @@
             <Border Classes="Panel">
                 <StackPanel Margin="20">
                     <TextBlock Classes="Section">Events log</TextBlock>
-                    <ListBox ItemsSource="{Binding ApplicationEvents}" Height="240">
+                    <ListBox ItemsSource="{Binding ApplicationEvents}" Height="320">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
