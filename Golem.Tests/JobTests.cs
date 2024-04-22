@@ -12,7 +12,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Golem.Tests
 {
-    [Collection(nameof(SerialTestCollection))]
     public class JobTests : JobsTestBase
     {
 

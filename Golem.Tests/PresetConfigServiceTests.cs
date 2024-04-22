@@ -9,7 +9,6 @@ using Moq;
 
 namespace Golem.Tests
 {
-    [Collection(nameof(SerialTestCollection))]
     public class PresetConfigServicesTests : IDisposable, IClassFixture<GolemFixture>
     {
         private readonly ILoggerFactory _loggerFactory;
@@ -35,7 +34,7 @@ namespace Golem.Tests
         {
             var provider = new Mock<IProvider>();
             provider
-                .Setup(p => p.Exec<List<string>>(It.Is<IEnumerable<object>>(s => 
+                .Setup(p => p.Exec<List<string>>(It.Is<IEnumerable<object>>(s =>
                     s.SequenceEqual("--json preset active".Split()))))
                 .Returns(new List<string>
                 {
@@ -43,7 +42,7 @@ namespace Golem.Tests
                 });
 
             provider
-                .Setup(p => p.Exec<List<Preset>>(It.Is<IEnumerable<object>>(s => 
+                .Setup(p => p.Exec<List<Preset>>(It.Is<IEnumerable<object>>(s =>
                     s.SequenceEqual("preset --json list".Split()))))
                 .Returns(new List<Preset>
                 {
@@ -52,7 +51,7 @@ namespace Golem.Tests
                 });
 
             provider
-                .Setup(p => p.Exec<List<ExeUnit>>(It.Is<IEnumerable<object>>(s => 
+                .Setup(p => p.Exec<List<ExeUnit>>(It.Is<IEnumerable<object>>(s =>
                     s.SequenceEqual("--json exe-unit list".Split()))))
                 .Returns(new List<ExeUnit>
                 {
@@ -65,7 +64,7 @@ namespace Golem.Tests
 
             provider
                 .Verify(p => p.ExecToText(
-                            It.Is<IEnumerable<String>>(s => 
+                            It.Is<IEnumerable<String>>(s =>
                                 s.Contains("preset") && s.Contains("create")
                             )
                         ),
@@ -74,7 +73,7 @@ namespace Golem.Tests
 
             provider
                 .Verify(p => p.ExecToText(
-                            It.Is<IEnumerable<String>>(s => 
+                            It.Is<IEnumerable<String>>(s =>
                                 s.Contains("preset") && s.Contains("activate") && s.Contains("dummy")
                             )
                         ),
@@ -83,7 +82,7 @@ namespace Golem.Tests
 
             provider
                 .Verify(p => p.ExecToText(
-                            It.Is<IEnumerable<String>>(s => 
+                            It.Is<IEnumerable<String>>(s =>
                                 s.Contains("preset") && s.Contains("deactivate") && s.Contains("ai")
                             )
                         ),

@@ -7,9 +7,6 @@ global using Xunit.Abstractions;
     MaxParallelThreads = 1
 )]
 
-[CollectionDefinition(nameof(SerialTestCollection), DisableParallelization = true)]
-public class SerialTestCollection { }
-
 public class GolemFixture : IDisposable
 {
     public GolemFixture(IMessageSink sink)

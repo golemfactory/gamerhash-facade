@@ -12,12 +12,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Golem.Tests
 {
-    [Collection(nameof(SerialTestCollection))]
     public class StartStopProcessTests : IDisposable, IClassFixture<GolemFixture>
     {
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;
-        private readonly ITestOutputHelper output;
+        private readonly ITestOutputHelper _output;
 
 
         public StartStopProcessTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
@@ -27,7 +26,7 @@ namespace Golem.Tests
             _golemLib = Path.Combine(dir, "Golem.dll");
 
             XunitContext.Register(outputHelper);
-            output = outputHelper;
+            _output = outputHelper;
 
             _loggerProvider = new TestLoggerProvider(golemFixture.Sink);
         }
@@ -51,7 +50,7 @@ namespace Golem.Tests
         {
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            output.WriteLine("Path: " + golemPath);
+            _output.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
@@ -74,7 +73,7 @@ namespace Golem.Tests
         {
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            output.WriteLine("Path: " + golemPath);
+            _output.WriteLine("Path: " + golemPath);
 
             var dataDir = Path.Combine(golemPath, "test-data");
             if (Directory.Exists(dataDir))
@@ -126,7 +125,7 @@ namespace Golem.Tests
         {
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            output.WriteLine("Path: " + golemPath);
+            _output.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
@@ -143,7 +142,7 @@ namespace Golem.Tests
         {
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            output.WriteLine("Path: " + golemPath);
+            _output.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
@@ -171,7 +170,7 @@ namespace Golem.Tests
         {
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            output.WriteLine("Path: " + golemPath);
+            _output.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
@@ -198,7 +197,7 @@ namespace Golem.Tests
         {
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            output.WriteLine("Path: " + golemPath);
+            _output.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
 
