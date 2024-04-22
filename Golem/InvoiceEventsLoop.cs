@@ -55,7 +55,7 @@ class InvoiceEventsLoop
             }
             catch(Exception e)
             {
-                _events.Raise(new ApplicationEventArgs("InvoiceEventsLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
+                _events.Raise(new ApplicationEventArgs("InvoiceEventsLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e));
                 _logger.LogError("Error in invoice events loop: {e}", e.Message);
                 await Task.Delay(TimeSpan.FromSeconds(5), _token);
             }
