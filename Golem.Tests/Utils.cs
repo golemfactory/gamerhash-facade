@@ -34,9 +34,9 @@ namespace Golem.Tests
         }
 
         /// <summary>
-        /// Waits for file up to `timeoutSec` and reads it as a text file. Throws Exception on timeout.
+        /// Waits for file up to `timeoutSec`. Throws Exception on timeout.
         /// </summary>
-        public async static Task<String> WaitForFileAndRead(String path, int timeoutSec = 15)
+        public async static Task WaitForFile(String path, int timeoutSec = 15)
         {
             int i = 0;
             while (!File.Exists(path) && i < timeoutSec)
@@ -46,6 +46,14 @@ namespace Golem.Tests
             }
             if (i == timeoutSec)
                 throw new Exception($"File {path} was not created");
+        }
+
+        /// <summary>
+        /// Waits for file up to `timeoutSec` and reads it as a text file. Throws Exception on timeout.
+        /// </summary>
+        public async static Task<String> WaitForFileAndRead(String path, int timeoutSec = 15)
+        {
+            await WaitForFile(path, timeoutSec);
             return File.ReadAllText(path);
         }
 
@@ -101,13 +109,15 @@ namespace Golem.Tests
         protected GolemRelay? _relay;
         protected GolemRequestor? _requestor;
         protected AppKey? _requestorAppKey;
+        protected String _testClassName;
 
 
-        public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture)
+        public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName)
         {
             XunitContext.Register(outputHelper);
+            _testClassName = testClassName;
             // Log file directly in `tests` directory (like `tests/Jobtests-20231231.log )
-            var logfile = Path.Combine(PackageBuilder.TestDir(""), nameof(ErrorHandlingTests) + "-{Date}.log");
+            var logfile = Path.Combine(PackageBuilder.TestDir(""), testClassName + "-{Date}.log");
             var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
             _loggerFactory = LoggerFactory.Create(builder => builder
                 //// Console logger makes `dotnet test` hang on Windows
@@ -115,18 +125,18 @@ namespace Golem.Tests
                 .AddFile(logfile)
                 .AddProvider(loggerProvider)
             );
-            _logger = _loggerFactory.CreateLogger(nameof(ErrorHandlingTests));
+            _logger = _loggerFactory.CreateLogger(testClassName);
         }
 
         public async Task InitializeAsync()
         {
-            var testDir = PackageBuilder.TestDir($"{nameof(ErrorHandlingTests)}_relay");
+            var testDir = PackageBuilder.TestDir($"{_testClassName}_relay");
             _relay = await GolemRelay.Build(testDir, _loggerFactory.CreateLogger("Relay"));
             Assert.True(_relay.Start());
             System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:16464");
             System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");
 
-            _requestor = await GolemRequestor.Build(nameof(ErrorHandlingTests), _loggerFactory.CreateLogger("Requestor"));
+            _requestor = await GolemRequestor.Build(_testClassName, _loggerFactory.CreateLogger("Requestor"));
             Assert.True(_requestor.Start());
             _requestor.InitPayment();
             _requestorAppKey = _requestor.getTestAppKey();

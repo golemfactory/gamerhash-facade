@@ -53,12 +53,12 @@ class ActivityLoop
                     await foreach (var trackingEvent in _yagnaApi.ActivityMonitorStream(token))
                     {
                         var activities = trackingEvent?.Activities ?? new List<ActivityState>();
-                        
+
                         List<Job> currentJobs = await UpdateJobs(_jobs, activities);
-                        
+
                         var job = SelectCurrentJob(currentJobs);
                         setCurrentJob(job);
-                        if(job == null)
+                        if (job == null)
                         {
                             // Sometimes finished jobs end up in Idle state
                             _jobs.SetAllJobsFinished();
@@ -97,7 +97,7 @@ class ActivityLoop
         if (currentJobs.Count == 0)
         {
             _logger.LogDebug("Cleaning current job field");
-            
+
             return null;
         }
         else if (currentJobs.Count == 1)
@@ -139,12 +139,13 @@ class ActivityLoop
     {
         var result = await Task.WhenAll(
             activityStates
-                .Select(async d => {
-                        var usage = d.Usage!=null
-                                ? GolemUsage.From(d.Usage)
-                                : null;
-                        return await jobs.UpdateJob(d.Id, null, usage);
-                    }
+                .Select(async d =>
+                {
+                    var usage = d.Usage != null
+                            ? GolemUsage.From(d.Usage)
+                            : null;
+                    return await jobs.UpdateJobByActivity(d.Id, null, usage);
+                }
                 )
         );
 
