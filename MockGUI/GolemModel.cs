@@ -36,12 +36,12 @@ namespace MockGUI.ViewModels
         public ObservableCollection<ApplicationEventArgs> ApplicationEvents
         {
             get
-            { 
+            {
                 return _applicationEvents;
             }
             set
             {
-                _applicationEvents = value; 
+                _applicationEvents = value;
                 OnPropertyChanged();
             }
         }
@@ -98,7 +98,8 @@ namespace MockGUI.ViewModels
         {
             var loggerFactory = createLoggerFactory(modulesDir);
             var golem = await createGolem(loggerFactory);
-            if (mainnet) {
+            if (mainnet)
+            {
                 ((Golem.Golem)golem).WalletAddress = mainnetWalletAddr();
             }
             var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
@@ -201,12 +202,15 @@ namespace MockGUI.ViewModels
             List<IJob> jobs;
             try
             {
+                _logger.LogInformation("Listing jobs since: " + since);
                 jobs = await this.Golem.ListJobs(since);
-            } catch (Exception)
+            }
+            catch (Exception e)
             {
+                _logger.LogWarning(e, "Listing jobs failure");
                 jobs = new List<IJob>();
             }
-            
+
             this.JobsHistory = new ObservableCollection<IJob>(jobs);
         }
 

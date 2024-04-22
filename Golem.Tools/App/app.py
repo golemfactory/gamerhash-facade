@@ -3,7 +3,7 @@ import os
 import json
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from yapapi import Golem
 from yapapi.payload import Payload
@@ -15,7 +15,6 @@ from yapapi.log import enable_default_logger
 import argparse
 import asyncio
 import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +25,7 @@ from yapapi import __version__ as yapapi_version
 from yapapi import windows_event_loop_fix
 from yapapi.log import enable_default_logger
 from yapapi.strategy import SCORE_TRUSTED, SCORE_REJECTED, MarketStrategy
+from yapapi.strategy.base import PropValueRange, PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEOUT_SEC
 
 # Utils
 
@@ -61,6 +61,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
     )
     parser.add_argument("--runtime", default="dummy", help="Runtime name, for example `automatic`")
     parser.add_argument("--descriptor", default=None, help="Path to node descriptor file")
+    parser.add_argument("--pay-interval", default=180, help="Interval of making partial payments")
     return parser
 
 
@@ -131,8 +132,12 @@ class ProviderOnceStrategy(MarketStrategy):
     """Hires provider only once.
     """
 
-    def __init__(self):
+    def __init__(self, pay_interval=180):
         self.history = set(())
+        self.acceptable_prop_value_range_overrides =  {
+            PROP_DEBIT_NOTE_INTERVAL_SEC: PropValueRange(60, None),
+            PROP_PAYMENT_TIMEOUT_SEC: PropValueRange(int(pay_interval), None),
+        }
 
     async def score_offer(self, offer):
         if offer.issuer not in self.history:
@@ -193,12 +198,12 @@ class AiRuntimeService(Service):
     def __init__(self, strategy: ProviderOnceStrategy):
         super().__init__()
         self.strategy = strategy
+        
 
-
-async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy"):
-    strategy = ProviderOnceStrategy()
+async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy", args=None):
+    strategy = ProviderOnceStrategy(pay_interval=args.pay_interval)
     async with Golem(
-        budget=1.0,
+        budget=4.0,
         subnet_tag=subnet_tag,
         strategy=strategy,
         payment_driver=driver,
@@ -212,6 +217,7 @@ async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy
                 {"strategy": strategy}
             ],
             num_instances=1,
+            expiration=datetime.now(timezone.utc) + timedelta(days=10),
         )
 
         async def print_usage():
@@ -264,7 +270,6 @@ async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy
                 } for s in cluster.instances
             ]
 
-
         usage_printed = False
         while True:
             await asyncio.sleep(3)
@@ -277,6 +282,7 @@ async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy
                 usage_printed = True
             
             print(f"""instances: {[f"{r['name']}: {r['state']}" for r in i]}""")
+
 
 if __name__ == "__main__":
     parser = build_parser("Run AI runtime task")
@@ -291,6 +297,7 @@ if __name__ == "__main__":
             driver=args.payment_driver,
             network=args.payment_network,
             runtime=args.runtime,
+            args=args
         ),
         log_file=args.log_file,
     )

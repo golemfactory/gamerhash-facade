@@ -53,6 +53,7 @@ namespace App
         private readonly bool _mainnet;
 
         private readonly string _runtime;
+        public UInt32? PaymentInterval { get; set; }
 
         private string _message;
         public string Message
@@ -96,6 +97,10 @@ namespace App
             if (_mainnet)
             {
                 args += $" --descriptor {GetNodeDescriptor()}";
+            }
+            if (PaymentInterval.HasValue)
+            {
+                args += $" --pay-interval {PaymentInterval.Value}";
             }
             return args;
         }
