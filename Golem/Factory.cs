@@ -11,6 +11,11 @@ namespace Golem
 {
     public class Factory : IFactory
     {
+        public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet = true)
+        {
+            return await Create(modulesDir, loggerFactory, mainnet, null);
+        }
+
         public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory = null, bool mainnet = true, string? dataDir = null)
         {
             var binaries = Path.Combine(modulesDir, "golem");

@@ -12,12 +12,11 @@ using Newtonsoft.Json.Linq;
 
 namespace Golem.Tests
 {
-    [Collection(nameof(SerialTestCollection))]
     public class PropertyChangeTests : IDisposable, IClassFixture<GolemFixture>
     {
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;
-        private readonly ITestOutputHelper output;
+        private readonly ITestOutputHelper _output;
 
 
         public PropertyChangeTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
@@ -28,7 +27,7 @@ namespace Golem.Tests
             _golemLib = Path.Combine(dir, "Golem.dll");
 
             XunitContext.Register(outputHelper);
-            output = outputHelper;
+            _output = outputHelper;
 
             _loggerProvider = new TestLoggerProvider(golemFixture.Sink);
         }

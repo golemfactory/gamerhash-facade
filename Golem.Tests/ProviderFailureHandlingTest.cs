@@ -15,7 +15,6 @@ using System.Runtime.InteropServices;
 
 namespace Golem.Tests
 {
-    [Collection(nameof(SerialTestCollection))]
     public class ErrorHandlingTests : JobsTestBase
 
     {

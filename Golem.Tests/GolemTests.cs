@@ -12,7 +12,6 @@ using Newtonsoft.Json.Linq;
 
 namespace Golem.Tests
 {
-    [Collection(nameof(SerialTestCollection))]
     public class GolemTests : IDisposable, IClassFixture<GolemFixture>
     {
         private readonly TestLoggerProvider _loggerProvider;
