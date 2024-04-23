@@ -73,7 +73,7 @@ class ActivityLoop
                 }
                 catch (Exception e)
                 {
-                    _events.Raise(new ApplicationEventArgs("ActivityLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
+                    _events.Raise(new ApplicationEventArgs("ActivityLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e));
                     _logger.LogError(e, "Activity monitoring request failure");
                     await Task.Delay(TimeSpan.FromSeconds(5), token);
                 }

@@ -54,14 +54,15 @@ class InvoiceEventsLoop
                     }
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e)
             {
+                _events.Raise(new ApplicationEventArgs("InvoiceEventsLoop", $"OperationCanceledException", ApplicationEventArgs.SeverityLevel.Error, e));
                 _logger.LogInformation("Invoice events loop cancelled");
                 return;
             }
             catch (Exception e)
             {
-                _events.Raise(new ApplicationEventArgs("InvoiceLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
+                _events.Raise(new ApplicationEventArgs("InvoiceEventsLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e));
                 _logger.LogError("Error in invoice events loop: {e}", e.Message);
                 await Task.Delay(TimeSpan.FromSeconds(5), _token);
             }
