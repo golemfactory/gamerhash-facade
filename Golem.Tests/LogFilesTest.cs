@@ -58,7 +58,7 @@ namespace Golem.Tests
             // Start app to create runtime logs
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
-            Job? currentJob = await ReadChannel<Job?>(jobChannel);
+            Job? currentJob = await ReadChannel<Job?>(jobChannel, timeoutMs: 30_000);
             var currentState = await ReadChannel(jobStatusChannel, (JobStatus s) => s != JobStatus.Computing, 30_000);
             await app.Stop();
 

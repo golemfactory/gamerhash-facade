@@ -65,10 +65,10 @@ namespace Golem.Tests
             _logger.LogInformation("Starting Golem");
             await golem.Start();
             // On startup Golem status goes from `Off` to `Starting`
-            Assert.Equal(GolemStatus.Starting, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Off));
+            Assert.Equal(GolemStatus.Starting, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Off, 30_000));
 
             // .. and then to `Ready`
-            Assert.Equal(GolemStatus.Ready, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Starting));
+            Assert.Equal(GolemStatus.Ready, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Starting, 30_000));
 
             // `CurrentJob` after startup, before taking any Job should be null
             Assert.Null(golem.CurrentJob);
@@ -140,10 +140,10 @@ namespace Golem.Tests
             _logger.LogInformation("Stopping Golem");
             await golem.Stop();
 
-            var stoppingStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => { return status == GolemStatus.Ready; });
+            var stoppingStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => status == GolemStatus.Ready, 30_000);
             Assert.Equal(GolemStatus.Stopping, stoppingStatus);
 
-            var offStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => { return status == GolemStatus.Ready; });
+            var offStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => status == GolemStatus.Ready, 30_000);
             Assert.Equal(GolemStatus.Off, offStatus);
         }
     }
