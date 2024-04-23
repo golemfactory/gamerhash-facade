@@ -16,7 +16,6 @@ using System.Runtime.InteropServices;
 namespace Golem.Tests
 {
     public class ErrorHandlingTests : JobsTestBase
-
     {
 
         public ErrorHandlingTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
@@ -76,7 +75,7 @@ namespace Golem.Tests
             Assert.Empty(RunningExecutablesNames(subprocesses));
 
             var stopTask = golem.Stop();
-            Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
+            Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus?>(statusChannel, (GolemStatus? s) => s == GolemStatus.Error, 30_000));
             await stopTask;
 
             // Check if status changed from Error to Off
