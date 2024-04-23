@@ -16,7 +16,6 @@ using System.Runtime.InteropServices;
 namespace Golem.Tests
 {
     public class ErrorHandlingTests : JobsTestBase
-
     {
 
         public ErrorHandlingTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)

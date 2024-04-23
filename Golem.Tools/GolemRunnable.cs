@@ -35,6 +35,7 @@ namespace Golem.Tools
             if (!process.Process.HasExited)
             {
                 _golemProcess = process;
+                ChildProcessTracker.AddProcess(_golemProcess.Process);
                 return !_golemProcess.Process.HasExited;
             }
 
