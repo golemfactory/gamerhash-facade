@@ -151,8 +151,8 @@ class ProviderOnceStrategy(MarketStrategy):
 
 # App
 
-# RUNTIME_NAME = "automatic" 
-RUNTIME_NAME = "dummy"
+RUNTIME_NAME = "automatic" 
+#RUNTIME_NAME = "dummy"
 
 @dataclass
 class AiPayload(Payload):
@@ -204,12 +204,13 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
     if response.encoding is None:
         response.encoding = 'utf-8'
 
-    for line in response.iter_lines(decode_unicode=True):
-        if line:
-            response = json.loads(line)
-            image = Image.open(io.BytesIO(base64.b64decode(response['images'][0])))
-            print(f"Saving response to {os.path.abspath(output_file)}")
-            image.save(output_file)
+    if response.ok:
+        response = json.loads(response.text)
+        image = Image.open(io.BytesIO(base64.b64decode(response['images'][0])))
+        print(f"Saving response to {os.path.abspath(output_file)}")
+        image.save(output_file)
+    else:
+        print(f"Error code: {response.status_code}, message: {response.text}")
 
 
 async def main(subnet_tag, driver=None, network=None):
@@ -277,8 +278,6 @@ async def main(subnet_tag, driver=None, network=None):
                     prompt,
                     'output.png'
                 )
-                print('Response received. Check output.png')
-
             
             await asyncio.sleep(3)
         # End 
