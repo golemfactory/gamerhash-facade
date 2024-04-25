@@ -165,6 +165,7 @@ namespace Golem.Yagna
                 environment = Options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(Options.YagnaApiUrl) : environment;
                 environment = Options.PrivateKey != null ? environment.WithPrivateKey(Options.PrivateKey) : environment;
                 environment = Options.AppKey != null ? environment.WithAppKey(Options.AppKey) : environment;
+                environment = environment.WithMetricsGroup("GamerHash");
 
                 var args = $"service run {debugFlag}".Split();
 
@@ -270,7 +271,8 @@ namespace Golem.Yagna
 
         internal IEnumerable<string> LogFiles()
         {
-            if (!Directory.Exists(_dataDir)) {
+            if (!Directory.Exists(_dataDir))
+            {
                 return new List<string>();
             }
             var logFiles = Directory.GetFiles(_dataDir, "yagna_*.log");
