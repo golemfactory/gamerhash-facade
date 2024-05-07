@@ -27,10 +27,10 @@ namespace Golem.Tests
             return await factory.Create(modulesDir, loggerFactory, false, dataDir);
         }
 
-        public async static Task<IGolem> Golem(string golemPath, ILoggerFactory loggerFactory, string? dataDir = null)
+        public async static Task<IGolem> Golem(string golemPath, ILoggerFactory loggerFactory, string? dataDir = null, RelayType relay = RelayType.Public)
         {
             var modulesDir = PackageBuilder.ModulesDir(golemPath);
-            return await new Factory().Create(modulesDir, loggerFactory, false, dataDir);
+            return await new Factory().Create(modulesDir, loggerFactory, false, dataDir, relay);
         }
 
         /// <summary>
@@ -133,7 +133,7 @@ namespace Golem.Tests
             var testDir = PackageBuilder.TestDir($"{_testClassName}_relay");
             _relay = await GolemRelay.Build(testDir, _loggerFactory.CreateLogger("Relay"));
             Assert.True(_relay.Start());
-            System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:16464");
+            NetConfig.SetEnv(RelayType.Local);
             System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");
 
             _requestor = await GolemRequestor.Build(_testClassName, _loggerFactory.CreateLogger("Requestor"));

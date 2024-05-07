@@ -26,7 +26,7 @@ namespace Golem.Tests
 
             string golemPath = await PackageBuilder.BuildTestDirectory();
 
-            var golem = await TestUtils.Golem(golemPath, _loggerFactory);
+            var golem = await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
 
             var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), _loggerFactory).Observe(golem);
             var jobStatusChannel = PropertyChangeChannel<IJob, JobStatus>(null, "");
