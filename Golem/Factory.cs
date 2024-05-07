@@ -16,15 +16,21 @@ namespace Golem
             return await Create(modulesDir, loggerFactory, mainnet, null);
         }
 
+
         public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory = null, bool mainnet = true, string? dataDir = null)
+        {
+            return await Create(modulesDir, loggerFactory, mainnet, null, RelayType.Public);
+        }
+
+        public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet, string? dataDir, RelayType relayType)
         {
             var binaries = Path.Combine(modulesDir, "golem");
 
-            dataDir = dataDir ?? Path.Combine(modulesDir, "golem-data");
+            dataDir ??= Path.Combine(modulesDir, "golem-data");
 
             var logger = loggerFactory ?? NullLoggerFactory.Instance;
             var network = Factory.Network(mainnet);
-            var golem = new Golem(binaries, dataDir, logger, network);
+            var golem = new Golem(binaries, dataDir, logger, network, relayType);
 
             await ConfigureAccess(golem, binaries, mainnet, logger);
 
@@ -83,6 +89,5 @@ namespace Golem
                 throw new Exception("Failed to download: " + response.ToString());
             }
         }
-
     }
 }

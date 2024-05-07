@@ -2,7 +2,9 @@
 
 using CommandLine;
 
-using Golem.Tools;
+using Golem;
+
+using GolemLib;
 
 using Microsoft.Extensions.Logging;
 
@@ -17,7 +19,7 @@ public class AppArguments
 {
     [Option('g', "golem", Required = true, HelpText = "Path to a folder with golem executables (modules)")]
     public string? GolemPath { get; set; }
-    [Option('r', "relay", Default = RelayType.Public, Required = false, HelpText = "Change relay to devnet yacn2a or local")]
+    [Option('r', "relay", Default = RelayType.Public, Required = false, HelpText = "Change relay to devnet yacn2a, local or central net")]
     public required RelayType Relay { get; set; }
     [Option('f', "framework", Default = Framework.Automatic, Required = false, HelpText = "Type of AI Framework to run")]
     public required Framework AiFramework { get; set; }
@@ -39,7 +41,7 @@ class ExampleRunner
         var parsed = Parser.Default.ParseArguments<AppArguments>(args).Value;
         var workDir = parsed.GolemPath ?? "";
 
-        GolemRelay.SetEnv(parsed.Relay);
+        NetConfig.SetEnv(parsed.Relay);
 
         var App = new FullExample(workDir, "Requestor", loggerFactory, runtime: parsed.AiFramework.ToString().ToLower(), parsed.Mainnet);
 

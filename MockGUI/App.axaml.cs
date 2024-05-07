@@ -4,10 +4,9 @@ using Avalonia.Markup.Xaml;
 using MockGUI.ViewModels;
 using CommandLine;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Avalonia.Threading;
 
-using Golem.Tools;
+using GolemLib;
 
 namespace MockGUI;
 
