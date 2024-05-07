@@ -343,7 +343,7 @@ namespace Golem
             }
         }
 
-        public Golem(string golemPath, string? dataDir, ILoggerFactory loggerFactory, Network network, RelayType net = RelayType.Public)
+        public Golem(string golemPath, string? dataDir, ILoggerFactory loggerFactory, Network network, RelayType net)
         {
             NetConfig.SetEnv(net);
 
