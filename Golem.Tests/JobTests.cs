@@ -145,6 +145,14 @@ namespace Golem.Tests
 
             var offStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => status == GolemStatus.Ready, 30_000);
             Assert.Equal(GolemStatus.Off, offStatus);
+ 
+            // Restarting to have Golem again in a Ready state
+            var startTask = golem.Start();
+            Assert.Equal(GolemStatus.Starting, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Off, 30_000));
+            Assert.Equal(GolemStatus.Ready, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Starting, 30_000));
+
+            // Restarted Yagna should list job with Finished state
+            Assert.Equal(JobStatus.Finished, jobs[0].Status);
         }
     }
 }

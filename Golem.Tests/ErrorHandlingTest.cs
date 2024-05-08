@@ -80,6 +80,28 @@ namespace Golem.Tests
 
             // Check if status changed from Error to Off
             Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
+
+            // Restarting to have Golem again in a Ready state
+            startTask = golem.Start();
+            Assert.Equal(GolemStatus.Starting, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
+            await startTask;
+            Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
+
+            // After startup Yagna will check all activities and update their states. It does not happen instantly.
+            var jobs = new List<IJob>();
+            for (int i = 0; i < 10; i++)
+            {
+                jobs = await golem.ListJobs(DateTime.MinValue);
+                // Restarted Golem should list one job from previous run.
+                Assert.Single(jobs);
+                if (jobs[0].Status != JobStatus.Computing) {
+                    break;
+                }
+                await Task.Delay(1_000);
+            }
+
+            // Restarted Yagna should update Activities from Ready to Unresponsive state, which results with Interrupted job status.
+            Assert.Equal(JobStatus.Interrupted, jobs[0].Status);
         }
 
         /// <summary>
