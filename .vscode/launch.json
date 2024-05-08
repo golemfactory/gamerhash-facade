@@ -8,7 +8,7 @@
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/MockGUI/bin/Debug/net7.0/MockGUI.dll",
-            "args": ["--golem", "modules"],
+            "args": ["--golem", "modules", "-r", "None"],
             "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
@@ -16,8 +16,9 @@
             "env": {
                 // "Logging__LogLevel__Default": "Debug",
                 // "Logging__LogLevel__Microsoft": "Information"
-                "YA_NET_RELAY_HOST": "127.0.0.1:17464"
+                // "YA_NET_RELAY_HOST": "127.0.0.1:17464"
                 // "YA_NET_RELAY_HOST":"yacn2a.dev.golem.network:7477"
+                "YA_NET_RELAY_HOST":"18.184.73.24:7464"
             }
         },
         {

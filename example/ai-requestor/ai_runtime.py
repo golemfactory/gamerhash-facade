@@ -189,7 +189,13 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
 
     custom_url = "/sdapi/v1/txt2img"
     url = activity._api.api_client.configuration.host + f"/activity/{activity.id}/proxy-http" + custom_url
-    headers = {"Authorization": "Bearer "+token}
+
+    stream = True
+
+    if stream:
+        headers = {"Authorization": "Bearer "+token, "Accept": "application/octet-stream-2"}
+    else:
+        headers = {"Authorization": "Bearer "+token, "Accept": "application/json"}
 
     payload = {
         'prompt': prompt,
@@ -198,19 +204,38 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
 
     print('Sending request:')
     payload_str = str(payload).replace("'", "\\\"")
-    print(f'curl -X POST -H \'Authorization: Bearer {token}\' -H "Content-Type: application/json; charset=utf-8"  -H "Accept: text/event-stream" -d "{payload_str}" {url}')
+    if stream:
+        print(f'curl -X POST -H \'Authorization: Bearer {token}\' -H "Content-Type: application/json; charset=utf-8"  -H "Accept: application/octet-stream" -d "{payload_str}" {url}')
+    else:
+        print(f'curl -X POST -H \'Authorization: Bearer {token}\' -H "Content-Type: application/json; charset=utf-8"  -H "Accept: application/json" -d "{payload_str}" {url}')
     
-    response = requests.post(url, headers=headers, json=payload, stream=True)
+    response = requests.post(url, headers=headers, json=payload, stream=stream)
+    # if response.status_code != 200:
+    print(f'Reponse status code: {response.status_code}');
+    print(response.headers)
     if response.encoding is None:
         response.encoding = 'utf-8'
 
-    if response.ok:
-        response = json.loads(response.text)
+    if stream:
+        if response.ok:
+            response = json.loads(response.text)
+            image = Image.open(io.BytesIO(base64.b64decode(response['images'][0])))
+            print(f"Saving response to {os.path.abspath(output_file)}")
+            image.save(output_file)
+        else:
+            print(f"Error code: {response.status_code}, message: {response.text}")
+    else:
+        content = ""
+        with open("content.txt", "w") as text_file:
+            for line in response.iter_lines(decode_unicode=True):
+                if line:
+                    text_file.write(line)
+                    content += line
+
+        response = json.loads(content)
         image = Image.open(io.BytesIO(base64.b64decode(response['images'][0])))
         print(f"Saving response to {os.path.abspath(output_file)}")
         image.save(output_file)
-    else:
-        print(f"Error code: {response.status_code}, message: {response.text}")
 
 
 async def main(subnet_tag, driver=None, network=None):
