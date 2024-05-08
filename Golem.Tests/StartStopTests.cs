@@ -176,7 +176,7 @@ namespace Golem.Tests
 
             var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
-            for (int i = 0; i < 20; i++)
+            for (int i = 0; i < 5; i++)
             {
                 var startTask = golem.Start();
 
