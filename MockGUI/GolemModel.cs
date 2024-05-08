@@ -86,12 +86,12 @@ namespace MockGUI.ViewModels
 
         public static async Task<GolemViewModel> Load(string modulesDir, RelayType relayType, bool mainnet)
         {
-            return await Create(modulesDir, (loggerFactory) => LoadLib("Golem.dll", modulesDir, loggerFactory, mainnet), relayType, mainnet);
+            return await Create(modulesDir, (loggerFactory) => LoadLib("Golem.dll", modulesDir, loggerFactory, mainnet, relayType), relayType, mainnet);
         }
 
         public static async Task<GolemViewModel> CreateStatic(string modulesDir, RelayType relayType, bool mainnet)
         {
-            return await Create(modulesDir, (loggerFactory) => new Factory().Create(modulesDir, loggerFactory, mainnet), relayType, mainnet);
+            return await Create(modulesDir, (loggerFactory) => new Factory().Create(modulesDir, loggerFactory, mainnet, null, relayType), relayType, mainnet);
         }
 
         static async Task<GolemViewModel> Create(string modulesDir, Func<ILoggerFactory, Task<IGolem>> createGolem, RelayType relayType, bool mainnet)
@@ -108,8 +108,6 @@ namespace MockGUI.ViewModels
 
         public static async Task<GolemRelay?> CreateRelay(string modulesDir, RelayType relayType, ILoggerFactory loggerFactory)
         {
-            GolemRelay.SetEnv(relayType);
-
             if (relayType == RelayType.Local)
             {
                 var logger = loggerFactory.CreateLogger(nameof(GolemRelay));
@@ -138,7 +136,7 @@ namespace MockGUI.ViewModels
             return mainnetAddressReader.ReadLine() ?? throw new Exception($"Failed to read from file {mainnetAddressFilename}");
         }
 
-        public static async Task<IGolem> LoadLib(string lib, string modulesDir, ILoggerFactory loggerFactory, bool mainnet)
+        public static async Task<IGolem> LoadLib(string lib, string modulesDir, ILoggerFactory loggerFactory, bool mainnet, RelayType relayType)
         {
             const string factoryType = "Golem.Factory";
 
@@ -150,7 +148,7 @@ namespace MockGUI.ViewModels
             var obj = Activator.CreateInstance(t) ?? throw new Exception("Creating Factory instance failed. Lib not loaded: " + dllPath);
             var factory = obj as IFactory ?? throw new Exception("Cast to IFactory failed.");
 
-            return await factory.Create(modulesDir, loggerFactory, mainnet);
+            return await factory.Create(modulesDir, loggerFactory, mainnet, null, relayType);
         }
 
         private static ILoggerFactory createLoggerFactory(string modulesDir)

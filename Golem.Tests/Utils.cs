@@ -18,19 +18,29 @@ namespace Golem.Tests
     {
         public async static Task<IGolem> LoadBinaryLib(string dllPath, string modulesDir, ILoggerFactory loggerFactory, string? dataDir = null)
         {
+            DisableMetricsReporting();
+
             const string factoryType = "Golem.Factory";
 
             Assembly ass = Assembly.LoadFrom(dllPath);
             Type? t = ass.GetType(factoryType) ?? throw new Exception("Factory Type not found. Lib not loaded: " + dllPath);
             var obj = Activator.CreateInstance(t) ?? throw new Exception("Creating Factory instance failed. Lib not loaded: " + dllPath);
             var factory = obj as IFactory ?? throw new Exception("Cast to IFactory failed.");
-            return await factory.Create(modulesDir, loggerFactory, false, dataDir);
+            return await factory.Create(modulesDir, loggerFactory, false, dataDir, RelayType.Devnet);
         }
 
-        public async static Task<IGolem> Golem(string golemPath, ILoggerFactory loggerFactory, string? dataDir = null)
+        public async static Task<IGolem> Golem(string golemPath, ILoggerFactory loggerFactory, string? dataDir = null, RelayType relay = RelayType.Devnet)
         {
+            DisableMetricsReporting();
+
             var modulesDir = PackageBuilder.ModulesDir(golemPath);
-            return await new Factory().Create(modulesDir, loggerFactory, false, dataDir);
+            return await new Factory().Create(modulesDir, loggerFactory, false, dataDir, relay);
+        }
+
+        public static void DisableMetricsReporting()
+        {
+            // We don't want to report CI Providers to Grafana under the same label as production apps.
+            Environment.SetEnvironmentVariable("YAGNA_METRICS_GROUP", "CI-GamerHash");
         }
 
         /// <summary>
@@ -133,7 +143,7 @@ namespace Golem.Tests
             var testDir = PackageBuilder.TestDir($"{_testClassName}_relay");
             _relay = await GolemRelay.Build(testDir, _loggerFactory.CreateLogger("Relay"));
             Assert.True(_relay.Start());
-            System.Environment.SetEnvironmentVariable("YA_NET_RELAY_HOST", "127.0.0.1:16464");
+            NetConfig.SetEnv(RelayType.Local);
             System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");
 
             _requestor = await GolemRequestor.Build(_testClassName, _loggerFactory.CreateLogger("Requestor"));

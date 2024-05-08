@@ -121,6 +121,13 @@ Note that this doesn't mean that you will get payments in these regular interval
 
 Provider can break Agreement if it doesn't receive payment. Since it is only example application, these case are not handled, but setting high enough interval value (which is understood as payment timeout as well) should solve this problem if it is too anoying.
 
+### Running on central net
+
+```
+dotnet run --project MockGUI --golem modules --use-dll --relay Central
+dotnet run --project ExampleRunner -- --golem modules --framework Dummy --relay Central
+```
+
 ## Troublshooting
 
 ### Provider doesn't pick up tasks
