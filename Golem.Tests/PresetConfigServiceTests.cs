@@ -9,7 +9,7 @@ using Moq;
 
 namespace Golem.Tests
 {
-    public class PresetConfigServicesTests : IDisposable, IClassFixture<GolemFixture>
+    public class PresetConfigServicesTests : WithFreeApiPort, IDisposable, IClassFixture<GolemFixture>
     {
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;

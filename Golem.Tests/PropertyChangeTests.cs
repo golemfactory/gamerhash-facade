@@ -12,7 +12,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Golem.Tests
 {
-    public class PropertyChangeTests : IDisposable, IClassFixture<GolemFixture>
+    public class PropertyChangeTests : WithFreeApiPort, IDisposable, IClassFixture<GolemFixture>
     {
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;

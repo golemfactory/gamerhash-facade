@@ -10,6 +10,7 @@ using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
+using System.Net.Sockets;
 
 
 namespace Golem.Tests
@@ -110,9 +111,52 @@ namespace Golem.Tests
 
             throw new Exception($"Failed to find matching {nameof(T)} within {timeoutMs} ms.");
         }
+
+        public static void CheckYagnaApiPortIsFree()
+        {
+            if (!IsPortFree("127.0.0.1", 12501))
+            {
+                throw new Exception("API port is open");
+            }
+        }
+
+        public static bool IsPortFree(
+            string host,
+            int port,
+            int retries = 3,
+            int retry_delay = 500,
+            int connection_timeout = 250
+        )
+        {
+            for (int retries_count = 0; retries_count < retries; retries_count++)
+            {
+                try
+                {
+                    var client = new TcpClient();
+                    IAsyncResult connection = client.BeginConnect(host, port, null, null);
+                    if (!connection.AsyncWaitHandle.WaitOne(connection_timeout))
+                        return true;
+                    client.EndConnect(connection);
+                }
+                catch (Exception)
+                {
+                    return true;
+                }
+                Thread.Sleep(retry_delay);
+            }
+            return false;
+        }
     }
 
-    public class JobsTestBase : IDisposable, IAsyncLifetime, IClassFixture<GolemFixture>
+    public class WithFreeApiPort
+    {
+        public WithFreeApiPort()
+        {
+            TestUtils.CheckYagnaApiPortIsFree();
+        }
+    }
+
+    public class JobsTestBase : WithFreeApiPort, IDisposable, IAsyncLifetime, IClassFixture<GolemFixture>
     {
         protected readonly ILoggerFactory _loggerFactory;
         protected readonly ILogger _logger;
@@ -124,6 +168,7 @@ namespace Golem.Tests
 
         public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName)
         {
+            TestUtils.CheckYagnaApiPortIsFree();
             XunitContext.Register(outputHelper);
             _testClassName = testClassName;
             // Log file directly in `tests` directory (like `tests/Jobtests-20231231.log )

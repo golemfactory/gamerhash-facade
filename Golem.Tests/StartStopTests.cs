@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Golem.Tests
 {
-    public class StartStopProcessTests : IDisposable, IClassFixture<GolemFixture>
+    public class StartStopProcessTests : WithFreeApiPort, IDisposable, IClassFixture<GolemFixture>
     {
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;
@@ -176,7 +176,7 @@ namespace Golem.Tests
 
             var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 20; i++)
             {
                 var startTask = golem.Start();
 
