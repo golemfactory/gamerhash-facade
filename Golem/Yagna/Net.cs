@@ -6,6 +6,9 @@ namespace Golem
     {
         public static void SetEnv(RelayType relay)
         {
+            if (relay == RelayType.None)
+                return;
+
             Environment.SetEnvironmentVariable("YA_NET_TYPE", "hybrid");
 
             if (relay == RelayType.Devnet)
