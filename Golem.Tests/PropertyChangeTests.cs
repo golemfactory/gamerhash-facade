@@ -19,7 +19,7 @@ namespace Golem.Tests
         private readonly ITestOutputHelper _output;
 
 
-        public PropertyChangeTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
+        public PropertyChangeTests(ITestOutputHelper outputHelper, GolemFixture golemFixture) : base(outputHelper)
         {
 
             var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
@@ -73,28 +73,35 @@ namespace Golem.Tests
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
             var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
-
-            // TODO Without starting fails on Provider.Config set.
-            await golem.Start();
-
-            // Initialize property value
-            golem.WalletAddress = "0x1111111111111111111111111111111111111111";
-            var property = "0x2222222222222222222222222222222222222222";
-            Action<string?> update = (v) =>
+            try
             {
-                property = v;
-            };
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, string>(nameof(IGolem.WalletAddress), update, loggerFactory).Subscribe();
+                // TODO Without starting fails on Provider.Config set.
+                await golem.Start();
 
-            // Setting same value should not trigger property change event
-            golem.WalletAddress = "0x1111111111111111111111111111111111111111";
-            Assert.Equal("0x2222222222222222222222222222222222222222", property);
+                // Initialize property value
+                golem.WalletAddress = "0x1111111111111111111111111111111111111111";
+                var property = "0x2222222222222222222222222222222222222222";
+                Action<string?> update = (v) =>
+                {
+                    property = v;
+                };
+                golem.PropertyChanged += new PropertyChangedHandler<Golem, string>(nameof(IGolem.WalletAddress), update, loggerFactory).Subscribe();
 
-            // Setting different value should trigger property change event
-            golem.WalletAddress = "0x3333333333333333333333333333333333333333";
-            Assert.Equal("0x3333333333333333333333333333333333333333", property);
+                // Setting same value should not trigger property change event
+                golem.WalletAddress = "0x1111111111111111111111111111111111111111";
+                Assert.Equal("0x2222222222222222222222222222222222222222", property);
 
-            await golem.Stop();
+                // Setting different value should trigger property change event
+                golem.WalletAddress = "0x3333333333333333333333333333333333333333";
+                Assert.Equal("0x3333333333333333333333333333333333333333", property);
+
+                await golem.Stop();
+
+            }
+            finally
+            {
+                await golem.Stop();
+            }
         }
 
         [Fact]
@@ -103,50 +110,56 @@ namespace Golem.Tests
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
             var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            try
+            {
+                // Initialize property value
+                var initialValue = new GolemPrice
+                {
+                    StartPrice = 1,
+                    GpuPerSec = 1,
+                    EnvPerSec = 1,
+                    NumRequests = 1
+                };
+                golem.Price = initialValue;
 
-            // Initialize property value
-            var initialValue = new GolemPrice
-            {
-                StartPrice = 1,
-                GpuPerSec = 1,
-                EnvPerSec = 1,
-                NumRequests = 1
-            };
-            golem.Price = initialValue;
+                var property = new GolemPrice
+                {
+                    StartPrice = 2,
+                    GpuPerSec = 2,
+                    EnvPerSec = 2,
+                    NumRequests = 2
+                };
+                Action<GolemPrice?> update = (v) =>
+                {
+                    property = v;
+                };
+                golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemPrice>(nameof(IGolem.Price), update, loggerFactory).Subscribe();
 
-            var property = new GolemPrice
-            {
-                StartPrice = 2,
-                GpuPerSec = 2,
-                EnvPerSec = 2,
-                NumRequests = 2
-            };
-            Action<GolemPrice?> update = (v) =>
-            {
-                property = v;
-            };
-            golem.PropertyChanged += new PropertyChangedHandler<Golem, GolemPrice>(nameof(IGolem.Price), update, loggerFactory).Subscribe();
+                // Setting same value should not trigger property change event
+                golem.Price = initialValue;
+                Assert.Equivalent(new GolemPrice
+                {
+                    StartPrice = 2,
+                    GpuPerSec = 2,
+                    EnvPerSec = 2,
+                    NumRequests = 2
+                }, property);
 
-            // Setting same value should not trigger property change event
-            golem.Price = initialValue;
-            Assert.Equivalent(new GolemPrice
+                // Setting different value should trigger property change event
+                var newValue = new GolemPrice
+                {
+                    StartPrice = 3,
+                    GpuPerSec = 3,
+                    EnvPerSec = 3,
+                    NumRequests = 3
+                };
+                golem.Price = newValue;
+                Assert.Equivalent(newValue, property);
+            }
+            finally
             {
-                StartPrice = 2,
-                GpuPerSec = 2,
-                EnvPerSec = 2,
-                NumRequests = 2
-            }, property);
-
-            // Setting different value should trigger property change event
-            var newValue = new GolemPrice
-            {
-                StartPrice = 3,
-                GpuPerSec = 3,
-                EnvPerSec = 3,
-                NumRequests = 3
-            };
-            golem.Price = newValue;
-            Assert.Equivalent(newValue, property);
+                await golem.Stop();
+            }
         }
 
         public void Dispose()

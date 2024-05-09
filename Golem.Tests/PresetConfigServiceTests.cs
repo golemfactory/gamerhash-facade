@@ -14,7 +14,7 @@ namespace Golem.Tests
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger _logger;
 
-        public PresetConfigServicesTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
+        public PresetConfigServicesTests(ITestOutputHelper outputHelper, GolemFixture golemFixture): base(outputHelper)
         {
             XunitContext.Register(outputHelper);
             // Log file directly in `tests` directory (like `tests/Jobtests-20231231.log )

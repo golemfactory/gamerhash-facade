@@ -19,7 +19,7 @@ namespace Golem.Tests
         private readonly ITestOutputHelper _output;
 
 
-        public StartStopProcessTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
+        public StartStopProcessTests(ITestOutputHelper outputHelper, GolemFixture golemFixture) : base(outputHelper)
         {
             var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
 
@@ -53,19 +53,26 @@ namespace Golem.Tests
             _output.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
+            try
+            {
+                var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+                var startTask = golem.Start();
+                Assert.Equal(GolemStatus.Starting, status.Value);
+                await startTask;
+                Assert.Equal(GolemStatus.Ready, status.Value);
 
-            var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, status.Value);
-            await startTask;
-            Assert.Equal(GolemStatus.Ready, status.Value);
+                var stopTask = golem.Stop();
+                Assert.Equal(GolemStatus.Stopping, status.Value);
+                await stopTask;
 
-            var stopTask = golem.Stop();
-            Assert.Equal(GolemStatus.Stopping, status.Value);
-            await stopTask;
+                Assert.Equal(GolemStatus.Off, status.Value);
 
-            Assert.Equal(GolemStatus.Off, status.Value);
+            }
+            finally
+            {
+                await golem.Stop();
+            }
         }
 
         [Fact]
@@ -83,17 +90,23 @@ namespace Golem.Tests
                 Directory.Delete(Path.Combine(golemPath, dataDirDefault));
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory, dataDir);
+            try
+            {
+                var startTask = golem.Start();
+                await startTask;
+                var stopTask = golem.Stop();
+                await stopTask;
 
-            var startTask = golem.Start();
-            await startTask;
-            var stopTask = golem.Stop();
-            await stopTask;
+                Assert.True(File.Exists(Path.Combine(dataDir, "yagna", "yagna.db")));
+                Assert.True(Directory.Exists(Path.Combine(dataDir, "provider", "cert-dir")));
 
-            Assert.True(File.Exists(Path.Combine(dataDir, "yagna", "yagna.db")));
-            Assert.True(Directory.Exists(Path.Combine(dataDir, "provider", "cert-dir")));
-
-            Assert.False(File.Exists(Path.Combine(dataDirDefault, "yagna", "yagna.db")));
-            Assert.False(Directory.Exists(Path.Combine(dataDirDefault, "provider", "cert-dir")));
+                Assert.False(File.Exists(Path.Combine(dataDirDefault, "yagna", "yagna.db")));
+                Assert.False(Directory.Exists(Path.Combine(dataDirDefault, "provider", "cert-dir")));
+            }
+            finally
+            {
+                await golem.Stop();
+            }
         }
 
         [Fact]
@@ -104,20 +117,27 @@ namespace Golem.Tests
             Console.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            try
+            {
+                var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+                var startTask = golem.Start();
+                Assert.Equal(GolemStatus.Starting, status.Value);
+                await startTask;
 
-            var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, status.Value);
-            await startTask;
+                Assert.Equal(GolemStatus.Ready, status.Value);
+                var stopTask = golem.Stop();
 
-            Assert.Equal(GolemStatus.Ready, status.Value);
-            var stopTask = golem.Stop();
+                Assert.Equal(GolemStatus.Stopping, status.Value);
+                await stopTask;
 
-            Assert.Equal(GolemStatus.Stopping, status.Value);
-            await stopTask;
+                Assert.Equal(GolemStatus.Off, status.Value);
 
-            Assert.Equal(GolemStatus.Off, status.Value);
+            }
+            finally
+            {
+                await golem.Stop();
+            }
         }
 
         [Fact]
@@ -128,13 +148,20 @@ namespace Golem.Tests
             _output.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
+            try
+            {
+                var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+                var startTask = golem.Start();
+                await golem.Stop();
 
-            var startTask = golem.Start();
-            await golem.Stop();
+                Assert.Equal(GolemStatus.Off, status.Value);
 
-            Assert.Equal(GolemStatus.Off, status.Value);
+            }
+            finally
+            {
+                await golem.Stop();
+            }
         }
 
         [Fact]
@@ -145,23 +172,31 @@ namespace Golem.Tests
             _output.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
-
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
-
-            for (int i = 0; i < 5; i++)
+            try
             {
-                var startTask = golem.Start();
-                Assert.Equal(GolemStatus.Starting, status.Value);
-                await startTask;
-                Assert.Equal(GolemStatus.Ready, status.Value);
 
-                await Task.Delay(TimeSpan.FromMilliseconds(10 + 300 * i));
+                var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
-                var stopTask = golem.Stop();
-                Assert.Equal(GolemStatus.Stopping, status.Value);
-                await stopTask;
+                for (int i = 0; i < 5; i++)
+                {
+                    var startTask = golem.Start();
+                    Assert.Equal(GolemStatus.Starting, status.Value);
+                    await startTask;
+                    Assert.Equal(GolemStatus.Ready, status.Value);
 
-                Assert.Equal(GolemStatus.Off, status.Value);
+                    await Task.Delay(TimeSpan.FromMilliseconds(10 + 300 * i));
+
+                    var stopTask = golem.Stop();
+                    Assert.Equal(GolemStatus.Stopping, status.Value);
+                    await stopTask;
+
+                    Assert.Equal(GolemStatus.Off, status.Value);
+                }
+
+            }
+            finally
+            {
+                await golem.Stop();
             }
         }
 
@@ -173,22 +208,30 @@ namespace Golem.Tests
             _output.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
-
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
-
-            for (int i = 0; i < 20; i++)
+            try
             {
-                var startTask = golem.Start();
 
-                await Task.Delay(TimeSpan.FromMilliseconds(10 + 100 * i));
+                var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
-                var stopTask1 = golem.Stop();
-                var stopTask2 = golem.Stop();
+                for (int i = 0; i < 20; i++)
+                {
+                    var startTask = golem.Start();
 
-                await stopTask1;
-                await stopTask2;
+                    await Task.Delay(TimeSpan.FromMilliseconds(10 + 100 * i));
 
-                Assert.Equal(GolemStatus.Off, status.Value);
+                    var stopTask1 = golem.Stop();
+                    var stopTask2 = golem.Stop();
+
+                    await stopTask1;
+                    await stopTask2;
+
+                    Assert.Equal(GolemStatus.Off, status.Value);
+                }
+
+            }
+            finally
+            {
+                await golem.Stop();
             }
         }
 
@@ -200,21 +243,28 @@ namespace Golem.Tests
             _output.WriteLine("Path: " + golemPath);
 
             var golem = await TestUtils.Golem(golemPath, loggerFactory);
-
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
-
-            for (int i = 0; i < 3; i++)
+            try
             {
-                await golem.Start();
-                Assert.Equal(GolemStatus.Ready, status.Value);
+                var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
 
-                var stopTask = golem.Stop();
-                Assert.Equal(GolemStatus.Stopping, status.Value);
+                for (int i = 0; i < 3; i++)
+                {
+                    await golem.Start();
+                    Assert.Equal(GolemStatus.Ready, status.Value);
 
-                await golem.Start();
-                await stopTask;
+                    var stopTask = golem.Stop();
+                    Assert.Equal(GolemStatus.Stopping, status.Value);
 
-                Assert.Equal(GolemStatus.Off, status.Value);
+                    await golem.Start();
+                    await stopTask;
+
+                    Assert.Equal(GolemStatus.Off, status.Value);
+                }
+
+            }
+            finally
+            {
+                await golem.Stop();
             }
         }
     }

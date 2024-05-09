@@ -151,8 +151,9 @@ namespace Golem.Tests
 
     public class WithAvailablePort
     {
-        public WithAvailablePort()
+        public WithAvailablePort(ITestOutputHelper outputHelper)
         {
+            outputHelper.WriteLine("Checking if port is available");
             TestUtils.CheckPortIsAvailable();
         }
     }
@@ -167,7 +168,7 @@ namespace Golem.Tests
         protected String _testClassName;
 
 
-        public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName)
+        public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName): base(outputHelper)
         {
             TestUtils.CheckPortIsAvailable();
             XunitContext.Register(outputHelper);
