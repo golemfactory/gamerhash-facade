@@ -238,10 +238,34 @@ namespace Golem
             SafeCancel(_providerCancellationtokenSource);
             SafeCancel(_yagnaCancellationtokenSource);
 
-            await Provider.Stop(providerTimeout);
-            await Yagna.Stop(yagnaTimeout);
-
-            Status = GolemStatus.Off;
+            try
+            {
+                try
+                {
+                    await Provider.Stop(providerTimeout);
+                }
+                catch (SystemException e)
+                {
+                    _events.Raise(new ApplicationEventArgs("Golem", $"Failed to stop Golem Provider: {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
+                    _logger.LogError("Failed to stop Golem Provider: {0}", e);
+                }
+                try
+                {
+                    await Yagna.Stop(yagnaTimeout);
+                }
+                catch (SystemException e)
+                {
+                    _events.Raise(new ApplicationEventArgs("Golem", $"Failed to stop Golem Yagna: {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
+                    _logger.LogError("Failed to stop Golem Yagna: {0}", e);
+                }
+                Status = GolemStatus.Off;
+            }
+            catch (Exception e)
+            {
+                _events.Raise(new ApplicationEventArgs("Golem", $"Failed to stop Golem: {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
+                _logger.LogError("Failed to stop Golem: {0}", e);
+                Status = GolemStatus.Error;
+            }
 
             OnPropertyChanged(nameof(WalletAddress));
             OnPropertyChanged(nameof(NodeId));
