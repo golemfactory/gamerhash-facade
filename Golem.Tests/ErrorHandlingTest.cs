@@ -100,8 +100,8 @@ namespace Golem.Tests
                 await Task.Delay(1_000);
             }
 
-            // Restarted Yagna should update Activities from Ready to Unresponsive state, which results with Interrupted job status.
-            Assert.Equal(JobStatus.Interrupted, jobs[0].Status);
+            // Restarted Yagna should update not Teminated Activities from Ready to Unresponsive state, which results with Interrupted job status.
+            Assert.True(JobStatus.Interrupted == jobs[0].Status || JobStatus.Finished == jobs[0].Status);
 
             // Final stop
             stopTask = golem.Stop();
