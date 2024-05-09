@@ -118,6 +118,9 @@ namespace Golem.Tests
                 var jobs = await golem.ListJobs(DateTime.MinValue);
                 var job = jobs.SingleOrDefault(j => j.Id == jobId);
                 Assert.Equal(JobStatus.Finished, job?.Status);
+
+                currentJob = await ReadChannel<Job?>(jobChannel);
+                Assert.Null(currentJob);
                 Assert.Null(golem.CurrentJob);
 
                 // Checking payments

@@ -100,9 +100,9 @@ namespace Golem.Tests
             matcher ??= FalseMatcher;
             while (await channel.WaitToReadAsync(cancelTokenSource.Token))
             {
-                if (channel.TryRead(out var value) && value is T tValue && !matcher.Invoke(tValue))
+                if (channel.TryRead(out var value) && !matcher.Invoke(value))
                 {
-                    return tValue;
+                    return value;
                 }
                 else
                 {
@@ -168,7 +168,7 @@ namespace Golem.Tests
         protected String _testClassName;
 
 
-        public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName): base(outputHelper)
+        public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName) : base(outputHelper)
         {
             TestUtils.CheckPortIsAvailable();
             XunitContext.Register(outputHelper);
