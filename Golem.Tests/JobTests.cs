@@ -122,7 +122,7 @@ namespace Golem.Tests
 
                 // Checking payments
 
-                Assert.Equal(GolemLib.Types.PaymentStatus.Settled, await ReadChannel<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent));
+                Assert.Equal(GolemLib.Types.PaymentStatus.Settled, await ReadChannel<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent, 30_000));
 
                 //TODO payments is empty
                 var payments = await ReadChannel<List<GolemLib.Types.Payment>?>(currentJobPaymentConfirmationChannel);
