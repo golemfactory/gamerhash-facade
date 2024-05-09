@@ -125,7 +125,7 @@ namespace Golem.Tests
             string host,
             int port,
             int retries = 10,
-            int retry_delay = 500,
+            int retry_delay = 1000,
             int connection_timeout = 250
         )
         {
