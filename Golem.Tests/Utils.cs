@@ -124,7 +124,7 @@ namespace Golem.Tests
         public static bool IsPortAvailable(
             string host,
             int port,
-            int retries = 10,
+            int retries = 30,
             int retry_delay = 1000,
             int connection_timeout = 250
         )
