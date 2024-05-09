@@ -11,6 +11,7 @@ using GolemLib.Types;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 using System.Net.Sockets;
+using Golem.Yagna;
 
 
 namespace Golem.Tests
@@ -112,18 +113,18 @@ namespace Golem.Tests
             throw new Exception($"Failed to find matching {nameof(T)} within {timeoutMs} ms.");
         }
 
-        public static void CheckYagnaApiPortIsFree()
+        public static void CheckPortIsAvailable()
         {
-            if (!IsPortFree("127.0.0.1", 12501))
+            if (!IsPortAvailable(EnvironmentBuilder.DefaultLocalAddress, EnvironmentBuilder.DefaultApiPort))
             {
                 throw new Exception("API port is open");
             }
         }
 
-        public static bool IsPortFree(
+        public static bool IsPortAvailable(
             string host,
             int port,
-            int retries = 3,
+            int retries = 10,
             int retry_delay = 500,
             int connection_timeout = 250
         )
@@ -148,15 +149,15 @@ namespace Golem.Tests
         }
     }
 
-    public class WithFreeApiPort
+    public class WithAvailablePort
     {
-        public WithFreeApiPort()
+        public WithAvailablePort()
         {
-            TestUtils.CheckYagnaApiPortIsFree();
+            TestUtils.CheckPortIsAvailable();
         }
     }
 
-    public class JobsTestBase : WithFreeApiPort, IDisposable, IAsyncLifetime, IClassFixture<GolemFixture>
+    public class JobsTestBase : WithAvailablePort, IDisposable, IAsyncLifetime, IClassFixture<GolemFixture>
     {
         protected readonly ILoggerFactory _loggerFactory;
         protected readonly ILogger _logger;
@@ -168,7 +169,7 @@ namespace Golem.Tests
 
         public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName)
         {
-            TestUtils.CheckYagnaApiPortIsFree();
+            TestUtils.CheckPortIsAvailable();
             XunitContext.Register(outputHelper);
             _testClassName = testClassName;
             // Log file directly in `tests` directory (like `tests/Jobtests-20231231.log )

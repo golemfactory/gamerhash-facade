@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Golem.Tests
 {
-    public class StartStopProcessTests : WithFreeApiPort, IDisposable, IClassFixture<GolemFixture>
+    public class StartStopProcessTests : WithAvailablePort, IDisposable, IClassFixture<GolemFixture>
     {
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;
