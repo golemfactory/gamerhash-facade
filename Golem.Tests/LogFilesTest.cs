@@ -29,12 +29,7 @@ namespace Golem.Tests
             await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
 
             var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), _loggerFactory).Observe(golem);
-            var jobStatusChannel = PropertyChangeChannel<IJob, JobStatus>(null, "");
-            Channel<Job?> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) =>
-            {
-                jobStatusChannel = PropertyChangeChannel(currentJob, nameof(currentJob.Status),
-                    (JobStatus v) => _logger.LogInformation($"Current job Status update: {v}"));
-            });
+            Channel<Job?> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) => {});
 
             // Then
 
@@ -59,6 +54,8 @@ namespace Golem.Tests
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
             Job? currentJob = await ReadChannel<Job?>(jobChannel, timeoutMs: 30_000);
+            var jobStatusChannel = PropertyChangeChannel(currentJob, nameof(currentJob.Status),
+                    (JobStatus v) => _logger.LogInformation($"Current job Status update: {v}"));
             var currentState = await ReadChannel(jobStatusChannel, (JobStatus s) => s != JobStatus.Computing, 60_000);
             await app.Stop();
 
