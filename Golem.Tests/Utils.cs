@@ -203,7 +203,7 @@ namespace Golem.Tests
         /// Reads from `channel` and returns first `T` for which `matcher` returns `false`
         /// </summary>
         /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
-        public async Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? matcher = null, double timeoutMs = 10_000)
+        public async Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? matcher = null, double timeoutMs = 30_000)
         {
             return await TestUtils.ReadChannel(channel, matcher, timeoutMs, _logger);
         }

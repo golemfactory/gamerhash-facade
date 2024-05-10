@@ -415,6 +415,11 @@ namespace Golem
 
         public async ValueTask DisposeAsync()
         {
+            if (Status == GolemStatus.Off)
+                return;
+            // starting stopping of Golem processes
+            var _ = (this as IGolem).Stop();
+            // consecutive Stop() call kills processes
             await (this as IGolem).Stop();
         }
 
