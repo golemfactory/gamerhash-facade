@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using System.Threading.Channels;
 
 using Golem.Tools;
@@ -28,7 +29,7 @@ namespace Golem.Tests
             _logger.LogInformation($"Path: {golemPath}");
             await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
 
-            Channel<GolemStatus> golemStatusChannel = PropertyChangeChannel(golem, nameof(IGolem.Status),
+            var golemStatusChannel = PropertyChangeChannel(golem, nameof(IGolem.Status),
                 (GolemStatus v) => _logger.LogInformation($"Golem status update: {v}"));
 
             var jobStatusChannel = PropertyChangeChannel<IJob, JobStatus>(null, "");
@@ -62,16 +63,18 @@ namespace Golem.Tests
             // `CurrentJob` before startup should be null.
             Assert.Null(golem.CurrentJob);
 
-            _logger.LogInformation("Starting Golem");
-            await golem.Start();
-            // On startup Golem status goes from `Off` to `Starting`
-            Assert.Equal(GolemStatus.Starting, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Off, 30_000));
+            // Before any run there should be no log files.
+            var logFiles = golem.LogFiles();
+            _logger.LogInformation($"Log files after 2nd run: {String.Join("\n", logFiles)}");
+            Assert.Empty(logFiles);
 
-            // .. and then to `Ready`
-            Assert.Equal(GolemStatus.Ready, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Starting, 30_000));
+            _logger.LogInformation("Starting Golem");
+            await StartGolem(golem, golemPath, golemStatusChannel);
 
             // `CurrentJob` after startup, before taking any Job should be null
             Assert.Null(golem.CurrentJob);
+
+            await CheckLogsAfterGolemStart(golem, golemPath);
 
             // Starting Sample App
 
@@ -80,7 +83,7 @@ namespace Golem.Tests
             Assert.True(app.Start());
 
             // `CurrentJob` property update notification.
-            Job? currentJob = await ReadChannel<Job?>(jobChannel);
+            Job? currentJob = await ReadChannel<Job?>(jobChannel, null);
             // `CurrentJob` object property and object arriving as a property notification are the same.
             Assert.Same(currentJob, golem.CurrentJob);
             Assert.NotNull(currentJob);
@@ -139,30 +142,125 @@ namespace Golem.Tests
             }
 
             // Stopping Golem
+            await StopGolem(golem, golemPath, golemStatusChannel);
 
-            _logger.LogInformation("Stopping Golem");
-            await golem.Stop();
-
-            var stoppingStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => status == GolemStatus.Ready, 30_000);
-            Assert.Equal(GolemStatus.Stopping, stoppingStatus);
-
-            var offStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => status == GolemStatus.Ready, 30_000);
-            Assert.Equal(GolemStatus.Off, offStatus);
+            CheckRuntimeLogsAfterAppRun(golem);
 
             // Restarting to have Golem again in a Ready state
-            await golem.Start();
-            Assert.Equal(GolemStatus.Starting, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Off, 30_000));
-            Assert.Equal(GolemStatus.Ready, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Starting, 30_000));
+            await StartGolem(golem, golemPath, golemStatusChannel);
 
             // Restarted Yagna should list job with Finished state
             Assert.Equal(JobStatus.Finished, jobs[0].Status);
 
-            // Final stop           
-            await golem.Stop();
-            stoppingStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => status == GolemStatus.Ready, 30_000);
-            Assert.Equal(GolemStatus.Stopping, stoppingStatus);
-            offStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => status == GolemStatus.Ready, 30_000);
-            Assert.Equal(GolemStatus.Off, offStatus);
+            // Stop
+            await StopGolem(golem, golemPath, golemStatusChannel);
+
+            // Restart to make Golem to archive old logs
+            await StartGolem(golem, golemPath, golemStatusChannel);
+
+            CheckLogGzArchivesAfterRestart(golem);
+
+            // Stop
+            await StopGolem(golem, golemPath, golemStatusChannel);
+        }
+
+        async Task StartGolem(IGolem golem, String golemPath, ChannelReader<GolemStatus> statusChannel)
+        {
+            _logger.LogInformation("Starting Golem");
+            var startTask = golem.Start();
+            Assert.Equal(GolemStatus.Starting, await ReadChannel(statusChannel));
+            await startTask;
+            Assert.Equal(GolemStatus.Ready, await ReadChannel(statusChannel));
+            var providerPidFile = Path.Combine(golemPath, "modules/golem-data/provider/ya-provider.pid");
+            await TestUtils.WaitForFile(providerPidFile);
+        }
+
+        async Task StopGolem(IGolem golem, String golemPath, ChannelReader<GolemStatus> statusChannel)
+        {
+            _logger.LogInformation("Stopping Golem");
+            var stopTask = golem.Stop();
+            Assert.Equal(GolemStatus.Stopping, await ReadChannel(statusChannel));
+            await stopTask;
+            Assert.Equal(GolemStatus.Off, await ReadChannel(statusChannel));
+            var providerPidFile = Path.Combine(golemPath, "modules/golem-data/provider/ya-provider.pid");
+            try
+            {
+                File.Delete(providerPidFile);
+            }
+            catch { }
+        }
+
+        // After startup yagna and provider logs should be available
+        async Task CheckLogsAfterGolemStart(Golem golem, String golemPath)
+        {
+            await CheckProviderHasStarted(golemPath);
+            var logFiles = golem.LogFiles();
+            _logger.LogInformation($"Log files after start: {String.Join("\n", logFiles)}");
+            var logFileNames = logFiles.Select(file => Path.GetFileName(file)).ToList() ?? new List<string>();
+            // After 1st run there should be yagna and ya-provider log files
+            Assert.Contains("ya-provider_rCURRENT.log", logFileNames);
+            Assert.Contains("yagna_rCURRENT.log", logFileNames);
+        }
+
+        void CheckRuntimeLogsAfterAppRun(Golem golem)
+        {
+            var logFiles = golem.LogFiles();
+            _logger.LogInformation($"Log files after app run: {String.Join("\n", logFiles)}");
+            // After app run there should be runtime logs created by `test`/`offer-template` commands
+            var runtimeTestLogFiles = logFiles.FindAll(path => path
+                .Contains(Path.Combine("exe-unit", "work", "logs")))
+                .FindAll(path => path.EndsWith(".log"));
+            Assert.NotEmpty(runtimeTestLogFiles);
+            // There should be new runtime logs created by running the app
+            var runtimeActivityLogFiles = logFiles.FindAll(path => path
+                .Contains(Path.Combine("exe-unit", "work")))
+                .FindAll(path => path.EndsWith(".log"))
+                .FindAll(path => !runtimeTestLogFiles.Contains(path));
+            Assert.Single(runtimeActivityLogFiles);
+            var logFileNames = logFiles.Select(file => Path.GetFileName(file)).ToList() ?? new List<string>();
+            // There should be current yagna and ya-provider log files
+            Assert.Contains("ya-provider_rCURRENT.log", logFileNames);
+            Assert.Contains("yagna_rCURRENT.log", logFileNames);
+
+        }
+
+        // Log files after rerstart of Golem should include log.gz archives.
+        void CheckLogGzArchivesAfterRestart(Golem golem)
+        {
+            var logFiles = golem.LogFiles();
+            _logger.LogInformation($"Log files after restart: {String.Join("\n", logFiles)}");
+            // After 3rd run there should be runtime logs created by `test`/`offer-template` commands
+            var runtimeTestLogFiles = logFiles.FindAll(path => path
+                .Contains(Path.Combine("exe-unit", "work", "logs")))
+                .FindAll(path => path.EndsWith(".log"));
+            Assert.NotEmpty(runtimeTestLogFiles);
+            // After 3rd run there should old runtime logs created by previous activity
+            var runtimeActivityLogFiles = logFiles.FindAll(path => path
+                .Contains(Path.Combine("exe-unit", "work")))
+                .FindAll(path => path.EndsWith(".log"))
+                .FindAll(path => !runtimeTestLogFiles.Contains(path));
+            Assert.Single(runtimeActivityLogFiles);
+            var logFileNames = logFiles.Select(file => Path.GetFileName(file)).ToList() ?? new List<string>();
+            // After 3rd run there should be current yagna and ya-provider log files
+            Assert.Contains("ya-provider_rCURRENT.log", logFileNames);
+            Assert.Contains("yagna_rCURRENT.log", logFileNames);
+            // After 3rd run there should be previous yagna and ya-provider log files
+            Regex providerLogPattern = new Regex(@"^ya-provider_r[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.log$");
+            Assert.Single(logFileNames.FindAll(file => providerLogPattern.IsMatch(file)));
+            Regex yagnaLogPattern = new Regex(@"^yagna_r[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.log$");
+            Assert.Single(logFileNames.FindAll(file => yagnaLogPattern.IsMatch(file)));
+            // After 3rd run there should be previous previous yagna and ya-provider log gz file archives
+            Regex providerLogGzPattern = new Regex(@"^ya-provider_r[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.log\.gz$");
+            Assert.Single(logFileNames.FindAll(file => providerLogGzPattern.IsMatch(file)));
+            Regex yagnaLogGzPattern = new Regex(@"^yagna_r[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.log\.gz$");
+            Assert.Single(logFileNames.FindAll(file => yagnaLogGzPattern.IsMatch(file)));
+        }
+
+        // Detects provider has already started (when pid file appears)
+        async static Task CheckProviderHasStarted(String golemPath)
+        {
+            var providerPidFile = Path.Combine(golemPath, "modules", "golem-data", "provider", "ya-provider.pid");
+            _ = await TestUtils.WaitForFileAndRead(providerPidFile);
         }
     }
 }

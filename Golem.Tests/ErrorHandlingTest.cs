@@ -35,13 +35,7 @@ namespace Golem.Tests
 
             var statusChannel = TestUtils.PropertyChangeChannel<Golem, GolemStatus?>((Golem)golem, nameof(Golem.Status), _loggerFactory);
 
-            var jobStatusChannel = PropertyChangeChannel<IJob, JobStatus>(null, "");
-
-            Channel<Job?> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) =>
-            {
-                jobStatusChannel = PropertyChangeChannel(currentJob, nameof(currentJob.Status),
-                    (JobStatus v) => _logger.LogInformation($"Current job Status update: {v}"));
-            });
+            var jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Action<Job?>?)null);
 
             // Then
             var startTask = golem.Start();
@@ -55,6 +49,7 @@ namespace Golem.Tests
 
             // Await for current job to be in Computing state
             Job? currentJob = await ReadChannel<Job?>(jobChannel);
+            var jobStatusChannel = PropertyChangeChannel(currentJob, nameof(currentJob.Status), (Action<JobStatus>?)null);
             var currentState = await ReadChannel(jobStatusChannel, (JobStatus s) => s != JobStatus.Computing, 60_000);
 
             // Access Provider process
