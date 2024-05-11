@@ -55,8 +55,6 @@ namespace Golem.Tests
 
             // Then
 
-            // Starting Golem
-
             // Golem status is `Off` before start.
             Assert.Equal(GolemStatus.Off, golem.Status);
 
@@ -68,7 +66,8 @@ namespace Golem.Tests
             _logger.LogInformation($"Log files after 2nd run: {String.Join("\n", logFiles)}");
             Assert.Empty(logFiles);
 
-            _logger.LogInformation("Starting Golem");
+            // Starting Golem
+
             await StartGolem(golem, golemPath, golemStatusChannel);
 
             // `CurrentJob` after startup, before taking any Job should be null
@@ -83,16 +82,16 @@ namespace Golem.Tests
             Assert.True(app.Start());
 
             // `CurrentJob` property update notification.
-            Job? currentJob = await ReadChannel<Job?>(jobChannel, null);
+            Job? currentJob = await ReadChannel<Job?>(jobChannel);
             // `CurrentJob` object property and object arriving as a property notification are the same.
             Assert.Same(currentJob, golem.CurrentJob);
             Assert.NotNull(currentJob);
 
             // Job starts with `Idle` it might switch into `DownloadingModel` state and then transitions to `Computing`
-            var currentState = await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle, 30_000);
+            var currentState = await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle);
             if (currentState == JobStatus.DownloadingModel)
             {
-                Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.DownloadingModel, 30_000));
+                Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.DownloadingModel));
             }
             else
             {
@@ -115,7 +114,7 @@ namespace Golem.Tests
             _logger.LogInformation("Stopping App");
             await app.Stop(StopMethod.SigInt);
 
-            Assert.Equal(JobStatus.Finished, await ReadChannel(currentJobStatusChannel, (JobStatus s) => s == JobStatus.Computing, 30_000));
+            Assert.Equal(JobStatus.Finished, await ReadChannel(currentJobStatusChannel, (JobStatus s) => s == JobStatus.Computing));
 
             var jobs = await golem.ListJobs(DateTime.MinValue);
             var job = jobs.SingleOrDefault(j => j.Id == jobId);
@@ -127,7 +126,7 @@ namespace Golem.Tests
 
             // Checking payments
 
-            Assert.Equal(GolemLib.Types.PaymentStatus.Settled, await ReadChannel<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent, 30_000));
+            Assert.Equal(GolemLib.Types.PaymentStatus.Settled, await ReadChannel<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent));
 
             //TODO payments is empty
             var payments = await ReadChannel<List<GolemLib.Types.Payment>?>(currentJobPaymentConfirmationChannel);
