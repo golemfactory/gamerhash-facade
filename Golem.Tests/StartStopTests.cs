@@ -54,18 +54,18 @@ namespace Golem.Tests
 
             await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, status.Value);
+            Assert.Equal(GolemStatus.Starting, await TestUtils.ReadChannel<GolemStatus>(status));
             await startTask;
-            Assert.Equal(GolemStatus.Ready, status.Value);
+            Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel<GolemStatus>(status));
 
             var stopTask = golem.Stop();
-            Assert.Equal(GolemStatus.Stopping, status.Value);
+            Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus>(status));
             await stopTask;
 
-            Assert.Equal(GolemStatus.Off, status.Value);
+            Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus>(status));
         }
 
         [Fact]
@@ -105,19 +105,19 @@ namespace Golem.Tests
 
             await using var golem = (Golem)await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, status.Value);
+            Assert.Equal(GolemStatus.Starting, await TestUtils.ReadChannel<GolemStatus>(status));
             await startTask;
 
-            Assert.Equal(GolemStatus.Ready, status.Value);
+            Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel<GolemStatus>(status));
             var stopTask = golem.Stop();
 
-            Assert.Equal(GolemStatus.Stopping, status.Value);
+            Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus>(status));
             await stopTask;
 
-            Assert.Equal(GolemStatus.Off, status.Value);
+            Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus>(status));
         }
 
         [Fact]
@@ -129,12 +129,12 @@ namespace Golem.Tests
 
             await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             var startTask = golem.Start();
             await golem.Stop();
 
-            Assert.Equal(GolemStatus.Off, status.Value);
+            Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel(status, (GolemStatus s) => s != GolemStatus.Off));
         }
 
         [Fact]
@@ -146,22 +146,22 @@ namespace Golem.Tests
 
             await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             for (int i = 0; i < 5; i++)
             {
                 var startTask = golem.Start();
-                Assert.Equal(GolemStatus.Starting, status.Value);
+                Assert.Equal(GolemStatus.Starting, await TestUtils.ReadChannel<GolemStatus>(status));
                 await startTask;
-                Assert.Equal(GolemStatus.Ready, status.Value);
+                Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel<GolemStatus>(status));
 
                 await Task.Delay(TimeSpan.FromMilliseconds(10 + 300 * i));
 
                 var stopTask = golem.Stop();
-                Assert.Equal(GolemStatus.Stopping, status.Value);
+                Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus>(status));
                 await stopTask;
 
-                Assert.Equal(GolemStatus.Off, status.Value);
+                Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus>(status));
             }
         }
 
@@ -174,7 +174,7 @@ namespace Golem.Tests
 
             await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             for (int i = 0; i < 20; i++)
             {
@@ -188,7 +188,7 @@ namespace Golem.Tests
                 await stopTask1;
                 await stopTask2;
 
-                Assert.Equal(GolemStatus.Off, status.Value);
+                Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel(status, (GolemStatus s) => s != GolemStatus.Off));
             }
         }
 
@@ -201,20 +201,20 @@ namespace Golem.Tests
 
             await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             for (int i = 0; i < 3; i++)
             {
                 await golem.Start();
-                Assert.Equal(GolemStatus.Ready, status.Value);
+                Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel(status, (GolemStatus s) => s != GolemStatus.Ready));
 
                 var stopTask = golem.Stop();
-                Assert.Equal(GolemStatus.Stopping, status.Value);
+                Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus>(status));
 
                 await golem.Start();
                 await stopTask;
 
-                Assert.Equal(GolemStatus.Off, status.Value);
+                Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel(status, (GolemStatus s) => s != GolemStatus.Off));
             }
         }
     }

@@ -114,6 +114,24 @@ namespace Golem.Tests
             throw new Exception($"Failed to find matching {nameof(T)} within {timeoutMs} ms.");
         }
 
+        public static Channel<GolemStatus> StatusChannel(Golem golem, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Golem, GolemStatus>(golem, nameof(IGolem.Status), loggerFactory);
+
+        public static Channel<Job?> JobChannel(Golem golem, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Golem, Job?>(golem, nameof(IGolem.CurrentJob), loggerFactory);
+
+        public static Channel<JobStatus> JobStatusChannel(Job job, ILoggerFactory loggerFactory) => 
+            PropertyChangeChannel<Job, JobStatus>(job, nameof(job.Status), loggerFactory);
+
+        public static Channel<GolemLib.Types.PaymentStatus?> JobPaymentStatusChannel(Job job, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Job, GolemLib.Types.PaymentStatus?>(job, nameof(job.PaymentStatus), loggerFactory);
+
+        public static Channel<GolemUsage?> JobUsageChannel(Job job, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Job, GolemUsage?>(job, nameof(job.CurrentUsage), loggerFactory);
+
+        public static Channel<List<Payment>?> JobPaymentConfirmationChannel(Job job, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Job, List<Payment>?>(job, nameof(job.PaymentConfirmation), loggerFactory);
+
         public static void CheckPortIsAvailable()
         {
             if (!IsPortAvailable(EnvironmentBuilder.DefaultLocalAddress, EnvironmentBuilder.DefaultApiPort))
@@ -199,7 +217,6 @@ namespace Golem.Tests
             _requestor.InitPayment();
             _requestorAppKey = _requestor.getTestAppKey();
         }
-        
 
         public async Task StartGolem(IGolem golem, String golemPath, ChannelReader<GolemStatus> statusChannel)
         {
@@ -258,19 +275,19 @@ namespace Golem.Tests
             return PropertyChangeChannel(job, nameof(job.Status),
                     (JobStatus v) => _logger.LogInformation($"Job Status update: {v}"));
         }
-        
+
         public Channel<GolemLib.Types.PaymentStatus?> JobPaymentStatusChannel(Job job)
         {
             return PropertyChangeChannel(job, nameof(job.PaymentStatus),
                     (GolemLib.Types.PaymentStatus? v) => _logger.LogInformation($"Current job Payment Status update: {v}"));
         }
-        
+
         public Channel<GolemUsage?> JobUsageChannel(Job job)
         {
             return PropertyChangeChannel(job, nameof(job.CurrentUsage),
                     (GolemUsage? v) => _logger.LogInformation($"Current job Usage update: {v}"));
         }
-        
+
         public Channel<List<Payment>?> JobPaymentConfirmationChannel(Job job)
         {
             return PropertyChangeChannel(job, nameof(job.PaymentConfirmation),
