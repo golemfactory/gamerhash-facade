@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 using System.Net.Sockets;
 using Golem.Yagna;
+using Golem.Yagna.Types;
 
 
 namespace Golem.Tests
@@ -198,6 +199,33 @@ namespace Golem.Tests
             _requestor.InitPayment();
             _requestorAppKey = _requestor.getTestAppKey();
         }
+        
+
+        public async Task StartGolem(IGolem golem, String golemPath, ChannelReader<GolemStatus> statusChannel)
+        {
+            _logger.LogInformation("Starting Golem");
+            var startTask = golem.Start();
+            Assert.Equal(GolemStatus.Starting, await ReadChannel(statusChannel));
+            await startTask;
+            Assert.Equal(GolemStatus.Ready, await ReadChannel(statusChannel));
+            var providerPidFile = Path.Combine(golemPath, "modules/golem-data/provider/ya-provider.pid");
+            await TestUtils.WaitForFile(providerPidFile);
+        }
+
+        public async Task StopGolem(IGolem golem, String golemPath, ChannelReader<GolemStatus> statusChannel)
+        {
+            _logger.LogInformation("Stopping Golem");
+            var stopTask = golem.Stop();
+            Assert.Equal(GolemStatus.Stopping, await ReadChannel(statusChannel));
+            await stopTask;
+            Assert.Equal(GolemStatus.Off, await ReadChannel(statusChannel));
+            var providerPidFile = Path.Combine(golemPath, "modules/golem-data/provider/ya-provider.pid");
+            try
+            {
+                File.Delete(providerPidFile);
+            }
+            catch { }
+        }
 
         /// <summary>
         /// Reads from `channel` and returns first `T` for which `matcher` returns `false`
@@ -211,6 +239,42 @@ namespace Golem.Tests
         public Channel<T?> PropertyChangeChannel<OBJ, T>(OBJ? obj, string propName, Action<T?>? extraHandler = null) where OBJ : INotifyPropertyChanged
         {
             return TestUtils.PropertyChangeChannel(obj, propName, _loggerFactory, extraHandler);
+        }
+
+        public Channel<GolemStatus> StatusChannel(Golem golem)
+        {
+            return PropertyChangeChannel(golem, nameof(IGolem.Status),
+                (GolemStatus v) => _logger.LogInformation($"Golem status update: {v}"));
+        }
+
+        public Channel<Job?> JobChannel(Golem golem)
+        {
+            return PropertyChangeChannel(golem, nameof(Golem.CurrentJob), (Job? currentJob) =>
+                _logger.LogInformation($"Current Job update: {currentJob}"));
+        }
+
+        public Channel<JobStatus> JobStatusChannel(Job job)
+        {
+            return PropertyChangeChannel(job, nameof(job.Status),
+                    (JobStatus v) => _logger.LogInformation($"Job Status update: {v}"));
+        }
+        
+        public Channel<GolemLib.Types.PaymentStatus?> JobPaymentStatusChannel(Job job)
+        {
+            return PropertyChangeChannel(job, nameof(job.PaymentStatus),
+                    (GolemLib.Types.PaymentStatus? v) => _logger.LogInformation($"Current job Payment Status update: {v}"));
+        }
+        
+        public Channel<GolemUsage?> JobUsageChannel(Job job)
+        {
+            return PropertyChangeChannel(job, nameof(job.CurrentUsage),
+                    (GolemUsage? v) => _logger.LogInformation($"Current job Usage update: {v}"));
+        }
+        
+        public Channel<List<Payment>?> JobPaymentConfirmationChannel(Job job)
+        {
+            return PropertyChangeChannel(job, nameof(job.PaymentConfirmation),
+                    (List<Payment>? v) => _logger.LogInformation($"Current job Payment Confirmation update: {v}"));
         }
 
         public async Task DisposeAsync()

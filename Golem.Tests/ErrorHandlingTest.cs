@@ -26,22 +26,17 @@ namespace Golem.Tests
         public async Task StartTriggerErrorStop_VerifyStatusAsync()
         {
             // Having
-            var logger = _loggerFactory.CreateLogger(nameof(StartTriggerErrorStop_VerifyStatusAsync));
-
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            logger.LogInformation("Path: " + golemPath);
+            _logger.LogInformation("Path: " + golemPath);
 
             await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
 
-            var statusChannel = TestUtils.PropertyChangeChannel<Golem, GolemStatus?>((Golem)golem, nameof(Golem.Status), _loggerFactory);
+            var statusChannel = StatusChannel(golem);
 
-            var jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Action<Job?>?)null);
+            var jobChannel = JobChannel(golem);
 
             // Then
-            var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, await ReadChannel<GolemStatus?>(statusChannel));
-            await startTask;
-            Assert.Equal(GolemStatus.Ready, await ReadChannel<GolemStatus?>(statusChannel));
+            await StartGolem(golem, golemPath, statusChannel);
 
             _logger.LogInformation("Starting Sample App");
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
@@ -65,23 +60,16 @@ namespace Golem.Tests
             providerProcess.Kill();
 
             // Check if Provider failure triggered status change to Error
-            Assert.Equal(GolemStatus.Error, await ReadChannel<GolemStatus?>(statusChannel));
+            Assert.Equal(GolemStatus.Error, await ReadChannel<GolemStatus>(statusChannel));
 
             // Check if there are no remaining child processes alive
             Assert.Empty(RunningExecutablesNames(subprocesses));
 
-            var stopTask = golem.Stop();
-            Assert.Equal(GolemStatus.Stopping, await ReadChannel<GolemStatus?>(statusChannel, (GolemStatus? s) => s == GolemStatus.Error));
-            await stopTask;
-
             // Check if status changed from Error to Off
-            Assert.Equal(GolemStatus.Off, await ReadChannel<GolemStatus?>(statusChannel));
+            await StopGolem(golem, golemPath, statusChannel);
 
             // Restarting to have Golem again in a Ready state
-            startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, await ReadChannel<GolemStatus?>(statusChannel));
-            await startTask;
-            Assert.Equal(GolemStatus.Ready, await ReadChannel<GolemStatus?>(statusChannel));
+            await StartGolem(golem, golemPath, statusChannel);
 
             // After startup Yagna will check all activities and update their states. It does not happen instantly.
             var jobs = new List<IJob>();
@@ -101,10 +89,7 @@ namespace Golem.Tests
             Assert.True(JobStatus.Interrupted == jobs[0].Status || JobStatus.Finished == jobs[0].Status);
 
             // Final stop
-            stopTask = golem.Stop();
-            Assert.Equal(GolemStatus.Stopping, await ReadChannel<GolemStatus?>(statusChannel, (GolemStatus? s) => s == GolemStatus.Error));
-            await stopTask;
-            Assert.Equal(GolemStatus.Off, await ReadChannel<GolemStatus?>(statusChannel));
+            await StopGolem(golem, golemPath, statusChannel);
         }
 
         /// <summary>
