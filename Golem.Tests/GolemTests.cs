@@ -33,7 +33,7 @@ namespace Golem.Tests
 
         ILoggerFactory CreateLoggerFactory([CallerMemberName] string testName = "test")
         {
-            var logfile = Path.Combine(PackageBuilder.TestDir(testName), testName + "-{Date}.log");
+            var logfile = Path.Combine(PackageBuilder.TestDir(testName), testName + ".log");
             return LoggerFactory.Create(builder => builder
                             .AddSimpleConsole(options => options.SingleLine = true)
                             .AddFile(logfile)

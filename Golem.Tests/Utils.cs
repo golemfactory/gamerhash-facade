@@ -120,7 +120,7 @@ namespace Golem.Tests
         public static Channel<Job?> JobChannel(Golem golem, ILoggerFactory loggerFactory) =>
             PropertyChangeChannel<Golem, Job?>(golem, nameof(IGolem.CurrentJob), loggerFactory);
 
-        public static Channel<JobStatus> JobStatusChannel(Job job, ILoggerFactory loggerFactory) => 
+        public static Channel<JobStatus> JobStatusChannel(Job job, ILoggerFactory loggerFactory) =>
             PropertyChangeChannel<Job, JobStatus>(job, nameof(job.Status), loggerFactory);
 
         public static Channel<GolemLib.Types.PaymentStatus?> JobPaymentStatusChannel(Job job, ILoggerFactory loggerFactory) =>
@@ -258,41 +258,23 @@ namespace Golem.Tests
             return TestUtils.PropertyChangeChannel(obj, propName, _loggerFactory, extraHandler);
         }
 
-        public Channel<GolemStatus> StatusChannel(Golem golem)
-        {
-            return PropertyChangeChannel(golem, nameof(IGolem.Status),
-                (GolemStatus v) => _logger.LogInformation($"Golem status update: {v}"));
-        }
+        public Channel<GolemStatus> StatusChannel(Golem golem) =>
+            TestUtils.StatusChannel(golem, _loggerFactory);
 
-        public Channel<Job?> JobChannel(Golem golem)
-        {
-            return PropertyChangeChannel(golem, nameof(Golem.CurrentJob), (Job? currentJob) =>
-                _logger.LogInformation($"Current Job update: {currentJob}"));
-        }
+        public Channel<Job?> JobChannel(Golem golem) =>
+            TestUtils.JobChannel(golem, _loggerFactory);
 
-        public Channel<JobStatus> JobStatusChannel(Job job)
-        {
-            return PropertyChangeChannel(job, nameof(job.Status),
-                    (JobStatus v) => _logger.LogInformation($"Job Status update: {v}"));
-        }
+        public Channel<JobStatus> JobStatusChannel(Job job) =>
+            TestUtils.JobStatusChannel(job, _loggerFactory);
 
-        public Channel<GolemLib.Types.PaymentStatus?> JobPaymentStatusChannel(Job job)
-        {
-            return PropertyChangeChannel(job, nameof(job.PaymentStatus),
-                    (GolemLib.Types.PaymentStatus? v) => _logger.LogInformation($"Current job Payment Status update: {v}"));
-        }
+        public Channel<GolemLib.Types.PaymentStatus?> JobPaymentStatusChannel(Job job) =>
+            TestUtils.JobPaymentStatusChannel(job, _loggerFactory);
 
-        public Channel<GolemUsage?> JobUsageChannel(Job job)
-        {
-            return PropertyChangeChannel(job, nameof(job.CurrentUsage),
-                    (GolemUsage? v) => _logger.LogInformation($"Current job Usage update: {v}"));
-        }
+        public Channel<GolemUsage?> JobUsageChannel(Job job) =>
+            TestUtils.JobUsageChannel(job, _loggerFactory);
 
-        public Channel<List<Payment>?> JobPaymentConfirmationChannel(Job job)
-        {
-            return PropertyChangeChannel(job, nameof(job.PaymentConfirmation),
-                    (List<Payment>? v) => _logger.LogInformation($"Current job Payment Confirmation update: {v}"));
-        }
+        public Channel<List<Payment>?> JobPaymentConfirmationChannel(Job job) =>
+            TestUtils.JobPaymentConfirmationChannel(job, _loggerFactory);
 
         public async Task DisposeAsync()
         {
