@@ -44,8 +44,9 @@ namespace Golem.Tests
 
             // Await for current job to be in Computing state
             Job? currentJob = await ReadChannel<Job?>(jobChannel);
-            var jobStatusChannel = PropertyChangeChannel(currentJob, nameof(currentJob.Status), (Action<JobStatus>?)null);
-            var currentState = await ReadChannel(jobStatusChannel, (JobStatus s) => s != JobStatus.Computing, 60_000);
+            Assert.NotNull(currentJob);
+            var jobStatusChannel = JobStatusChannel(currentJob);
+            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle || s == JobStatus.DownloadingModel, 60_000));
 
             // Access Provider process
             var providerPidFile = Path.Combine(golemPath, "modules", "golem-data", "provider", "ya-provider.pid");
