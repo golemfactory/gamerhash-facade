@@ -49,7 +49,7 @@ namespace Golem.Tests
         /// <summary>
         /// Waits for file up to `timeoutSec`. Throws Exception on timeout.
         /// </summary>
-        public async static Task WaitForFile(String path, int timeoutSec = 15)
+        public async static Task WaitForFile(string path, int timeoutSec = 15)
         {
             int i = 0;
             while (!File.Exists(path) && i < timeoutSec)
@@ -68,6 +68,15 @@ namespace Golem.Tests
         {
             await WaitForFile(path, timeoutSec);
             return File.ReadAllText(path);
+        }
+
+        /// <summary>
+        /// Waits for creation of Provider pid file
+        /// </summary>
+        public static async Task WaitForProviderPidFile(string golemPath, int timeoutSec = 15)
+        {
+            var providerPidFile = Path.Combine(golemPath, "modules", "golem-data", "provider", "ya-provider.pid");
+            await WaitForFile(providerPidFile, timeoutSec);
         }
 
         /// <summary>
@@ -152,7 +161,7 @@ namespace Golem.Tests
             {
                 try
                 {
-                    var client = new TcpClient();
+                    using var client = new TcpClient();
                     IAsyncResult connection = client.BeginConnect(host, port, null, null);
                     if (!connection.AsyncWaitHandle.WaitOne(connection_timeout))
                         return true;
@@ -218,15 +227,22 @@ namespace Golem.Tests
             _requestorAppKey = _requestor.getTestAppKey();
         }
 
-        public async Task StartGolem(IGolem golem, String golemPath, ChannelReader<GolemStatus> statusChannel)
+        /// <param name="golem"></param>
+        /// <param name="statusChannel"></param>
+        /// <param name="golemPath">Path to Golem dir. Makes function to wait for Provider PID file to appear.</param>
+        public async Task StartGolem(IGolem golem, ChannelReader<GolemStatus> statusChannel, string? golemPath = null)
         {
+            if (golemPath != null)
+            {
+                // Awaits for Provider pid file (when they appreared old logs are already archived) + 1 sec
+                await TestUtils.WaitForProviderPidFile(golemPath, 30);
+                await Task.Delay(1_000);
+            }
             _logger.LogInformation("Starting Golem");
             var startTask = golem.Start();
             Assert.Equal(GolemStatus.Starting, await ReadChannel(statusChannel));
             await startTask;
             Assert.Equal(GolemStatus.Ready, await ReadChannel(statusChannel));
-            var providerPidFile = Path.Combine(golemPath, "modules/golem-data/provider/ya-provider.pid");
-            await TestUtils.WaitForFile(providerPidFile);
         }
 
         public async Task StopGolem(IGolem golem, String golemPath, ChannelReader<GolemStatus> statusChannel)

@@ -48,7 +48,7 @@ namespace Golem.Tests
 
             // Starting Golem
 
-            await StartGolem(golem, golemPath, golemStatusChannel);
+            await StartGolem(golem, golemStatusChannel);
 
             // `CurrentJob` after startup, before taking any Job should be null
             Assert.Null(golem.CurrentJob);
@@ -118,7 +118,7 @@ namespace Golem.Tests
             CheckRuntimeLogsAfterAppRun(golem);
 
             // Restarting to have Golem again in a Ready state
-            await StartGolem(golem, golemPath, golemStatusChannel);
+            await StartGolem(golem, golemStatusChannel, golemPath);
 
             // Restarted Yagna should list job with Finished state
             Assert.Equal(JobStatus.Finished, jobs[0].Status);
@@ -127,9 +127,9 @@ namespace Golem.Tests
             await StopGolem(golem, golemPath, golemStatusChannel);
 
             // Restart to make Golem to archive old logs
-            await StartGolem(golem, golemPath, golemStatusChannel);
+            await StartGolem(golem, golemStatusChannel, golemPath);
 
-            CheckLogGzArchivesAfterRestart(golem);
+            await CheckLogGzArchivesAfterRestart(golem);
 
             // Stop
             await StopGolem(golem, golemPath, golemStatusChannel);
@@ -170,7 +170,7 @@ namespace Golem.Tests
         }
 
         // Log files after rerstart of Golem should include log.gz archives.
-        void CheckLogGzArchivesAfterRestart(Golem golem)
+        async Task CheckLogGzArchivesAfterRestart(Golem golem)
         {
             var logFiles = golem.LogFiles();
             _logger.LogInformation($"Log files after restart: {String.Join("\n", logFiles)}");

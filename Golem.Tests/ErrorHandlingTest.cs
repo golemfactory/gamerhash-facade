@@ -36,7 +36,7 @@ namespace Golem.Tests
             var jobChannel = JobChannel(golem);
 
             // Then
-            await StartGolem(golem, golemPath, statusChannel);
+            await StartGolem(golem, statusChannel);
 
             _logger.LogInformation("Starting Sample App");
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
@@ -70,7 +70,7 @@ namespace Golem.Tests
             await StopGolem(golem, golemPath, statusChannel);
 
             // Restarting to have Golem again in a Ready state
-            await StartGolem(golem, golemPath, statusChannel);
+            await StartGolem(golem, statusChannel);
 
             // After startup Yagna will check all activities and update their states. It does not happen instantly.
             var jobs = new List<IJob>();
