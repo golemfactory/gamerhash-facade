@@ -12,14 +12,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Golem.Tests
 {
-    public class StartStopProcessTests : IDisposable, IClassFixture<GolemFixture>
+    public class StartStopProcessTests : WithAvailablePort, IDisposable, IClassFixture<GolemFixture>
     {
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;
         private readonly ITestOutputHelper _output;
 
 
-        public StartStopProcessTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
+        public StartStopProcessTests(ITestOutputHelper outputHelper, GolemFixture golemFixture) : base(outputHelper)
         {
             var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
 
@@ -52,20 +52,20 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             _output.WriteLine("Path: " + golemPath);
 
-            var golem = await TestUtils.Golem(golemPath, loggerFactory);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, status.Value);
+            Assert.Equal(GolemStatus.Starting, await TestUtils.ReadChannel<GolemStatus>(status));
             await startTask;
-            Assert.Equal(GolemStatus.Ready, status.Value);
+            Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel<GolemStatus>(status));
 
             var stopTask = golem.Stop();
-            Assert.Equal(GolemStatus.Stopping, status.Value);
+            Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus>(status));
             await stopTask;
 
-            Assert.Equal(GolemStatus.Off, status.Value);
+            Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus>(status));
         }
 
         [Fact]
@@ -82,7 +82,7 @@ namespace Golem.Tests
             if (Directory.Exists(dataDirDefault))
                 Directory.Delete(Path.Combine(golemPath, dataDirDefault));
 
-            var golem = await TestUtils.Golem(golemPath, loggerFactory, dataDir);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory, dataDir);
 
             var startTask = golem.Start();
             await startTask;
@@ -103,21 +103,21 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            await using var golem = (Golem)await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, status.Value);
+            Assert.Equal(GolemStatus.Starting, await TestUtils.ReadChannel<GolemStatus>(status));
             await startTask;
 
-            Assert.Equal(GolemStatus.Ready, status.Value);
+            Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel<GolemStatus>(status));
             var stopTask = golem.Stop();
 
-            Assert.Equal(GolemStatus.Stopping, status.Value);
+            Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus>(status));
             await stopTask;
 
-            Assert.Equal(GolemStatus.Off, status.Value);
+            Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus>(status));
         }
 
         [Fact]
@@ -127,14 +127,14 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             _output.WriteLine("Path: " + golemPath);
 
-            var golem = await TestUtils.Golem(golemPath, loggerFactory);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             var startTask = golem.Start();
             await golem.Stop();
 
-            Assert.Equal(GolemStatus.Off, status.Value);
+            Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel(status, (GolemStatus s) => s != GolemStatus.Off));
         }
 
         [Fact]
@@ -144,24 +144,24 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             _output.WriteLine("Path: " + golemPath);
 
-            var golem = await TestUtils.Golem(golemPath, loggerFactory);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             for (int i = 0; i < 5; i++)
             {
                 var startTask = golem.Start();
-                Assert.Equal(GolemStatus.Starting, status.Value);
+                Assert.Equal(GolemStatus.Starting, await TestUtils.ReadChannel<GolemStatus>(status));
                 await startTask;
-                Assert.Equal(GolemStatus.Ready, status.Value);
+                Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel<GolemStatus>(status));
 
                 await Task.Delay(TimeSpan.FromMilliseconds(10 + 300 * i));
 
                 var stopTask = golem.Stop();
-                Assert.Equal(GolemStatus.Stopping, status.Value);
+                Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus>(status));
                 await stopTask;
 
-                Assert.Equal(GolemStatus.Off, status.Value);
+                Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus>(status));
             }
         }
 
@@ -172,9 +172,9 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             _output.WriteLine("Path: " + golemPath);
 
-            var golem = await TestUtils.Golem(golemPath, loggerFactory);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             for (int i = 0; i < 20; i++)
             {
@@ -188,7 +188,7 @@ namespace Golem.Tests
                 await stopTask1;
                 await stopTask2;
 
-                Assert.Equal(GolemStatus.Off, status.Value);
+                Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel(status, (GolemStatus s) => s != GolemStatus.Off));
             }
         }
 
@@ -199,22 +199,22 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             _output.WriteLine("Path: " + golemPath);
 
-            var golem = await TestUtils.Golem(golemPath, loggerFactory);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
 
-            var status = new PropertyChangedHandler<Golem, GolemStatus>(nameof(IGolem.Status), loggerFactory).Observe(golem);
+            var status = TestUtils.StatusChannel(golem, loggerFactory);
 
             for (int i = 0; i < 3; i++)
             {
                 await golem.Start();
-                Assert.Equal(GolemStatus.Ready, status.Value);
+                Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel(status, (GolemStatus s) => s != GolemStatus.Ready));
 
                 var stopTask = golem.Stop();
-                Assert.Equal(GolemStatus.Stopping, status.Value);
+                Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus>(status));
 
                 await golem.Start();
                 await stopTask;
 
-                Assert.Equal(GolemStatus.Off, status.Value);
+                Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel(status, (GolemStatus s) => s != GolemStatus.Off));
             }
         }
     }

@@ -12,14 +12,14 @@ using Newtonsoft.Json.Linq;
 
 namespace Golem.Tests
 {
-    public class GolemTests : IDisposable, IClassFixture<GolemFixture>
+    public class GolemTests : WithAvailablePort, IDisposable, IClassFixture<GolemFixture>
     {
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;
         private readonly ITestOutputHelper output;
 
 
-        public GolemTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
+        public GolemTests(ITestOutputHelper outputHelper, GolemFixture golemFixture) : base(outputHelper)
         {
             var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
 
@@ -33,7 +33,7 @@ namespace Golem.Tests
 
         ILoggerFactory CreateLoggerFactory([CallerMemberName] string testName = "test")
         {
-            var logfile = Path.Combine(PackageBuilder.TestDir(testName), testName + "-{Date}.log");
+            var logfile = Path.Combine(PackageBuilder.TestDir(testName), testName + ".log");
             return LoggerFactory.Create(builder => builder
                             .AddSimpleConsole(options => options.SingleLine = true)
                             .AddFile(logfile)
@@ -58,7 +58,8 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = await TestUtils.Golem(golemPath, loggerFactory);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
+
             GolemStatus status = GolemStatus.Off;
 
             Action<GolemStatus> updateStatus = (v) =>
@@ -84,7 +85,8 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = await TestUtils.Golem(golemPath, loggerFactory);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
+
             await golem.Start();
 
             ChangePrices_VerifyPrice(golem, loggerFactory);
@@ -110,8 +112,6 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             Console.WriteLine("Path: " + golemPath);
 
-            var golem = await TestUtils.Golem(golemPath, loggerFactory);
-
             // Create new runtime descriptor with name "dummy_copy"
             var dummyDescPath = Path.Combine(golemPath, "modules", "plugins", "ya-dummy-ai.json");
             var copyDescPath = Path.Combine(golemPath, "modules", "plugins", "ya-dummy-ai_copy.json");
@@ -124,10 +124,13 @@ namespace Golem.Tests
             var copyDescStr = copyDescObj.ToString();
             File.WriteAllText(copyDescPath, copyDescStr);
 
-            // Start and stop golem to create and activate new presets
-            await golem.Start();
-            await golem.Stop();
-
+            var golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
+            await using(golem)
+            {
+                // Start and stop golem to create and activate new presets
+                await golem.Start();
+                await golem.Stop();
+            }
             // Update price in newly created "dummy_copy" preset
             var presetsPath = Path.Combine(golemPath, "modules", "golem-data", "provider", "presets.json");
             var presetsJson = File.ReadAllText(presetsPath);
@@ -145,7 +148,7 @@ namespace Golem.Tests
 
             // Golem on initialization should unify prices in all presets 
             // (it takes price from first Preset, and sets the same price for others if different)
-            golem = await TestUtils.Golem(golemPath, loggerFactory);
+            golem = (Golem)await TestUtils.Golem(golemPath, loggerFactory);
             var price = golem.Price;
 
             Assert.Equal(copyPresetGpuPriceOriginalValue, price.GpuPerSec);

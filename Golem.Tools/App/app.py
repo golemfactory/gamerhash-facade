@@ -174,7 +174,7 @@ class AiRuntimeService(Service):
         
         if AiRuntimeService.runtime == "dummy":
             return AiPayload(
-                image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
+                image_url="hash:sha3:eb222a9f6afa502a379b2315ec9f1e853ba7013f7240bfa47fb2f455375fea9c:https://huggingface.co/timm/tf_mobilenetv3_small_minimal_100.in1k/resolve/main/model.safetensors?download=true",
                 runtime="dummy",
                 node_descriptor=node_descriptor
             )

@@ -12,14 +12,14 @@ using Newtonsoft.Json.Linq;
 
 namespace Golem.Tests
 {
-    public class PropertyChangeTests : IDisposable, IClassFixture<GolemFixture>
+    public class PropertyChangeTests : WithAvailablePort, IDisposable, IClassFixture<GolemFixture>
     {
         private readonly TestLoggerProvider _loggerProvider;
         private readonly string _golemLib;
         private readonly ITestOutputHelper _output;
 
 
-        public PropertyChangeTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
+        public PropertyChangeTests(ITestOutputHelper outputHelper, GolemFixture golemFixture) : base(outputHelper)
         {
 
             var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
@@ -72,7 +72,7 @@ namespace Golem.Tests
         {
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            await using var golem = (Golem)await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
 
             // TODO Without starting fails on Provider.Config set.
             await golem.Start();
@@ -102,7 +102,7 @@ namespace Golem.Tests
         {
             var loggerFactory = CreateLoggerFactory();
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            var golem = await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
+            await using var golem = (Golem)await TestUtils.LoadBinaryLib(_golemLib, PackageBuilder.ModulesDir(golemPath), loggerFactory);
 
             // Initialize property value
             var initialValue = new GolemPrice
