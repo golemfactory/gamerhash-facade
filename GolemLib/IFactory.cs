@@ -18,8 +18,13 @@ public interface IFactory
     /// </param>
     /// <returns>Golem object</returns>
     public Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory = null, bool mainnet = true, string? dataDir = null);
+}
 
+public interface IFactoryExt
+{
     /// <summary>Creates Golem object</summary>
     /// <param name="relayType">Type of relay to use</param>
     public Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet, string? dataDir, RelayType relayType);
 }
+
+
