@@ -15,7 +15,7 @@ namespace Golem
     }
 
 
-    public class Factory : IFactory
+    public class Factory : IFactory, IFactoryExt
     {
         public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet = true)
         {
