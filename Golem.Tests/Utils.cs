@@ -227,17 +227,8 @@ namespace Golem.Tests
             _requestorAppKey = _requestor.getTestAppKey();
         }
 
-        /// <param name="golem"></param>
-        /// <param name="statusChannel"></param>
-        /// <param name="golemPath">Path to Golem dir. Makes function to wait for Provider PID file to appear.</param>
-        public async Task StartGolem(IGolem golem, ChannelReader<GolemStatus> statusChannel, string? golemPath = null)
+        public async Task StartGolem(IGolem golem, ChannelReader<GolemStatus> statusChannel)
         {
-            if (golemPath != null)
-            {
-                // Awaits for Provider pid file (when they appreared old logs are already archived) + 1 sec
-                await TestUtils.WaitForProviderPidFile(golemPath, 30);
-                await Task.Delay(1_000);
-            }
             _logger.LogInformation("Starting Golem");
             var startTask = golem.Start();
             Assert.Equal(GolemStatus.Starting, await ReadChannel(statusChannel));

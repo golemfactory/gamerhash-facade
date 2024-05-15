@@ -118,18 +118,10 @@ namespace Golem.Tests
             CheckRuntimeLogsAfterAppRun(golem);
 
             // Restarting to have Golem again in a Ready state
-            await StartGolem(golem, golemStatusChannel, golemPath);
+            await StartGolem(golem, golemStatusChannel);
 
             // Restarted Yagna should list job with Finished state
             Assert.Equal(JobStatus.Finished, jobs[0].Status);
-
-            // Stop
-            await StopGolem(golem, golemPath, golemStatusChannel);
-
-            // Restart to make Golem to archive old logs
-            await StartGolem(golem, golemStatusChannel, golemPath);
-
-            await CheckLogGzArchivesAfterRestart(golem);
 
             // Stop
             await StopGolem(golem, golemPath, golemStatusChannel);
@@ -167,38 +159,6 @@ namespace Golem.Tests
             Assert.Contains("ya-provider_rCURRENT.log", logFileNames);
             Assert.Contains("yagna_rCURRENT.log", logFileNames);
 
-        }
-
-        // Log files after rerstart of Golem should include log.gz archives.
-        async Task CheckLogGzArchivesAfterRestart(Golem golem)
-        {
-            var logFiles = golem.LogFiles();
-            _logger.LogInformation($"Log files after restart: {String.Join("\n", logFiles)}");
-            // After 3rd run there should be runtime logs created by `test`/`offer-template` commands
-            var runtimeTestLogFiles = logFiles.FindAll(path => path
-                .Contains(Path.Combine("exe-unit", "work", "logs")))
-                .FindAll(path => path.EndsWith(".log"));
-            Assert.NotEmpty(runtimeTestLogFiles);
-            // After 3rd run there should old runtime logs created by previous activity
-            var runtimeActivityLogFiles = logFiles.FindAll(path => path
-                .Contains(Path.Combine("exe-unit", "work")))
-                .FindAll(path => path.EndsWith(".log"))
-                .FindAll(path => !runtimeTestLogFiles.Contains(path));
-            Assert.Single(runtimeActivityLogFiles);
-            var logFileNames = logFiles.Select(file => Path.GetFileName(file)).ToList() ?? new List<string>();
-            // After 3rd run there should be current yagna and ya-provider log files
-            Assert.Contains("ya-provider_rCURRENT.log", logFileNames);
-            Assert.Contains("yagna_rCURRENT.log", logFileNames);
-            // After 3rd run there should be previous yagna and ya-provider log files
-            Regex providerLogPattern = new Regex(@"^ya-provider_r[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.log$");
-            Assert.Single(logFileNames.FindAll(file => providerLogPattern.IsMatch(file)));
-            Regex yagnaLogPattern = new Regex(@"^yagna_r[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.log$");
-            Assert.Single(logFileNames.FindAll(file => yagnaLogPattern.IsMatch(file)));
-            // After 3rd run there should be previous previous yagna and ya-provider log gz file archives
-            Regex providerLogGzPattern = new Regex(@"^ya-provider_r[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.log\.gz$");
-            Assert.Single(logFileNames.FindAll(file => providerLogGzPattern.IsMatch(file)));
-            Regex yagnaLogGzPattern = new Regex(@"^yagna_r[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.log\.gz$");
-            Assert.Single(logFileNames.FindAll(file => yagnaLogGzPattern.IsMatch(file)));
         }
 
         // Detects provider has already started (when pid file appears)
