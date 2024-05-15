@@ -25,7 +25,7 @@ namespace Golem
 
         public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory = null, bool mainnet = true, string? dataDir = null)
         {
-            return await Create(modulesDir, loggerFactory, mainnet, null, DecideRelayType());
+            return await Create(modulesDir, loggerFactory, mainnet, dataDir, DecideRelayType());
         }
 
         public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet, string? dataDir, RelayType relayType)
