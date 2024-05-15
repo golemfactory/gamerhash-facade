@@ -9,7 +9,13 @@ using System.Net.Http;
 
 namespace Golem
 {
-    public class Factory : IFactory, IFactoryExt
+    public interface IFactoryExt
+    {
+        public Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet, string? dataDir, RelayType relayType);
+    }
+
+
+    public class Factory : IFactory
     {
         public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet = true)
         {
@@ -19,7 +25,7 @@ namespace Golem
 
         public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory = null, bool mainnet = true, string? dataDir = null)
         {
-            return await Create(modulesDir, loggerFactory, mainnet, null, RelayType.Public);
+            return await Create(modulesDir, loggerFactory, mainnet, null, DecideRelayType());
         }
 
         public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet, string? dataDir, RelayType relayType)
@@ -40,6 +46,12 @@ namespace Golem
         public static Network Network(bool mainnet)
         {
             return mainnet ? Yagna.Types.Network.Polygon : Yagna.Types.Network.Holesky;
+        }
+
+        public static RelayType DecideRelayType()
+        {
+            var env = Environment.GetEnvironmentVariable("GOLEM_RELAY_TYPE") ?? "";
+            return Enum.TryParse(env, out RelayType relay) ? relay : RelayType.Public;
         }
 
         private static async Task ConfigureAccess(Golem golem, string dir, bool mainnet, ILoggerFactory loggerFactory)
