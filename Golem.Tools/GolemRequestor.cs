@@ -39,6 +39,7 @@ namespace Golem.Tools
             envBuilder.WithYagnaApiUrl("http://127.0.0.1:7465");
             envBuilder.WithGsbUrl("tcp://127.0.0.1:7464");
             envBuilder.WithYaNetBindUrl("udp://0.0.0.0:11500");
+            envBuilder.WithMetricsGroup("Example-GamerHash");
             _env = envBuilder.Build();
             _mainnet = mainnet;
         }
