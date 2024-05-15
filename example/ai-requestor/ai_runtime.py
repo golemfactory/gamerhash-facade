@@ -7,7 +7,7 @@ from PIL import Image
 import requests
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from yapapi import Golem
 from yapapi.payload import Payload
@@ -20,8 +20,8 @@ from yapapi.config import ApiConfig
 import argparse
 import asyncio
 import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 import colorama  # type: ignore
 
@@ -30,9 +30,11 @@ from yapapi import __version__ as yapapi_version
 from yapapi import windows_event_loop_fix
 from yapapi.log import enable_default_logger
 from yapapi.strategy import SCORE_TRUSTED, SCORE_REJECTED, MarketStrategy
+from yapapi.strategy.base import PropValueRange, PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEOUT_SEC
 from yapapi.rest import Activity
 
 from ya_activity import ApiClient, ApiException, RequestorControlApi, RequestorStateApi
+
 
 # Utils
 
@@ -66,6 +68,9 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         default=str(default_log_path),
         help="Log file for YAPAPI; default: %(default)s",
     )
+    parser.add_argument("--runtime", default="dummy", help="Runtime name, for example `automatic`")
+    parser.add_argument("--descriptor", default=None, help="Path to node descriptor file")
+    parser.add_argument("--pay-interval", default=180, help="Interval of making partial payments")
     return parser
 
 
@@ -136,8 +141,14 @@ class ProviderOnceStrategy(MarketStrategy):
     """Hires provider only once.
     """
 
-    def __init__(self):
+    def __init__(self, pay_interval=10):
         self.history = set(())
+        self.acceptable_prop_value_range_overrides =  {
+            PROP_DEBIT_NOTE_INTERVAL_SEC: PropValueRange(30, None),
+            PROP_PAYMENT_TIMEOUT_SEC: PropValueRange(int(pay_interval), None),
+        }
+        print("init: ")
+        print(self.acceptable_prop_value_range_overrides)
 
     async def score_offer(self, offer):
         if offer.issuer not in self.history:
@@ -151,24 +162,47 @@ class ProviderOnceStrategy(MarketStrategy):
 
 # App
 
-RUNTIME_NAME = "automatic" 
-#RUNTIME_NAME = "dummy"
+#RUNTIME_NAME = "automatic" 
+RUNTIME_NAME = "dummy"
 
 @dataclass
 class AiPayload(Payload):
     image_url: str = prop("golem.srv.comp.ai.model")
     image_fmt: str = prop("golem.srv.comp.ai.model-format", default="safetensors")
 
-    runtime: str = constraint(inf.INF_RUNTIME_NAME, default=RUNTIME_NAME)
+    node_descriptor: Optional[dict] = prop("golem.!exp.gap-31.v0.node.descriptor", default=None)
+
+    runtime: str = constraint(inf.INF_RUNTIME_NAME, default="dummy")
 
 
 class AiRuntimeService(Service):
+    runtime: str
+    node_descriptor: Optional[str] = None
+
     @staticmethod
     async def get_payload():
         ## TODO switched into using smaller model to avoid problems during tests. Resolve it when automatic runtime integrated
         # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
         # return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
-        return AiPayload(image_url="hash:sha3:b2da48d618beddab1887739d75b50a3041c810bc73805a416761185998359b24:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
+        # return AiPayload(image_url="hash:sha3:b2da48d618beddab1887739d75b50a3041c810bc73805a416761185998359b24:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
+
+        if AiRuntimeService.node_descriptor:
+            node_descriptor = json.loads(open(AiRuntimeService.node_descriptor, "r").read())
+        else:
+            node_descriptor = None
+        
+        if AiRuntimeService.runtime == "dummy":
+            return AiPayload(
+                image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
+                runtime="dummy",
+                node_descriptor=node_descriptor
+            )
+        return AiPayload(
+            image_url="hash:sha3:b2da48d618beddab1887739d75b50a3041c810bc73805a416761185998359b24:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true",
+            runtime="automatic",
+            node_descriptor=node_descriptor
+        )
+
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)
 
@@ -193,7 +227,7 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
     stream = True
 
     if stream:
-        headers = {"Authorization": "Bearer "+token, "Accept": "application/octet-stream-2"}
+        headers = {"Authorization": "Bearer "+token, "Accept": "application/octet-stream"}
     else:
         headers = {"Authorization": "Bearer "+token, "Accept": "application/json"}
 
@@ -216,7 +250,7 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
     if response.encoding is None:
         response.encoding = 'utf-8'
 
-    if stream:
+    if not stream:
         if response.ok:
             response = json.loads(response.text)
             image = Image.open(io.BytesIO(base64.b64decode(response['images'][0])))
@@ -238,8 +272,8 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
         image.save(output_file)
 
 
-async def main(subnet_tag, driver=None, network=None):
-    strategy = ProviderOnceStrategy()
+async def main(subnet_tag, descriptor, driver=None, network=None, runtime="dummy", args=None):
+    strategy = ProviderOnceStrategy(pay_interval=args.pay_interval)
     async with Golem(
         budget=10.0,
         subnet_tag=subnet_tag,
@@ -247,12 +281,15 @@ async def main(subnet_tag, driver=None, network=None):
         payment_driver=driver,
         payment_network=network,
     ) as golem:
+        AiRuntimeService.runtime = runtime
+        AiRuntimeService.node_descriptor = descriptor
         cluster = await golem.run_service(
             AiRuntimeService,
             instance_params=[
                 {"strategy": strategy}
             ],
             num_instances=1,
+            expiration=datetime.now(timezone.utc) + timedelta(days=10),
         )
 
         def instances():
@@ -267,6 +304,8 @@ async def main(subnet_tag, driver=None, network=None):
         async def get_image(prompt, file_name):
             
             for s in cluster.instances:
+
+                print('s: ', s.strategy.acceptable_prop_value_ranges)
 
                 for _ in range(0, 10):
                     if s._ctx == None:
@@ -313,11 +352,18 @@ if __name__ == "__main__":
     parser.set_defaults(log_file=f"ai-yapapi-{now}.log")
     args = parser.parse_args()
 
+    print("args: ")
+    print (args)
+
+
     run_golem_example(
         main(
             subnet_tag=args.subnet_tag,
+            descriptor=args.descriptor,
             driver=args.payment_driver,
             network=args.payment_network,
+            runtime=args.runtime,
+            args=args
         ),
         log_file=args.log_file,
     )

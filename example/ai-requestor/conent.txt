@@ -1,1 +1,0 @@
-<!doctype html><html lang=en><title>406 Not Acceptable</title><h1>Not Acceptable</h1><p>The resource identified by the request is only capable of generating response entities which have content characteristics not acceptable according to the accept headers sent in the request. Supported entities are: application/json, application/octet-stream</p>

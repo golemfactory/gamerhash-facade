@@ -46,9 +46,13 @@ def stream_image():
         response = json.dumps(response)
        
         start = 0
-        for end in range(0, len(response), 65536):
-            yield response[start:end]
-            start = end
+        # for end in range(0, len(response), 1*1024):
+        while True:
+            time.sleep(1)
+            yield f'line {start}\n'
+            start += 1
+            # yield response[start:end]
+            # start = end
         if start < len(response):
             yield response[start:]
 
@@ -57,6 +61,7 @@ def stream_image():
         return Response(stream_with_context(img_stream(r['prompt'])), mimetype="application/octet-stream")
     return {"error": "Request must be JSON"}, 415
 
-
-
+@app.get("/r")
+def get_r():
+    return "my nice response", 200
 
