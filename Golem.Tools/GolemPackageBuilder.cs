@@ -18,8 +18,8 @@ namespace Golem.Tools
 {
     public class PackageBuilder
     {
-        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.16.0-ai-rc16";
-        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.2.2-rc1";
+        public static string CURRENT_GOLEM_VERSION = "pre-rel-v0.16.0-ai-rc20";
+        public static string CURRENT_RUNTIME_VERSION = "pre-rel-v0.2.2-rc2";
 
         internal static string InitTestDirectory(string name, bool cleanupData = true)
         {
