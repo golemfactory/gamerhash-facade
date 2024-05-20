@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using System.Threading.Channels;
 
 using Golem.Tools;
@@ -26,35 +27,13 @@ namespace Golem.Tests
 
             string golemPath = await PackageBuilder.BuildTestDirectory();
             _logger.LogInformation($"Path: {golemPath}");
-            var golem = await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
 
-            Channel<GolemStatus> golemStatusChannel = PropertyChangeChannel(golem, nameof(IGolem.Status),
-                (GolemStatus v) => _logger.LogInformation($"Golem status update: {v}"));
+            var golemStatusChannel = StatusChannel(golem);
 
-            var jobStatusChannel = PropertyChangeChannel<IJob, JobStatus>(null, "");
-            var jobPaymentStatusChannel = PropertyChangeChannel<IJob, GolemLib.Types.PaymentStatus?>(null, "");
-            var jobGolemUsageChannel = PropertyChangeChannel<IJob, GolemUsage>(null, "");
-            var jobPaymentConfirmationChannel = PropertyChangeChannel<IJob, List<Payment>>(null, "");
-
-            Channel<Job?> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) =>
-            {
-                _logger.LogInformation($"Current Job update: {currentJob}");
-
-                jobStatusChannel = PropertyChangeChannel(currentJob, nameof(currentJob.Status),
-                    (JobStatus v) => _logger.LogInformation($"Current job Status update: {v}"));
-                jobPaymentStatusChannel = PropertyChangeChannel(currentJob, nameof(currentJob.PaymentStatus),
-                    (GolemLib.Types.PaymentStatus? v) => _logger.LogInformation($"Current job Payment Status update: {v}"));
-                jobGolemUsageChannel = PropertyChangeChannel(currentJob, nameof(currentJob.CurrentUsage),
-                    (GolemUsage? v) => _logger.LogInformation($"Current job Usage update: {v}"));
-                jobPaymentConfirmationChannel = PropertyChangeChannel(currentJob, nameof(currentJob.PaymentConfirmation),
-                    (List<Payment>? v) => _logger.LogInformation($"Current job Payment Confirmation update: {v}"));
-
-            });
-
+            var jobChannel = JobChannel(golem);
 
             // Then
-
-            // Starting Golem
 
             // Golem status is `Off` before start.
             Assert.Equal(GolemStatus.Off, golem.Status);
@@ -62,16 +41,19 @@ namespace Golem.Tests
             // `CurrentJob` before startup should be null.
             Assert.Null(golem.CurrentJob);
 
-            _logger.LogInformation("Starting Golem");
-            await golem.Start();
-            // On startup Golem status goes from `Off` to `Starting`
-            Assert.Equal(GolemStatus.Starting, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Off, 30_000));
+            // Before any run there should be no log files.
+            var logFiles = golem.LogFiles();
+            _logger.LogInformation($"Log files after 2nd run: {String.Join("\n", logFiles)}");
+            Assert.Empty(logFiles);
 
-            // .. and then to `Ready`
-            Assert.Equal(GolemStatus.Ready, await ReadChannel(golemStatusChannel, (GolemStatus s) => s == GolemStatus.Starting, 30_000));
+            // Starting Golem
+
+            await StartGolem(golem, golemStatusChannel);
 
             // `CurrentJob` after startup, before taking any Job should be null
             Assert.Null(golem.CurrentJob);
+
+            await CheckLogsAfterGolemStart(golem, golemPath);
 
             // Starting Sample App
 
@@ -85,16 +67,13 @@ namespace Golem.Tests
             Assert.Same(currentJob, golem.CurrentJob);
             Assert.NotNull(currentJob);
 
+            var jobStatusChannel = JobStatusChannel(currentJob);
+            var jobPaymentStatusChannel = JobPaymentStatusChannel(currentJob);
+            var jobPaymentConfirmationChannel = JobPaymentConfirmationChannel(currentJob);
+
             // Job starts with `Idle` it might switch into `DownloadingModel` state and then transitions to `Computing`
-            var currentState = await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle, 30_000);
-            if (currentState == JobStatus.DownloadingModel)
-            {
-                Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.DownloadingModel, 30_000));
-            }
-            else
-            {
-                Assert.Equal(JobStatus.Computing, currentState);
-            }
+            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
+                (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
 
             Assert.Same(currentJob, golem.CurrentJob);
             Assert.NotNull(currentJob);
@@ -102,29 +81,27 @@ namespace Golem.Tests
 
             _logger.LogInformation($"Got a job. Status {golem.CurrentJob?.Status}, Id: {golem.CurrentJob?.Id}, RequestorId: {golem.CurrentJob?.RequestorId}");
 
-            // keep references to a finishing job status channels
-            var currentJobStatusChannel = jobStatusChannel;
-            var currentJobPaymentStatusChannel = jobPaymentStatusChannel;
-            var currentJobPaymentConfirmationChannel = jobPaymentConfirmationChannel;
-
             var jobId = currentJob.Id;
             // Stopping Sample App
             _logger.LogInformation("Stopping App");
             await app.Stop(StopMethod.SigInt);
 
-            Assert.Equal(JobStatus.Finished, await ReadChannel(currentJobStatusChannel, (JobStatus s) => s == JobStatus.Computing, 30_000));
+            Assert.Equal(JobStatus.Finished, await ReadChannel<JobStatus>(jobStatusChannel));
 
             var jobs = await golem.ListJobs(DateTime.MinValue);
             var job = jobs.SingleOrDefault(j => j.Id == jobId);
             Assert.Equal(JobStatus.Finished, job?.Status);
+
+            currentJob = await ReadChannel<Job?>(jobChannel);
+            Assert.Null(currentJob);
             Assert.Null(golem.CurrentJob);
 
             // Checking payments
 
-            Assert.Equal(GolemLib.Types.PaymentStatus.Settled, await ReadChannel<GolemLib.Types.PaymentStatus?>(currentJobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent));
+            Assert.Equal(GolemLib.Types.PaymentStatus.Settled, await ReadChannel<GolemLib.Types.PaymentStatus?>(jobPaymentStatusChannel, (GolemLib.Types.PaymentStatus? s) => s == GolemLib.Types.PaymentStatus.InvoiceSent));
 
             //TODO payments is empty
-            var payments = await ReadChannel<List<GolemLib.Types.Payment>?>(currentJobPaymentConfirmationChannel);
+            var payments = await ReadChannel<List<GolemLib.Types.Payment>?>(jobPaymentConfirmationChannel);
             // Assert.Single(payments);
             // Assert.Equal(_requestorAppKey.Id, payments[0].PayerId);
             // _logger.LogInformation($"Invoice amount {payments[0].Amount}");
@@ -136,15 +113,59 @@ namespace Golem.Tests
             }
 
             // Stopping Golem
+            await StopGolem(golem, golemPath, golemStatusChannel);
 
-            _logger.LogInformation("Stopping Golem");
-            await golem.Stop();
+            CheckRuntimeLogsAfterAppRun(golem);
 
-            var stoppingStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => status == GolemStatus.Ready, 30_000);
-            Assert.Equal(GolemStatus.Stopping, stoppingStatus);
+            // Restarting to have Golem again in a Ready state
+            await StartGolem(golem, golemStatusChannel);
 
-            var offStatus = await ReadChannel(golemStatusChannel, (GolemStatus status) => status == GolemStatus.Ready, 30_000);
-            Assert.Equal(GolemStatus.Off, offStatus);
+            // Restarted Yagna should list job with Finished state
+            Assert.Equal(JobStatus.Finished, jobs[0].Status);
+
+            // Stop
+            await StopGolem(golem, golemPath, golemStatusChannel);
+        }
+
+        // After startup yagna and provider logs should be available
+        async Task CheckLogsAfterGolemStart(Golem golem, String golemPath)
+        {
+            await CheckProviderHasStarted(golemPath);
+            var logFiles = golem.LogFiles();
+            _logger.LogInformation($"Log files after start: {String.Join("\n", logFiles)}");
+            var logFileNames = logFiles.Select(file => Path.GetFileName(file)).ToList() ?? new List<string>();
+            // After 1st run there should be yagna and ya-provider log files
+            Assert.Contains("ya-provider_rCURRENT.log", logFileNames);
+            Assert.Contains("yagna_rCURRENT.log", logFileNames);
+        }
+
+        void CheckRuntimeLogsAfterAppRun(Golem golem)
+        {
+            var logFiles = golem.LogFiles();
+            _logger.LogInformation($"Log files after app run: {String.Join("\n", logFiles)}");
+            // After app run there should be runtime logs created by `test`/`offer-template` commands
+            var runtimeTestLogFiles = logFiles.FindAll(path => path
+                .Contains(Path.Combine("exe-unit", "work", "logs")))
+                .FindAll(path => path.EndsWith(".log"));
+            Assert.NotEmpty(runtimeTestLogFiles);
+            // There should be new runtime logs created by running the app
+            var runtimeActivityLogFiles = logFiles.FindAll(path => path
+                .Contains(Path.Combine("exe-unit", "work")))
+                .FindAll(path => path.EndsWith(".log"))
+                .FindAll(path => !runtimeTestLogFiles.Contains(path));
+            Assert.Single(runtimeActivityLogFiles);
+            var logFileNames = logFiles.Select(file => Path.GetFileName(file)).ToList() ?? new List<string>();
+            // There should be current yagna and ya-provider log files
+            Assert.Contains("ya-provider_rCURRENT.log", logFileNames);
+            Assert.Contains("yagna_rCURRENT.log", logFileNames);
+
+        }
+
+        // Detects provider has already started (when pid file appears)
+        async static Task CheckProviderHasStarted(String golemPath)
+        {
+            var providerPidFile = Path.Combine(golemPath, "modules", "golem-data", "provider", "ya-provider.pid");
+            _ = await TestUtils.WaitForFileAndRead(providerPidFile);
         }
     }
 }

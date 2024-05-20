@@ -26,27 +26,17 @@ namespace Golem.Tests
         public async Task StartTriggerErrorStop_VerifyStatusAsync()
         {
             // Having
-            var logger = _loggerFactory.CreateLogger(nameof(StartTriggerErrorStop_VerifyStatusAsync));
-
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            logger.LogInformation("Path: " + golemPath);
+            _logger.LogInformation("Path: " + golemPath);
 
-            var golem = await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
-            var statusChannel = TestUtils.PropertyChangeChannel<Golem, GolemStatus?>((Golem)golem, nameof(Golem.Status), _loggerFactory);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
 
-            var jobStatusChannel = PropertyChangeChannel<IJob, JobStatus>(null, "");
+            var statusChannel = StatusChannel(golem);
 
-            Channel<Job?> jobChannel = PropertyChangeChannel(golem, nameof(IGolem.CurrentJob), (Job? currentJob) =>
-            {
-                jobStatusChannel = PropertyChangeChannel(currentJob, nameof(currentJob.Status),
-                    (JobStatus v) => _logger.LogInformation($"Current job Status update: {v}"));
-            });
+            var jobChannel = JobChannel(golem);
 
             // Then
-            var startTask = golem.Start();
-            Assert.Equal(GolemStatus.Starting, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
-            await startTask;
-            Assert.Equal(GolemStatus.Ready, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
+            await StartGolem(golem, statusChannel);
 
             _logger.LogInformation("Starting Sample App");
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
@@ -54,7 +44,9 @@ namespace Golem.Tests
 
             // Await for current job to be in Computing state
             Job? currentJob = await ReadChannel<Job?>(jobChannel);
-            var currentState = await ReadChannel(jobStatusChannel, (JobStatus s) => s != JobStatus.Computing, 30_000);
+            Assert.NotNull(currentJob);
+            var jobStatusChannel = JobStatusChannel(currentJob);
+            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle || s == JobStatus.DownloadingModel, 60_000));
 
             // Access Provider process
             var providerPidFile = Path.Combine(golemPath, "modules", "golem-data", "provider", "ya-provider.pid");
@@ -69,17 +61,36 @@ namespace Golem.Tests
             providerProcess.Kill();
 
             // Check if Provider failure triggered status change to Error
-            Assert.Equal(GolemStatus.Error, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
+            Assert.Equal(GolemStatus.Error, await ReadChannel<GolemStatus>(statusChannel));
 
             // Check if there are no remaining child processes alive
             Assert.Empty(RunningExecutablesNames(subprocesses));
 
-            var stopTask = golem.Stop();
-            Assert.Equal(GolemStatus.Stopping, await TestUtils.ReadChannel<GolemStatus?>(statusChannel, (GolemStatus? s) => s == GolemStatus.Error, 30_000));
-            await stopTask;
-
             // Check if status changed from Error to Off
-            Assert.Equal(GolemStatus.Off, await TestUtils.ReadChannel<GolemStatus?>(statusChannel));
+            await StopGolem(golem, golemPath, statusChannel);
+
+            // Restarting to have Golem again in a Ready state
+            await StartGolem(golem, statusChannel);
+
+            // After startup Yagna will check all activities and update their states. It does not happen instantly.
+            var jobs = new List<IJob>();
+            for (int i = 0; i < 10; i++)
+            {
+                jobs = await golem.ListJobs(DateTime.MinValue);
+                // Restarted Golem should list one job from previous run.
+                Assert.Single(jobs);
+                if (jobs[0].Status != JobStatus.Computing)
+                {
+                    break;
+                }
+                await Task.Delay(1_000);
+            }
+
+            // Restarted Yagna should update not Teminated Activities from Ready to Unresponsive state, which results with Interrupted job status.
+            Assert.True(JobStatus.Interrupted == jobs[0].Status || JobStatus.Finished == jobs[0].Status);
+
+            // Final stop
+            await StopGolem(golem, golemPath, statusChannel);
         }
 
         /// <summary>

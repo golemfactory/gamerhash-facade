@@ -1,10 +1,10 @@
 global using Xunit;
 global using Xunit.Abstractions;
+using System.Threading;
 
 [assembly: CollectionBehavior(
     CollectionBehavior.CollectionPerAssembly,
-    DisableTestParallelization = true,
-    MaxParallelThreads = 1
+    DisableTestParallelization = true
 )]
 
 public class GolemFixture : IDisposable
