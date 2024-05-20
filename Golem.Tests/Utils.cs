@@ -10,6 +10,9 @@ using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
+using System.Net.Sockets;
+using Golem.Yagna;
+using Golem.Yagna.Types;
 
 
 namespace Golem.Tests
@@ -46,7 +49,7 @@ namespace Golem.Tests
         /// <summary>
         /// Waits for file up to `timeoutSec`. Throws Exception on timeout.
         /// </summary>
-        public async static Task WaitForFile(String path, int timeoutSec = 15)
+        public async static Task WaitForFile(string path, int timeoutSec = 15)
         {
             int i = 0;
             while (!File.Exists(path) && i < timeoutSec)
@@ -65,6 +68,15 @@ namespace Golem.Tests
         {
             await WaitForFile(path, timeoutSec);
             return File.ReadAllText(path);
+        }
+
+        /// <summary>
+        /// Waits for creation of Provider pid file
+        /// </summary>
+        public static async Task WaitForProviderPidFile(string golemPath, int timeoutSec = 15)
+        {
+            var providerPidFile = Path.Combine(golemPath, "modules", "golem-data", "provider", "ya-provider.pid");
+            await WaitForFile(providerPidFile, timeoutSec);
         }
 
         /// <summary>
@@ -98,9 +110,9 @@ namespace Golem.Tests
             matcher ??= FalseMatcher;
             while (await channel.WaitToReadAsync(cancelTokenSource.Token))
             {
-                if (channel.TryRead(out var value) && value is T tValue && !matcher.Invoke(tValue))
+                if (channel.TryRead(out var value) && !matcher.Invoke(value))
                 {
-                    return tValue;
+                    return value;
                 }
                 else
                 {
@@ -110,9 +122,71 @@ namespace Golem.Tests
 
             throw new Exception($"Failed to find matching {nameof(T)} within {timeoutMs} ms.");
         }
+
+        public static Channel<GolemStatus> StatusChannel(Golem golem, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Golem, GolemStatus>(golem, nameof(IGolem.Status), loggerFactory);
+
+        public static Channel<Job?> JobChannel(Golem golem, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Golem, Job?>(golem, nameof(IGolem.CurrentJob), loggerFactory);
+
+        public static Channel<JobStatus> JobStatusChannel(Job job, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Job, JobStatus>(job, nameof(job.Status), loggerFactory);
+
+        public static Channel<GolemLib.Types.PaymentStatus?> JobPaymentStatusChannel(Job job, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Job, GolemLib.Types.PaymentStatus?>(job, nameof(job.PaymentStatus), loggerFactory);
+
+        public static Channel<GolemUsage?> JobUsageChannel(Job job, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Job, GolemUsage?>(job, nameof(job.CurrentUsage), loggerFactory);
+
+        public static Channel<List<Payment>?> JobPaymentConfirmationChannel(Job job, ILoggerFactory loggerFactory) =>
+            PropertyChangeChannel<Job, List<Payment>?>(job, nameof(job.PaymentConfirmation), loggerFactory);
+
+        public static void CheckPortIsAvailable()
+        {
+            if (!IsPortAvailable(EnvironmentBuilder.DefaultLocalAddress, EnvironmentBuilder.DefaultApiPort))
+            {
+                throw new Exception("API port is open");
+            }
+        }
+
+        public static bool IsPortAvailable(
+            string host,
+            int port,
+            int retries = 30,
+            int retry_delay = 1000,
+            int connection_timeout = 250
+        )
+        {
+            for (int retries_count = 0; retries_count < retries; retries_count++)
+            {
+                try
+                {
+                    using var client = new TcpClient();
+                    IAsyncResult connection = client.BeginConnect(host, port, null, null);
+                    if (!connection.AsyncWaitHandle.WaitOne(connection_timeout))
+                        return true;
+                    client.EndConnect(connection);
+                }
+                catch (Exception)
+                {
+                    return true;
+                }
+                Thread.Sleep(retry_delay);
+            }
+            return false;
+        }
     }
 
-    public class JobsTestBase : IDisposable, IAsyncLifetime, IClassFixture<GolemFixture>
+    public class WithAvailablePort
+    {
+        public WithAvailablePort(ITestOutputHelper outputHelper)
+        {
+            outputHelper.WriteLine("Checking if port is available");
+            TestUtils.CheckPortIsAvailable();
+        }
+    }
+
+    public class JobsTestBase : WithAvailablePort, IDisposable, IAsyncLifetime, IClassFixture<GolemFixture>
     {
         protected readonly ILoggerFactory _loggerFactory;
         protected readonly ILogger _logger;
@@ -122,8 +196,9 @@ namespace Golem.Tests
         protected String _testClassName;
 
 
-        public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName)
+        public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName) : base(outputHelper)
         {
+            TestUtils.CheckPortIsAvailable();
             XunitContext.Register(outputHelper);
             _testClassName = testClassName;
             // Log file directly in `tests` directory (like `tests/Jobtests-20231231.log )
@@ -152,11 +227,35 @@ namespace Golem.Tests
             _requestorAppKey = _requestor.getTestAppKey();
         }
 
+        public async Task StartGolem(IGolem golem, ChannelReader<GolemStatus> statusChannel)
+        {
+            _logger.LogInformation("Starting Golem");
+            var startTask = golem.Start();
+            Assert.Equal(GolemStatus.Starting, await ReadChannel(statusChannel));
+            await startTask;
+            Assert.Equal(GolemStatus.Ready, await ReadChannel(statusChannel));
+        }
+
+        public async Task StopGolem(IGolem golem, String golemPath, ChannelReader<GolemStatus> statusChannel)
+        {
+            _logger.LogInformation("Stopping Golem");
+            var stopTask = golem.Stop();
+            Assert.Equal(GolemStatus.Stopping, await ReadChannel(statusChannel));
+            await stopTask;
+            Assert.Equal(GolemStatus.Off, await ReadChannel(statusChannel));
+            var providerPidFile = Path.Combine(golemPath, "modules/golem-data/provider/ya-provider.pid");
+            try
+            {
+                File.Delete(providerPidFile);
+            }
+            catch { }
+        }
+
         /// <summary>
         /// Reads from `channel` and returns first `T` for which `matcher` returns `false`
         /// </summary>
         /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
-        public async Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? matcher = null, double timeoutMs = 10_000)
+        public async Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? matcher = null, double timeoutMs = 30_000)
         {
             return await TestUtils.ReadChannel(channel, matcher, timeoutMs, _logger);
         }
@@ -165,6 +264,24 @@ namespace Golem.Tests
         {
             return TestUtils.PropertyChangeChannel(obj, propName, _loggerFactory, extraHandler);
         }
+
+        public Channel<GolemStatus> StatusChannel(Golem golem) =>
+            TestUtils.StatusChannel(golem, _loggerFactory);
+
+        public Channel<Job?> JobChannel(Golem golem) =>
+            TestUtils.JobChannel(golem, _loggerFactory);
+
+        public Channel<JobStatus> JobStatusChannel(Job job) =>
+            TestUtils.JobStatusChannel(job, _loggerFactory);
+
+        public Channel<GolemLib.Types.PaymentStatus?> JobPaymentStatusChannel(Job job) =>
+            TestUtils.JobPaymentStatusChannel(job, _loggerFactory);
+
+        public Channel<GolemUsage?> JobUsageChannel(Job job) =>
+            TestUtils.JobUsageChannel(job, _loggerFactory);
+
+        public Channel<List<Payment>?> JobPaymentConfirmationChannel(Job job) =>
+            TestUtils.JobPaymentConfirmationChannel(job, _loggerFactory);
 
         public async Task DisposeAsync()
         {

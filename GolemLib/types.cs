@@ -53,11 +53,12 @@ public enum JobStatus
     Idle,
     /// When job's activity transitions from `Initialized` to `Deployed` state
     DownloadingModel,
-    //TODO exe-unit should set `Computing` state when it receives GSB computation requests.
     /// When job's activity state is set to `Ready`.
     Computing,
     /// When  job's activity state is set to `Terminated`.
     Finished,
+    /// When job's activity state is set to `Unresponsive`.
+    Interrupted
 }
 
 public enum PaymentStatus

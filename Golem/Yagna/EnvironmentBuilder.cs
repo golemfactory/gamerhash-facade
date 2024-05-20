@@ -2,11 +2,18 @@ namespace Golem.Yagna
 {
     public class EnvironmentBuilder
     {
+        public const String DefaultLocalAddress = "127.0.0.1";
+        public const int DefaultGsbPort = 12501;
+        public const int DefaultApiPort = 12502;
+        
+        public const String DefaultBindAddress = "0.0.0.0";
+        public const int DefaultBindPort = 12503;
+
         private static readonly Dictionary<string, string> defaultEnv = new Dictionary<string, string>()
         {
-            { "GSB_URL", "tcp://127.0.0.1:12501" },
-            { "YAGNA_API_URL", "http://127.0.0.1:12502" },
-            { "YA_NET_BIND_URL", "udp://0.0.0.0:12503" },
+            { "GSB_URL", $@"tcp://{DefaultLocalAddress}:{DefaultGsbPort}" },
+            { "YAGNA_API_URL", $@"http://{DefaultLocalAddress}:{DefaultApiPort}" },
+            { "YA_NET_BIND_URL", $@"udp://{DefaultBindAddress}:{DefaultBindPort}" },
             { "YA_NET_BROADCAST_SIZE", "12" },
             { "YA_NET_RELAY_HOST", "yacn2.dev.golem.network:7477" },
             { "YA_NET_TYPE", "hybrid" },
