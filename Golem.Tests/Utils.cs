@@ -4,6 +4,7 @@ using System.Threading.Channels;
 
 using Golem.Tools;
 using GolemLib;
+using GolemLib.Types;
 
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
