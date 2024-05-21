@@ -6,7 +6,7 @@ using CommandLine;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 
-using GolemLib;
+using Golem;
 
 namespace MockGUI;
 

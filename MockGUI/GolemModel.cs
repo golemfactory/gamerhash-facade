@@ -146,7 +146,7 @@ namespace MockGUI.ViewModels
             Assembly ass = Assembly.LoadFrom(dllPath);
             Type? t = ass.GetType(factoryType) ?? throw new Exception("Factory Type not found. Lib not loaded: " + dllPath);
             var obj = Activator.CreateInstance(t) ?? throw new Exception("Creating Factory instance failed. Lib not loaded: " + dllPath);
-            var factory = obj as IFactory ?? throw new Exception("Cast to IFactory failed.");
+            var factory = obj as Factory ?? throw new Exception("Cast to IFactory failed.");
 
             return await factory.Create(modulesDir, loggerFactory, mainnet, null, relayType);
         }
