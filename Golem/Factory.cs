@@ -5,17 +5,9 @@ using GolemLib;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-using System.Net.Http;
-
 namespace Golem
 {
-    public interface IFactoryExt
-    {
-        public Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet, string? dataDir, RelayType relayType);
-    }
-
-
-    public class Factory : IFactory, IFactoryExt
+    public class Factory : IFactory
     {
         public async Task<IGolem> Create(string modulesDir, ILoggerFactory? loggerFactory, bool mainnet = true)
         {
