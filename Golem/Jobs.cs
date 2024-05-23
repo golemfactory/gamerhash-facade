@@ -171,18 +171,7 @@ class Jobs : IJobs
             .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId) || p.ActivityPayments.Exists(ap => invoice.ActivityIds.Contains(ap.ActivityId)))
             .ToList();
         job.PaymentConfirmation = paymentsForRecentJob;
-        job.PaymentStatus = IntoPaymentStatus(invoice.Status);
-
-        var confirmedSum = job.PaymentConfirmation.Sum(payment => Convert.ToDecimal(payment.Amount, CultureInfo.InvariantCulture));
-
-        _logger.LogInformation($"Job: {job.Id}, confirmed sum: {confirmedSum}, job expected reward: {job.CurrentReward}");
-
-        // Workaround for yagna unable to change status to SETTLED when using partial payments
-        if (invoice.Status == InvoiceStatus.ACCEPTED
-            && job.CurrentReward == confirmedSum)
-        {
-            job.PaymentStatus = IntoPaymentStatus(InvoiceStatus.SETTLED);
-        }
+        job.PaymentStatus = EvaluatePaymentStatus(job, IntoPaymentStatus(invoice.Status));
 
         return job;
     }
@@ -193,8 +182,24 @@ class Jobs : IJobs
         {
             var agreementId = await this._yagna.Api.GetActivityAgreement(activityPayment.ActivityId);
             var job = await GetOrCreateJob(agreementId);
-            job.PartialPayment(payment);
+            job.AddPartialPayment(payment);
+            job.PaymentStatus = EvaluatePaymentStatus(job, job.PaymentStatus);
         }
+    }
+
+    public GolemLib.Types.PaymentStatus? EvaluatePaymentStatus(Job job, GolemLib.Types.PaymentStatus? suggestedPaymentStatus)
+    {
+        var confirmedSum = job.PaymentConfirmation.Sum(payment => Convert.ToDecimal(payment.Amount, CultureInfo.InvariantCulture));
+
+        _logger.LogInformation($"Job: {job.Id}, confirmed sum: {confirmedSum}, job expected reward: {job.CurrentReward}");
+
+        // Workaround for yagna unable to change status to SETTLED when using partial payments
+        if (suggestedPaymentStatus == GolemLib.Types.PaymentStatus.Accepted
+            && job.CurrentReward == confirmedSum)
+        {
+            return IntoPaymentStatus(InvoiceStatus.SETTLED);
+        }
+        return suggestedPaymentStatus;
     }
 
     private async Task<Job> UpdateJobStatus(string agreementId)

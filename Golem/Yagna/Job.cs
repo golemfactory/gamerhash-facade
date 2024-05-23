@@ -109,7 +109,7 @@ namespace Golem.Yagna.Types
             this.Status = ResolveStatus(currentState, nextState);
         }
 
-        public void PartialPayment(Payment payment)
+        public void AddPartialPayment(Payment payment)
         {
             if (!PaymentConfirmation.Exists(pay => pay.PaymentId == payment.PaymentId))
             {

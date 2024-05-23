@@ -144,6 +144,7 @@ class ActivityLoop
                     var usage = d.Usage != null
                             ? GolemUsage.From(d.Usage)
                             : null;
+
                     return await jobs.UpdateJobByActivity(d.Id, null, usage);
                 }
                 )
