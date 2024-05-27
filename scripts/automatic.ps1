@@ -1,6 +1,5 @@
 param (
-    [string]$automatic_runtime_package_url = "https://gpu-on-golem.s3.eu-central-1.amazonaws.com/sd-webui-standalone/sd.webui_noxformers_nomodel.zip",
-    [string]$automatic_runtime_package_subdir = "sd.webui_noxformers",
+    [string]$automatic_runtime_package_url = "https://gpu-on-golem.s3.eu-central-1.amazonaws.com/sd-webui-standalone/sd-webui-gh-v0.1.3.zip",
     [string]$automatic_package_dir = "package",
     [bool]$compress = 0,
     [bool]$cleanup = 0
@@ -36,8 +35,8 @@ if (Test-Path $automatic_runtime_dir) {
 $automatic_runtime_dir_subdir = "$($automatic_runtime_dir)\automatic"
 New-item $automatic_runtime_dir_subdir -ItemType Directory -Force
 
-$automatic_runtime_unpacked_subdir_pattern = "$($automatic_runtime_unpacked)\$($automatic_runtime_package_subdir)\*"
-Copy-Item -Path $automatic_runtime_unpacked_subdir_pattern -Destination $automatic_runtime_dir_subdir -Recurse
+$automatic_runtime_unpacked_pattern = "$($automatic_runtime_unpacked)\*"
+Copy-Item -Path $automatic_runtime_unpacked_pattern -Destination $automatic_runtime_dir_subdir -Recurse
 $automatic_runtime_dir_dst = "$($automatic_runtime_dir)\"
 Copy-Item "scripts\config.json" -Destination $automatic_runtime_dir_dst
 
