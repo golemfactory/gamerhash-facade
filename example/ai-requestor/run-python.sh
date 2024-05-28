@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 source $(dirname "$0")/vars.sh
 
 export $(grep -v '^#' ${YAGNA_DATADIR}/.env | xargs)
