@@ -140,9 +140,16 @@ class ProviderOnceStrategy(MarketStrategy):
         self.history = set(())
 
     async def score_offer(self, offer):
+        # if offer.issuer == "0x64dd16c6d05667264bcd653640a88c26d751ea60":
+        #     return SCORE_TRUSTED
+        # else:
+        #     print(f"Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer})")
+        #     return SCORE_REJECTED
+
         if offer.issuer not in self.history:
             return SCORE_TRUSTED
         else:
+            print(f"Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer})")
             return SCORE_REJECTED
 
 
