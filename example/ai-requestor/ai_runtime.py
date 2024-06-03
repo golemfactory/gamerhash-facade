@@ -143,6 +143,7 @@ class ProviderOnceStrategy(MarketStrategy):
         if offer.issuer not in self.history:
             return SCORE_TRUSTED
         else:
+            print(f"Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer})")
             return SCORE_REJECTED
 
 

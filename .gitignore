@@ -49,4 +49,5 @@ Mock/obj/
 output.png
 
 /example/DummyAiHttpServer/__pycache__/
+/example/ai-requestor/__pycache__/
 MockGUI/MockGUI.sln
