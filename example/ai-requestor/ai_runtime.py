@@ -9,7 +9,7 @@ from PIL import Image
 import requests
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from yapapi import Golem
 from yapapi.payload import Payload
@@ -66,6 +66,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         "--payment-network", "--network", help="Payment network name, for example `holesky`"
     )
     parser.add_argument("--subnet-tag", help="Subnet name, for example `public`")
+    parser.add_argument("--runtime", default="automatic", help="Runtime name, for example `automatic`")
     parser.add_argument(
         "--log-file",
         default=str(default_log_path),
@@ -149,15 +150,10 @@ class ProviderOnceStrategy(MarketStrategy):
         }
 
     async def score_offer(self, offer):
-        if offer.issuer == "0xdb87db394ed726b0707cd73d78d9c8a5f6af8030":
-            return SCORE_TRUSTED
-        else:
-            print(f"Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer})")
-
         if offer.issuer not in self.history:
             return SCORE_TRUSTED
         else:
-            print(f"Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer})")
+            print(f"[Strategy] Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer})")
             return SCORE_REJECTED
 
 
@@ -178,12 +174,17 @@ class AiPayload(Payload):
 
 
 class AiRuntimeService(Service):
+    runtime: str
+
     @staticmethod
     async def get_payload():
         ## TODO switched into using smaller model to avoid problems during tests. Resolve it when automatic runtime integrated
         # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
         # return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
-        return AiPayload(image_url="hash:sha3:b2da48d618beddab1887739d75b50a3041c810bc73805a416761185998359b24:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
+        return AiPayload(
+            image_url="hash:sha3:b2da48d618beddab1887739d75b50a3041c810bc73805a416761185998359b24:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true",
+            runtime=AiRuntimeService.runtime,
+        )
     
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)
@@ -230,7 +231,7 @@ async def ainput(prompt: str = ""):
     return await asyncio.to_thread(input, prompt)
 
 
-async def main(subnet_tag, driver=None, network=None):
+async def main(subnet_tag, driver=None, network=None, args=None):
     strategy = ProviderOnceStrategy()
     async with Golem(
         budget=100.0,
@@ -239,12 +240,14 @@ async def main(subnet_tag, driver=None, network=None):
         payment_driver=driver,
         payment_network=network,
     ) as golem:
+        AiRuntimeService.runtime = args.runtime
         cluster = await golem.run_service(
             AiRuntimeService,
             instance_params=[
                 {"strategy": strategy}
             ],
             num_instances=1,
+            expiration=datetime.now(timezone.utc) + timedelta(days=10),
         )
 
         def instances():
@@ -310,6 +313,7 @@ if __name__ == "__main__":
             subnet_tag=args.subnet_tag,
             driver=args.payment_driver,
             network=args.payment_network,
+            args=args,
         ),
         log_file=args.log_file,
     )
