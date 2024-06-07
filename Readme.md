@@ -128,6 +128,55 @@ dotnet run --project MockGUI --golem modules --use-dll --relay Central
 dotnet run --project ExampleRunner -- --golem modules --framework Dummy --relay Central
 ```
 
+## Advanced example
+
+More advanced example (`example/ai-requestor/ai_runtime.py`) allows to run yagna daemon separately from requestor script.
+This is more similar to production environment behavior, where yagna is running constantly in background, whereas script
+is ran only on demand, when someone wants to make inference.
+
+### Setup
+
+You should run setup once at the beginning to create directory structure, download binaries and configure requestor.
+
+`./example/ai-requestor/setup-requestor.sh`
+
+Optional parameter can be added to specify target directory:
+`./example/ai-requestor/setup-requestor.sh modules`
+
+
+Yagna daemon is configured using .env file in:
+`modules/Requestor/modules/golem-data/yagna/.env`
+
+#### Central vs. hybrid net
+
+To change between central and hybrid net, choose between `YA_NET_TYPE=central` and `YA_NET_TYPE=hybrid`.
+
+### Running
+
+#### Daemon
+
+Before each series of tests you should run yagna daemon:
+
+`./example/ai-requestor/run-yagna.sh`
+
+(version with optional parameter: `./example/ai-requestor/run-yagna.sh modules`)
+
+Yagna daemon should be constantly running in the background and shouldn't be restarted between task runs.
+
+> [!NOTE]
+> Yagna daemons broadcast Offers in regular intervals which is 4 minutes on avarage. It means that you will collect all Offers from the network within ~4min. Offers are not persistent, so after restarting Node you need to wait for Offers again.
+
+#### Script
+
+If you have daemon running, you can hire a provider using command:
+
+`./example/ai-requestor/run-task.sh`
+
+(version with optional parameter: `./example/ai-requestor/run-task.sh modules`
+
+After Provider is hired, you will be asked to Provide prompt to automatic. Other option is to use displayed curl command and manually request inference.
+
+
 ## Troublshooting
 
 ### Provider doesn't pick up tasks

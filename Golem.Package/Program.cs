@@ -3,13 +3,13 @@
 using Golem.Tools;
 
 
-await Parser.Default.ParseArguments<BuildArgs, DownloadArgs>(args)
+await Parser.Default.ParseArguments<BuildArgs, DownloadArgs, BuildRequestorArgs>(args)
     .MapResult(
         (BuildArgs options) => Build(options),
         (DownloadArgs options) => Download(options),
+        (BuildRequestorArgs options) => BuildRequestor(options),
         errors => Task.FromResult(1)
     );
-
 
 static async Task Download(DownloadArgs args)
 {
@@ -40,15 +40,17 @@ static async Task Build(BuildArgs args)
     var root = await PackageBuilder.BuildTestDirectory("pack");
     var bins = PackageBuilder.BinariesDir(root);
 
-    var build_dir = (args.DllDir != null) 
-        ? args.DllDir 
+    var build_dir = (args.DllDir != null)
+        ? args.DllDir
         : AppDomain.CurrentDomain.SetupInformation.ApplicationBase ?? Path.GetTempPath();
 
     var package_dir = Path.Combine(current, args.Target);
 
     var dll_file_paths = new HashSet<string>();
-    foreach (var dll_file_pattern in args.DllFilePatterns.Split(',')) {
-        foreach (var dll_file_path in  Directory.GetFiles(build_dir, dll_file_pattern)) {
+    foreach (var dll_file_pattern in args.DllFilePatterns.Split(','))
+    {
+        foreach (var dll_file_path in Directory.GetFiles(build_dir, dll_file_pattern))
+        {
             dll_file_paths.Add(dll_file_path);
         }
     }
@@ -72,10 +74,26 @@ static async Task Build(BuildArgs args)
     if (Directory.Exists(root) && !args.DontClean)
     {
         Console.WriteLine($"Removing root dir: {root}");
-        try {
+        try
+        {
             Directory.Delete(root, true);
-        } catch (Exception err) {
+        }
+        catch (Exception err)
+        {
             Console.WriteLine($"Cannot delete {root}. Err {err}");
         }
     }
+}
+
+static async Task BuildRequestor(BuildRequestorArgs options)
+{
+    Console.WriteLine("Running Golem AI Requestor package builder!");
+
+    var current = Directory.GetCurrentDirectory();
+    var target = Path.Combine(current, options.Target);
+
+    Directory.CreateDirectory(target);
+    var dir = await PackageBuilder.BuildRequestorDirectoryRelative(target, true);
+
+    Console.WriteLine($"Requestor directory ready: {dir}");
 }
