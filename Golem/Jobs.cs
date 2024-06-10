@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 using Golem.Model;
@@ -22,20 +24,29 @@ public interface IJobs
     Task<Job> UpdateJobUsage(string agreementId);
     Task<Job> UpdateJobByActivity(string activityId, Invoice? invoice, GolemUsage? usage);
     Task UpdatePartialPayment(Payment payment);
+
+    void SetCurrentJob(Job? job);
+    Job? GetCurrentJob();
 }
 
-class Jobs : IJobs
+class Jobs : IJobs, INotifyPropertyChanged
 {
-    private readonly Action<Job?> _setCurrentJob;
     private readonly YagnaService _yagna;
     private readonly ILogger _logger;
     private readonly Dictionary<string, Job> _jobs = new();
     private DateTime _lastJob { get; set; }
+    public IJob? CurrentJob { get; private set; }
 
-    public Jobs(YagnaService yagna, Action<Job?> setCurrentJob, ILoggerFactory loggerFactory)
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected void OnPropertyChanged([CallerMemberName] string? name = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    public Jobs(YagnaService yagna, ILoggerFactory loggerFactory)
     {
         _yagna = yagna;
-        _setCurrentJob = setCurrentJob;
         _logger = loggerFactory.CreateLogger(nameof(Jobs));
         _lastJob = DateTime.Now;
     }
@@ -132,6 +143,11 @@ class Jobs : IJobs
             }
         }
         return null;
+    }
+
+    public Job? GetCurrentJob()
+    {
+        return (Job?)CurrentJob;
     }
 
     public async Task<Job> UpdateJobByActivity(string activityId, Invoice? invoice, GolemUsage? usage)
@@ -250,5 +266,19 @@ class Jobs : IJobs
         return job;
     }
 
+    public void SetCurrentJob(Job? job)
+    {
+        _logger.LogDebug($"Attempting to set current job to {job?.Id}, status {job?.Status}");
 
+        if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
+        {
+            CurrentJob = job;
+            _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
+            OnPropertyChanged(nameof(CurrentJob));
+        }
+        else
+        {
+            _logger.LogDebug($"Job has not changed ({job?.Id}).");
+        }
+    }
 }

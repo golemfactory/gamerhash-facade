@@ -31,9 +31,7 @@ class ActivityLoop
         _events = events;
     }
 
-    public async Task Start(
-        Action<Job?> setCurrentJob,
-        CancellationToken token)
+    public async Task Start(CancellationToken token)
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -55,7 +53,7 @@ class ActivityLoop
                         var activities = trackingEvent?.Activities ?? new List<ActivityState>();
 
                         List<Job> currentJobs = await UpdateJobs(_jobs, activities);
-                        setCurrentJob(SelectCurrentJob(currentJobs));
+                        _jobs.SetCurrentJob(SelectCurrentJob(currentJobs));
                     }
                 }
                 catch (OperationCanceledException e)
@@ -80,7 +78,7 @@ class ActivityLoop
         finally
         {
             _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
-            setCurrentJob(null);
+            _jobs.SetCurrentJob(null);
         }
     }
 
