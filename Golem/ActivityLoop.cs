@@ -111,14 +111,21 @@ class ActivityLoop
 
     public async Task<List<Job>> UpdateJobs(IJobs jobs, List<ActivityState> activityStates)
     {
-        var agreements = activityStates.DistinctBy(state => state.AgreementId);
+        var agreements = activityStates.Select(state => state.AgreementId).Distinct();
+        var currentJob = _jobs.GetCurrentJob();
+
+        // If Activity was destroyed, we can get list that doesn't contain current job.
+        if (currentJob != null)
+        {
+            agreements = agreements.Append(currentJob.Id);
+        }
 
         var result = await Task.WhenAll(
             agreements
-                .Select(async job =>
+                .Select(async jobId =>
                 {
-                    await jobs.UpdateJobStatus(job.AgreementId);
-                    return await jobs.UpdateJobUsage(job.AgreementId);
+                    await jobs.UpdateJobStatus(jobId);
+                    return await jobs.UpdateJobUsage(jobId);
                 })
         );
 
