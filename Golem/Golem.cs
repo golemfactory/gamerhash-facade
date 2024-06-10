@@ -399,7 +399,7 @@ namespace Golem
 
         private void SetCurrentJob(Job? job)
         {
-            _logger.LogDebug($"Setting current job to {job?.Id}, status {job?.Status}");
+            _logger.LogDebug($"Attempting to set current job to {job?.Id}, status {job?.Status}");
 
             if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
             {
@@ -409,7 +409,7 @@ namespace Golem
             }
             else
             {
-                _logger.LogDebug("Job has not changed.");
+                _logger.LogDebug($"Job has not changed ({job?.Id}).");
             }
         }
 

@@ -107,6 +107,14 @@ namespace Golem.Yagna.Types
         }
 
         public DateTime Timestamp { get; init; }
+        public bool Active
+        {
+            get
+            {
+                return Status != JobStatus.Finished && Status != JobStatus.Interrupted;
+            }
+        }
+
 
         public void UpdateActivityState(ActivityStatePair activityState)
         {

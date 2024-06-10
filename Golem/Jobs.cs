@@ -17,8 +17,9 @@ using static Golem.Model.ActivityState;
 public interface IJobs
 {
     Task<Job> GetOrCreateJob(string jobId);
-    void SetAllJobsFinished();
     Task<Job> UpdateJob(string agreementId, Invoice? invoice, GolemUsage? usage);
+    Task<Job> UpdateJobStatus(string agreementId);
+    Task<Job> UpdateJobUsage(string agreementId);
     Task<Job> UpdateJobByActivity(string activityId, Invoice? invoice, GolemUsage? usage);
     Task UpdatePartialPayment(Payment payment);
 }
@@ -29,12 +30,14 @@ class Jobs : IJobs
     private readonly YagnaService _yagna;
     private readonly ILogger _logger;
     private readonly Dictionary<string, Job> _jobs = new();
+    private DateTime _lastJob { get; set; }
 
     public Jobs(YagnaService yagna, Action<Job?> setCurrentJob, ILoggerFactory loggerFactory)
     {
         _yagna = yagna;
         _setCurrentJob = setCurrentJob;
         _logger = loggerFactory.CreateLogger(nameof(Jobs));
+        _lastJob = DateTime.Now;
     }
 
     public async Task<Job> GetOrCreateJob(string jobId)
@@ -57,21 +60,10 @@ class Jobs : IJobs
             job.Price = price ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
 
             _jobs[jobId] = job;
+            _lastJob = job.Timestamp;
         }
 
         return job;
-    }
-
-    public void SetAllJobsFinished()
-    {
-        foreach (var job in _jobs.Values)
-        {
-            if (job.Status != JobStatus.Finished)
-            {
-                job.Status = JobStatus.Finished;
-                job.OnPropertyChanged();
-            }
-        }
     }
 
     public async Task<List<IJob>> List(DateTime since)
@@ -193,7 +185,7 @@ class Jobs : IJobs
         }
     }
 
-    private async Task<Job> UpdateJobStatus(string agreementId)
+    public async Task<Job> UpdateJobStatus(string agreementId)
     {
         var job = await GetOrCreateJob(agreementId);
         var agreement = await _yagna.Api.GetAgreement(agreementId);
@@ -202,6 +194,17 @@ class Jobs : IJobs
         if (agreement.State == "Terminated")
         {
             job.Status = JobStatus.Finished;
+        }
+        else if (agreement.Timestamp < _lastJob)
+        {
+            // This is pureest form of hack. We are not able to infer from yagna API if task was really interrupted.
+            // We have a few scenarios that can be misleading:
+            // - Agreement is not terminated, because Provider was unable to reach Requestor.
+            // - Last Activity in Agreement was destroyed by Requestor immediately before forced shutdown,
+            //   but Agreement wasn't. In this case all activities are `Finished`, but Agreement is still hanging.
+            // Normally we treat Agreements without Activity as `Idle`, but this means that in all these scenarios
+            // Agreements from the past would be marked as `Idle`, what is definately not true.
+            job.Status = JobStatus.Interrupted;
         }
         else
         {
@@ -223,7 +226,7 @@ class Jobs : IJobs
     }
 
     // the _usageUpdate is the usage of current activity but we need to gather usage for all activities for a given job
-    private async Task<Job> UpdateJobUsage(string agreementId)
+    public async Task<Job> UpdateJobUsage(string agreementId)
     {
         var job = await GetOrCreateJob(agreementId);
         var agreement = await _yagna.Api.GetAgreement(agreementId);

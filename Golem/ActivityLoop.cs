@@ -55,14 +55,7 @@ class ActivityLoop
                         var activities = trackingEvent?.Activities ?? new List<ActivityState>();
 
                         List<Job> currentJobs = await UpdateJobs(_jobs, activities);
-
-                        var job = SelectCurrentJob(currentJobs);
-                        setCurrentJob(job);
-                        if (job == null)
-                        {
-                            // Sometimes finished jobs end up in Idle state
-                            _jobs.SetAllJobsFinished();
-                        }
+                        setCurrentJob(SelectCurrentJob(currentJobs));
                     }
                 }
                 catch (OperationCanceledException e)
@@ -87,7 +80,6 @@ class ActivityLoop
         finally
         {
             _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
-            _jobs.SetAllJobsFinished();
             setCurrentJob(null);
         }
     }
@@ -97,30 +89,14 @@ class ActivityLoop
         if (currentJobs.Count == 0)
         {
             _logger.LogDebug("Cleaning current job field");
-
             return null;
-        }
-        else if (currentJobs.Count == 1)
-        {
-            return currentJobs[0];
         }
         else
         {
-            _logger.LogWarning($"Multiple ({currentJobs.Count}) non terminated jobs");
-            currentJobs.ForEach(job => _logger.LogWarning($"Non terminated job {job.Id}, status {job.Status}"));
+            currentJobs.Sort((job1, job2) => job1.Timestamp.CompareTo(job2.Timestamp));
+            currentJobs.Reverse();
 
-            var job = currentJobs
-                .Where(job => new[] {
-                                        JobStatus.DownloadingModel,
-                                        JobStatus.Computing,
-                                        JobStatus.Idle
-                    }.Contains(job.Status))
-                .OrderByDescending(job => job.Status == JobStatus.DownloadingModel)
-                .ThenByDescending(job => job.Status == JobStatus.Computing)
-                .ThenByDescending(job => job.Status == JobStatus.Idle)
-                .FirstOrDefault();
-
-            return job;
+            return currentJobs[0].Active ? currentJobs[0] : null;
         }
     }
 
@@ -137,17 +113,15 @@ class ActivityLoop
 
     public async Task<List<Job>> UpdateJobs(IJobs jobs, List<ActivityState> activityStates)
     {
-        var result = await Task.WhenAll(
-            activityStates
-                .Select(async d =>
-                {
-                    var usage = d.Usage != null
-                            ? GolemUsage.From(d.Usage)
-                            : null;
+        var agreements = activityStates.DistinctBy(state => state.AgreementId);
 
-                    return await jobs.UpdateJobByActivity(d.Id, null, usage);
-                }
-                )
+        var result = await Task.WhenAll(
+            agreements
+                .Select(async job =>
+                {
+                    await jobs.UpdateJobStatus(job.AgreementId);
+                    return await jobs.UpdateJobUsage(job.AgreementId);
+                })
         );
 
         return result.ToList();
