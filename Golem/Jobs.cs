@@ -35,7 +35,7 @@ class Jobs : IJobs, INotifyPropertyChanged
     private readonly ILogger _logger;
     private readonly Dictionary<string, Job> _jobs = new();
     private DateTime _lastJob { get; set; }
-    public IJob? CurrentJob { get; private set; }
+    public Job? CurrentJob { get; private set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -272,8 +272,17 @@ class Jobs : IJobs, INotifyPropertyChanged
 
         if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
         {
-            CurrentJob = job;
+            if (job == null && CurrentJob != null && CurrentJob.Status != JobStatus.Finished)
+            {
+                _logger.LogWarning("Changing CurrentJob to null, despite it not being Finished. Setting status to Interrupted.");
+
+                CurrentJob.Status = JobStatus.Interrupted;
+                _lastJob = DateTime.Now;
+            }
+
             _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
+
+            CurrentJob = job;
             OnPropertyChanged(nameof(CurrentJob));
         }
         else
