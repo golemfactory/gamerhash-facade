@@ -78,7 +78,6 @@ class InvoiceEventsLoop
         {
             try
             {
-
                 _token.ThrowIfCancellationRequested();
                 _logger.LogDebug("Checking for new payments since: {}", since);
 

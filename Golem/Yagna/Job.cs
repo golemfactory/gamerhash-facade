@@ -144,8 +144,8 @@ namespace Golem.Yagna.Types
                     return JobStatus.Computing;
                 case StateType.Ready:
                     return JobStatus.Computing;
-                case StateType.Terminated:
-                    return JobStatus.Finished;
+                // case StateType.Terminated:
+                //     return JobStatus.Finished;
                 case StateType.Unresponsive:
                     return JobStatus.Interrupted;
             }

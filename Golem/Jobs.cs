@@ -34,7 +34,7 @@ class Jobs : IJobs, INotifyPropertyChanged
     private readonly YagnaService _yagna;
     private readonly ILogger _logger;
     private readonly Dictionary<string, Job> _jobs = new();
-    private DateTime _lastJob { get; set; }
+    private DateTime _lastJobTimestamp { get; set; }
     public Job? CurrentJob { get; private set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -48,7 +48,7 @@ class Jobs : IJobs, INotifyPropertyChanged
     {
         _yagna = yagna;
         _logger = loggerFactory.CreateLogger(nameof(Jobs));
-        _lastJob = DateTime.Now;
+        _lastJobTimestamp = DateTime.Now;
     }
 
     public async Task<Job> GetOrCreateJob(string jobId)
@@ -71,7 +71,6 @@ class Jobs : IJobs, INotifyPropertyChanged
             job.Price = price ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
 
             _jobs[jobId] = job;
-            _lastJob = job.Timestamp;
         }
 
         return job;
@@ -209,9 +208,12 @@ class Jobs : IJobs, INotifyPropertyChanged
         // Agreement state has precedens over individual activity states.
         if (agreement.State == "Terminated")
         {
+            var termination = await _yagna.Api.GetTerminationReason(agreementId);
+            _logger.LogDebug($"Termination reason for {agreementId}: {termination.Reason}");
+
             job.Status = JobStatus.Finished;
         }
-        else if (agreement.Timestamp < _lastJob)
+        else if (agreement.Timestamp < _lastJobTimestamp)
         {
             // This is pureest form of hack. We are not able to infer from yagna API if task was really interrupted.
             // We have a few scenarios that can be misleading:
@@ -224,6 +226,7 @@ class Jobs : IJobs, INotifyPropertyChanged
         }
         else
         {
+            bool allTerminated = true;
             var activities = await _yagna.Api.GetActivities(agreementId);
             foreach (var activity in activities)
             {
@@ -234,8 +237,15 @@ class Jobs : IJobs, INotifyPropertyChanged
                 // If assumption is not valid, then Job state will change in strange way depending on activities order.
                 // This won't rather happen in correct cases. In incorrect case we will have incorrect state anyway.
                 if (activityStatePair.currentState() != StateType.Terminated)
+                {
+                    allTerminated = false;
                     job.UpdateActivityState(activityStatePair);
+                }
             }
+
+            // Agreement is still not terminated, so we should be in Idle state.
+            if (allTerminated)
+                job.Status = JobStatus.Idle;
         }
 
         return job;
@@ -272,17 +282,16 @@ class Jobs : IJobs, INotifyPropertyChanged
 
         if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
         {
-            if (job == null && CurrentJob != null && CurrentJob.Status != JobStatus.Finished)
+            if (CurrentJob != null && CurrentJob.Status != JobStatus.Finished)
             {
-                _logger.LogWarning("Changing CurrentJob to null, despite it not being Finished. Setting status to Interrupted.");
-
+                _logger.LogWarning("Changing CurrentJob, despite it not being Finished. Setting status to Interrupted.");
                 CurrentJob.Status = JobStatus.Interrupted;
-                _lastJob = DateTime.Now;
             }
 
             _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
 
             CurrentJob = job;
+            _lastJobTimestamp = CurrentJob != null ? CurrentJob.Timestamp : DateTime.Now;
             OnPropertyChanged(nameof(CurrentJob));
         }
         else

@@ -25,7 +25,7 @@ namespace Golem.Model
             public string? ProviderID { get; set; }
             public DateTime? Timestamp { get; set; }
         }
-        public string? AgreementID 
+        public string? AgreementID
         {
             get => Id;
             set => Id = value;
