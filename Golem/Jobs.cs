@@ -49,7 +49,8 @@ class Jobs : IJobs
             {
                 Id = jobId,
                 RequestorId = requestorId,
-                Timestamp = agreement.Timestamp ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}")
+                Timestamp = agreement.Timestamp ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}"),
+                Logger = _logger,
             };
 
             var price = GetPriceFromAgreement(agreement);
@@ -171,18 +172,7 @@ class Jobs : IJobs
             .Where(p => p.AgreementPayments.Exists(ap => ap.AgreementId == invoice.AgreementId) || p.ActivityPayments.Exists(ap => invoice.ActivityIds.Contains(ap.ActivityId)))
             .ToList();
         job.PaymentConfirmation = paymentsForRecentJob;
-        job.PaymentStatus = IntoPaymentStatus(invoice.Status);
-
-        var confirmedSum = job.PaymentConfirmation.Sum(payment => Convert.ToDecimal(payment.Amount, CultureInfo.InvariantCulture));
-
-        _logger.LogInformation($"Job: {job.Id}, confirmed sum: {confirmedSum}, job expected reward: {job.CurrentReward}");
-
-        // Workaround for yagna unable to change status to SETTLED when using partial payments
-        if (invoice.Status == InvoiceStatus.ACCEPTED
-            && job.CurrentReward == confirmedSum)
-        {
-            job.PaymentStatus = IntoPaymentStatus(InvoiceStatus.SETTLED);
-        }
+        job.PaymentStatus = job.EvaluatePaymentStatus(Job.IntoPaymentStatus(invoice.Status));
 
         return job;
     }
@@ -193,7 +183,13 @@ class Jobs : IJobs
         {
             var agreementId = await this._yagna.Api.GetActivityAgreement(activityPayment.ActivityId);
             var job = await GetOrCreateJob(agreementId);
-            job.PartialPayment(payment);
+            job.AddPartialPayment(payment);
+        }
+
+        foreach (var agreementPayment in payment.AgreementPayments)
+        {
+            var job = await GetOrCreateJob(agreementPayment.AgreementId);
+            job.AddPartialPayment(payment);
         }
     }
 
@@ -251,18 +247,5 @@ class Jobs : IJobs
         return job;
     }
 
-    private static GolemLib.Types.PaymentStatus IntoPaymentStatus(InvoiceStatus status)
-    {
-        return status switch
-        {
-            InvoiceStatus.ISSUED => GolemLib.Types.PaymentStatus.InvoiceSent,
-            InvoiceStatus.RECEIVED => GolemLib.Types.PaymentStatus.InvoiceSent,
-            InvoiceStatus.ACCEPTED => GolemLib.Types.PaymentStatus.Accepted,
-            InvoiceStatus.REJECTED => GolemLib.Types.PaymentStatus.Rejected,
-            InvoiceStatus.FAILED => GolemLib.Types.PaymentStatus.Rejected,
-            InvoiceStatus.SETTLED => GolemLib.Types.PaymentStatus.Settled,
-            InvoiceStatus.CANCELLED => GolemLib.Types.PaymentStatus.Rejected,
-            _ => throw new Exception($"Unknown InvoiceStatus: {status}"),
-        };
-    }
+
 }

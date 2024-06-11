@@ -1,13 +1,15 @@
 import asyncio
 import base64
+from concurrent.futures import ThreadPoolExecutor
 import io
 import json
 import os
+from typing import Final
 from PIL import Image
 import requests
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from yapapi import Golem
 from yapapi.payload import Payload
@@ -15,7 +17,6 @@ from yapapi.props import inf
 from yapapi.props.base import constraint, prop
 from yapapi.services import Service
 from yapapi.log import enable_default_logger
-from yapapi.config import ApiConfig
 
 import argparse
 import asyncio
@@ -30,9 +31,13 @@ from yapapi import __version__ as yapapi_version
 from yapapi import windows_event_loop_fix
 from yapapi.log import enable_default_logger
 from yapapi.strategy import SCORE_TRUSTED, SCORE_REJECTED, MarketStrategy
-from yapapi.rest import Activity
+from yapapi.strategy.base import PropValueRange, PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEOUT_SEC
+from ya_activity import RequestorControlApi
 
-from ya_activity import ApiClient, ApiException, RequestorControlApi, RequestorStateApi
+PROP_PAYMENT_TIMEOUT_SEC: Final[str] = "golem.com.scheme.payu.payment-timeout-sec?"
+PROP_DEBIT_NOTE_ACCEPTANCE_TIMEOUT: Final[str] = "golem.com.payment.debit-notes.accept-timeout?"
+
+MID_AGREEMENT_PAYMENTS_PROPS = [PROP_DEBIT_NOTE_INTERVAL_SEC, PROP_PAYMENT_TIMEOUT_SEC]
 
 # Utils
 
@@ -61,6 +66,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         "--payment-network", "--network", help="Payment network name, for example `holesky`"
     )
     parser.add_argument("--subnet-tag", help="Subnet name, for example `public`")
+    parser.add_argument("--runtime", default="automatic", help="Runtime name, for example `automatic`")
     parser.add_argument(
         "--log-file",
         default=str(default_log_path),
@@ -138,12 +144,16 @@ class ProviderOnceStrategy(MarketStrategy):
 
     def __init__(self):
         self.history = set(())
+        self.acceptable_prop_value_range_overrides =  {
+            PROP_DEBIT_NOTE_INTERVAL_SEC: PropValueRange(60, None),
+            PROP_PAYMENT_TIMEOUT_SEC: PropValueRange(int(180), None),
+        }
 
     async def score_offer(self, offer):
         if offer.issuer not in self.history:
             return SCORE_TRUSTED
         else:
-            print(f"Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer})")
+            print(f"[Strategy] Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer})")
             return SCORE_REJECTED
 
 
@@ -152,8 +162,8 @@ class ProviderOnceStrategy(MarketStrategy):
 
 # App
 
-RUNTIME_NAME = "automatic" 
-#RUNTIME_NAME = "dummy"
+#RUNTIME_NAME = "automatic" 
+RUNTIME_NAME = "dummy"
 
 @dataclass
 class AiPayload(Payload):
@@ -164,12 +174,18 @@ class AiPayload(Payload):
 
 
 class AiRuntimeService(Service):
+    runtime: str
+
     @staticmethod
     async def get_payload():
         ## TODO switched into using smaller model to avoid problems during tests. Resolve it when automatic runtime integrated
         # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
         # return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
-        return AiPayload(image_url="hash:sha3:b2da48d618beddab1887739d75b50a3041c810bc73805a416761185998359b24:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true")
+        return AiPayload(
+            image_url="hash:sha3:b2da48d618beddab1887739d75b50a3041c810bc73805a416761185998359b24:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true",
+            runtime=AiRuntimeService.runtime,
+        )
+    
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)
 
@@ -177,9 +193,6 @@ class AiRuntimeService(Service):
         script.deploy()
         script.start()
         yield script
-
-    # async def run(self):
-    #    # TODO run AI tasks here
 
     def __init__(self, strategy: ProviderOnceStrategy):
         super().__init__()
@@ -214,21 +227,27 @@ async def trigger(activity: RequestorControlApi, token, prompt, output_file):
         print(f"Error code: {response.status_code}, message: {response.text}")
 
 
-async def main(subnet_tag, driver=None, network=None):
+async def ainput(prompt: str = ""):
+    return await asyncio.to_thread(input, prompt)
+
+
+async def main(subnet_tag, driver=None, network=None, args=None):
     strategy = ProviderOnceStrategy()
     async with Golem(
-        budget=10.0,
+        budget=100.0,
         subnet_tag=subnet_tag,
         strategy=strategy,
         payment_driver=driver,
         payment_network=network,
     ) as golem:
+        AiRuntimeService.runtime = args.runtime
         cluster = await golem.run_service(
             AiRuntimeService,
             instance_params=[
                 {"strategy": strategy}
             ],
             num_instances=1,
+            expiration=datetime.now(timezone.utc) + timedelta(days=10),
         )
 
         def instances():
@@ -273,7 +292,7 @@ async def main(subnet_tag, driver=None, network=None):
 
             if len(running) > 0:             
                 print('Please type your prompt:')
-                prompt = input()
+                prompt = await ainput()
                 print('Sending to automatic')
                 await get_image(
                     prompt,
@@ -294,6 +313,7 @@ if __name__ == "__main__":
             subnet_tag=args.subnet_tag,
             driver=args.payment_driver,
             network=args.payment_network,
+            args=args,
         ),
         log_file=args.log_file,
     )

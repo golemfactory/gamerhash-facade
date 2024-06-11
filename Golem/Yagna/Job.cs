@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 
 using Golem.Model;
@@ -6,12 +7,17 @@ using Golem.Model;
 using GolemLib;
 using GolemLib.Types;
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 using static Golem.Model.ActivityState;
 
 namespace Golem.Yagna.Types
 {
     public class Job : IJob
     {
+        public ILogger Logger { get; set; } = NullLogger.Instance;
+
         public required string Id { get; init; }
 
         public string RequestorId { get; init; } = "";
@@ -109,11 +115,12 @@ namespace Golem.Yagna.Types
             this.Status = ResolveStatus(currentState, nextState);
         }
 
-        public void PartialPayment(Payment payment)
+        public void AddPartialPayment(Payment payment)
         {
             if (!PaymentConfirmation.Exists(pay => pay.PaymentId == payment.PaymentId))
             {
                 PaymentConfirmation.Add(payment);
+                PaymentStatus = EvaluatePaymentStatus(PaymentStatus);
             }
         }
 
@@ -135,6 +142,36 @@ namespace Golem.Yagna.Types
                     return JobStatus.Interrupted;
             }
             return JobStatus.Idle;
+        }
+
+        public GolemLib.Types.PaymentStatus? EvaluatePaymentStatus(GolemLib.Types.PaymentStatus? suggestedPaymentStatus)
+        {
+            var confirmedSum = this.PaymentConfirmation.Sum(payment => Convert.ToDecimal(payment.Amount, CultureInfo.InvariantCulture));
+
+            Logger.LogInformation($"Job: {this.Id}, confirmed sum: {confirmedSum}, job expected reward: {this.CurrentReward}");
+
+            // Workaround for yagna unable to change status to SETTLED when using partial payments
+            if (suggestedPaymentStatus == GolemLib.Types.PaymentStatus.Accepted
+                && this.CurrentReward == confirmedSum)
+            {
+                return IntoPaymentStatus(InvoiceStatus.SETTLED);
+            }
+            return suggestedPaymentStatus;
+        }
+
+        public static GolemLib.Types.PaymentStatus IntoPaymentStatus(InvoiceStatus status)
+        {
+            return status switch
+            {
+                InvoiceStatus.ISSUED => GolemLib.Types.PaymentStatus.InvoiceSent,
+                InvoiceStatus.RECEIVED => GolemLib.Types.PaymentStatus.InvoiceSent,
+                InvoiceStatus.ACCEPTED => GolemLib.Types.PaymentStatus.Accepted,
+                InvoiceStatus.REJECTED => GolemLib.Types.PaymentStatus.Rejected,
+                InvoiceStatus.FAILED => GolemLib.Types.PaymentStatus.Rejected,
+                InvoiceStatus.SETTLED => GolemLib.Types.PaymentStatus.Settled,
+                InvoiceStatus.CANCELLED => GolemLib.Types.PaymentStatus.Rejected,
+                _ => throw new Exception($"Unknown InvoiceStatus: {status}"),
+            };
         }
 
         public override int GetHashCode()
