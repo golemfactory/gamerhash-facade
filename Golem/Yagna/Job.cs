@@ -161,6 +161,7 @@ namespace Golem.Yagna.Types
                 "DebitNoteCancelled" => JobStatus.Interrupted,
                 "DebitNoteNotPaid" => JobStatus.Interrupted,
                 "RequestorUnreachable" => JobStatus.Interrupted,
+                "ProviderShutdown" => JobStatus.Interrupted,
                 "Expired" => JobStatus.Finished,
                 "Cancelled" => JobStatus.Finished,
                 _ => JobStatus.Finished,
