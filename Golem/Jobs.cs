@@ -209,9 +209,7 @@ class Jobs : IJobs, INotifyPropertyChanged
         if (agreement.State == "Terminated")
         {
             var termination = await _yagna.Api.GetTerminationReason(agreementId);
-            _logger.LogDebug($"Termination reason for {agreementId}: {termination.Reason}");
-
-            job.Status = JobStatus.Finished;
+            job.Status = Job.ResolveTerminationReason(termination.Code);
         }
         else if (agreement.Timestamp < _lastJobTimestamp)
         {
@@ -282,12 +280,6 @@ class Jobs : IJobs, INotifyPropertyChanged
 
         if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
         {
-            if (CurrentJob != null && CurrentJob.Status != JobStatus.Finished)
-            {
-                _logger.LogWarning("Changing CurrentJob, despite it not being Finished. Setting status to Interrupted.");
-                CurrentJob.Status = JobStatus.Interrupted;
-            }
-
             _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
 
             CurrentJob = job;

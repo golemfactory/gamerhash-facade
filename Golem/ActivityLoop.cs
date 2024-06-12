@@ -104,7 +104,7 @@ class ActivityLoop
                 var events = await _yagnaApi.GetAgreementEvents(since, _token);
                 if (events.Count > 0)
                 {
-                    var agreements = events.Select(evt => evt.AgreementID).Distinct();
+                    var agreements = FilterEvents(events);
 
                     List<Job> currentJobs = await UpdateJobs(_jobs, agreements.ToList());
                     _jobs.SetCurrentJob(SelectCurrentJob(currentJobs));
@@ -119,11 +119,29 @@ class ActivityLoop
             }
             catch (Exception e)
             {
-                _events.Raise(new ApplicationEventArgs("Agreement", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
-                _logger.LogError("Error in Agreement loop: {e}", e.Message);
+                _events.RaiseAndLog(new ApplicationEventArgs("AgreementLoop", $"Exception in Agreement Loop {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e), _logger);
                 await Task.Delay(TimeSpan.FromSeconds(5), _token);
             }
         }
+    }
+
+    private IEnumerable<string> FilterEvents(List<YagnaAgreementEvent> events)
+    {
+        events.ForEach(evt =>
+        {
+            if (evt.EventType == AgreementEventType.AgreementTerminatedEvent
+                && Job.ResolveTerminationReason(evt.Code) == JobStatus.Interrupted)
+            {
+                _events.RaiseAndLog(new ApplicationEventArgs("AgreementLoop", $"Agreement interrupted with: {evt.Code}, details: {evt.Message}",
+                    ApplicationEventArgs.SeverityLevel.Warning, null), _logger);
+            }
+        });
+
+        return events
+            .Where(evt => evt.EventType != AgreementEventType.AgreementRejectedEvent
+                && evt.EventType != AgreementEventType.AgreementCancelledEvent)
+            .Select(evt => evt.AgreementID)
+            .Distinct();
     }
 
     private Job? SelectCurrentJob(List<Job> currentJobs)
@@ -165,7 +183,8 @@ class ActivityLoop
         var currentJob = _jobs.GetCurrentJob();
         if (currentJob != null)
         {
-            jobIds.Add(currentJob.Id);
+            if (!jobIds.Contains(currentJob.Id))
+                jobIds.Add(currentJob.Id);
         }
 
         _logger.LogDebug("Updating jobs: {jobs}", string.Join(", ", jobIds));
