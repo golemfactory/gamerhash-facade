@@ -280,7 +280,10 @@ class Jobs : IJobs, INotifyPropertyChanged
 
         if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
         {
-            _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
+            if (job != null)
+                _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
+            else
+                _logger.LogInformation($"Last job {CurrentJob?.Id} finished. Setting to null.");
 
             CurrentJob = job;
             _lastJobTimestamp = CurrentJob != null ? CurrentJob.Timestamp : DateTime.Now;
