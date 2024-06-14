@@ -17,7 +17,7 @@ namespace Golem
             var severity = e.Severity == ApplicationEventArgs.SeverityLevel.Error ? LogLevel.Error : LogLevel.Warning;
 
             logger.Log(severity, $"{e.Message}");
-            ApplicationEvent?.Invoke(this, e);
+            Raise(e);
         }
     }
 }

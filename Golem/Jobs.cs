@@ -27,6 +27,7 @@ public interface IJobs
 
     void SetCurrentJob(Job? job);
     Job? GetCurrentJob();
+    void CleanupJobs();
 }
 
 class Jobs : IJobs, INotifyPropertyChanged
@@ -278,7 +279,7 @@ class Jobs : IJobs, INotifyPropertyChanged
     {
         _logger.LogDebug($"Attempting to set current job to {job?.Id}, status {job?.Status}");
 
-        if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
+        if (CurrentJob != job)
         {
             if (job != null)
                 _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
@@ -292,6 +293,19 @@ class Jobs : IJobs, INotifyPropertyChanged
         else
         {
             _logger.LogDebug($"Job has not changed ({job?.Id}).");
+        }
+    }
+
+    public void CleanupJobs()
+    {
+        foreach (var job in _jobs.Values)
+        {
+            // If yagna was stopped, we can get no chance of changing status based on
+            // REST api reponses, but at this point we are sure that CurrentJob was interrupted.
+            if (job != null && job.Status != JobStatus.Finished)
+            {
+                job.Status = JobStatus.Interrupted;
+            }
         }
     }
 }

@@ -63,16 +63,14 @@ class ActivityLoop
                         _jobs.SetCurrentJob(SelectCurrentJob(currentJobs));
                     }
                 }
-                catch (OperationCanceledException e)
+                catch (OperationCanceledException)
                 {
-                    _events.Raise(new ApplicationEventArgs("ActivityLoop", "OperationCanceledException", ApplicationEventArgs.SeverityLevel.Error, e));
                     _logger.LogDebug("Activity loop cancelled");
                     return;
                 }
                 catch (Exception e)
                 {
-                    _events.Raise(new ApplicationEventArgs("ActivityLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e));
-                    _logger.LogError(e, "Activity monitoring request failure");
+                    _events.RaiseAndLog(new ApplicationEventArgs("ActivityLoop", $"Exception in ActivityLoop {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e), _logger);
                     await Task.Delay(TimeSpan.FromSeconds(5), _token);
                 }
             }
@@ -84,7 +82,8 @@ class ActivityLoop
         }
         finally
         {
-            _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
+            _logger.LogInformation("Activity monitoring loop closed. Current job cleanup");
+            _jobs.CleanupJobs();
             _jobs.SetCurrentJob(null);
         }
     }

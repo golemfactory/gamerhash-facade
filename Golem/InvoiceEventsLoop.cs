@@ -54,16 +54,14 @@ class InvoiceEventsLoop
                     }
                 }
             }
-            catch (OperationCanceledException e)
+            catch (OperationCanceledException)
             {
-                _events.Raise(new ApplicationEventArgs("InvoiceEventsLoop", $"OperationCanceledException", ApplicationEventArgs.SeverityLevel.Error, e));
                 _logger.LogInformation("Invoice events loop cancelled");
                 return;
             }
             catch (Exception e)
             {
-                _events.Raise(new ApplicationEventArgs("InvoiceEventsLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e));
-                _logger.LogError("Error in invoice events loop: {e}", e.Message);
+                _events.RaiseAndLog(new ApplicationEventArgs("InvoiceEventsLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e), _logger);
                 await Task.Delay(TimeSpan.FromSeconds(5), _token);
             }
         }
@@ -97,8 +95,7 @@ class InvoiceEventsLoop
             }
             catch (Exception e)
             {
-                _events.Raise(new ApplicationEventArgs("PaymentsLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e));
-                _logger.LogError("Error in payments loop: {e}", e.Message);
+                _events.RaiseAndLog(new ApplicationEventArgs("PaymentsLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e), _logger);
                 await Task.Delay(TimeSpan.FromSeconds(5), _token);
             }
         }
