@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 
 using static Golem.Model.ActivityState;
 
+namespace Golem;
 
 public interface IJobs
 {
@@ -48,7 +49,7 @@ class Jobs : IJobs, INotifyPropertyChanged
     public Jobs(YagnaService yagna, ILoggerFactory loggerFactory)
     {
         _yagna = yagna;
-        _logger = loggerFactory.CreateLogger(nameof(Jobs));
+        _logger = loggerFactory.CreateLogger<Jobs>();
         _lastJobTimestamp = DateTime.Now;
     }
 
@@ -83,6 +84,8 @@ class Jobs : IJobs, INotifyPropertyChanged
         if (_yagna == null || _yagna.HasExited)
             throw new Exception("Invalid state: yagna is not started");
 
+        _logger.LogDebug($"Listing Jobs since: {since}");
+
         var agreementInfos = await _yagna.Api.GetAgreements(since);
         var invoices = await _yagna.Api.GetInvoices(since);
 
@@ -95,6 +98,7 @@ class Jobs : IJobs, INotifyPropertyChanged
             if (invoice != null)
                 await UpdateJobPayment(invoice);
         }
+        _logger.LogDebug($"Number of jobs: {_jobs.Count}");
 
         return _jobs.Values.Where(job => job.Timestamp >= since).OrderByDescending(job => job.Timestamp).Cast<IJob>().ToList();
     }
