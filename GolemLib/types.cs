@@ -57,7 +57,12 @@ public enum JobStatus
     Computing,
     /// When  job's activity state is set to `Terminated`.
     Finished,
-    /// When job's activity state is set to `Unresponsive`.
+    /// This status is reported when Job was finished inproperly due to problems:
+    /// - User stopped Golem during task execution
+    /// - Provider crashed
+    /// - Requestor was unreachable due to network conditions
+    /// - Agreement couldn't be terminated for whatever reasons
+    /// In this payments isn't guranteed.
     Interrupted
 }
 

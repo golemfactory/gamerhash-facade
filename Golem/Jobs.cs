@@ -71,6 +71,7 @@ class Jobs : IJobs, INotifyPropertyChanged
             var price = GetPriceFromAgreement(agreement);
             job.Price = price ?? throw new Exception($"Incomplete demand of agreement {agreement.AgreementID}");
 
+            _logger.LogDebug($"Created new job object {job.Id}");
             _jobs[jobId] = job;
         }
 
