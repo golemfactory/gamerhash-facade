@@ -223,6 +223,7 @@ namespace Golem.Yagna
 
                 var env = new Dictionary<string, string>(Env);
                 env["MIN_AGREEMENT_EXPIRATION"] = "30s";
+                env["DEBIT_NOTE_ACCEPTANCE_DEADLINE"] = "30s";
                 env["YAGNA_APPKEY"] = appKey;
 
                 ProviderProcess = await Task.Run(() => ProcessFactory.StartProcess(_yaProviderPath, arguments, env));

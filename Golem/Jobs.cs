@@ -98,7 +98,6 @@ class Jobs : IJobs, INotifyPropertyChanged
             if (invoice != null)
                 await UpdateJobPayment(invoice);
         }
-        _logger.LogDebug($"Number of jobs: {_jobs.Count}");
 
         return _jobs.Values.Where(job => job.Timestamp >= since).OrderByDescending(job => job.Timestamp).Cast<IJob>().ToList();
     }
