@@ -16,7 +16,7 @@ using Golem;
 
 namespace App
 {
-    public class SampleApp : GolemRunnable
+    public class SampleApp : GolemRunnable, IAsyncDisposable
     {
         private readonly Dictionary<string, string> _env;
         private readonly string? _extraArgs;
@@ -40,6 +40,11 @@ namespace App
 
             var args = $"--network {_network.Id} --driver {PaymentDriver.ERC20.Id} --subnet-tag public {_extraArgs}";
             return StartProcess("app", working_dir, args, _env, true);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await this.Stop(StopMethod.SigInt);
         }
     }
 

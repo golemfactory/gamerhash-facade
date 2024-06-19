@@ -308,6 +308,7 @@ class Jobs : IJobs, INotifyPropertyChanged
             // REST api reponses, but at this point we are sure that CurrentJob was interrupted.
             if (job != null && job.Status != JobStatus.Finished)
             {
+                _logger.LogDebug($"Job cleanup: changing {job.Id} status to Interrupted");
                 job.Status = JobStatus.Interrupted;
             }
         }

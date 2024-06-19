@@ -24,7 +24,7 @@ namespace Golem.Tools
         public string? Id;
     };
 
-    public class GolemRequestor : GolemRunnable
+    public class GolemRequestor : GolemRunnable, IAsyncLifetime
     {
         private readonly Dictionary<string, string> _env;
 
@@ -184,6 +184,16 @@ namespace Golem.Tools
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
             return working_dir;
+        }
+
+        public Task InitializeAsync()
+        {
+            return Task.CompletedTask;
+        }
+
+        public async Task DisposeAsync()
+        {
+            await Stop(StopMethod.SigInt);
         }
     }
 }

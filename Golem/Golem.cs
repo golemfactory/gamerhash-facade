@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
-    public class Golem : IGolem, IAsyncDisposable
+    public class Golem : IGolem, IAsyncDisposable, IGolemTesting
     {
         private YagnaService Yagna { get; set; }
         private Provider Provider { get; set; }
@@ -437,6 +437,16 @@ namespace Golem
             var logFiles = yagnaLogFiles.Concat(providerLogFiles).ToList();
             logFiles.Sort();
             return logFiles;
+        }
+
+        public int? GetYagnaPid()
+        {
+            return Yagna.YagnaProcess?.Id;
+        }
+
+        public int? GetProviderPid()
+        {
+            return Provider.ProviderProcess?.Id;
         }
     }
 }

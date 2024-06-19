@@ -124,7 +124,7 @@ namespace Golem.Tests
             }
             catch (OperationCanceledException)
             {
-                throw new Exception($"Failed to find expected value of type {nameof(T)} within {timeout_} ms.");
+                throw new Exception($"Failed to find expected value of type {nameof(T)} within {timeout_} s.");
             }
             throw new Exception($"`AwaitValue` for {nameof(T)} returned unexpectedly.");
         }
@@ -216,6 +216,7 @@ namespace Golem.Tests
         protected GolemRequestor? _requestor;
         protected AppKey? _requestorAppKey;
         protected String _testClassName;
+        protected GolemRequestor? _requestor2;
 
 
         public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName) : base(outputHelper)
