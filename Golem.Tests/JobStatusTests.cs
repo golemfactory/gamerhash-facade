@@ -68,7 +68,7 @@ namespace Golem.Tests
             await StartGolem(golem, StatusChannel(golem));
             var jobChannel = JobChannel(golem);
 
-            _logger.LogInformation("Starting Sample App");
+            _logger.LogInformation("=================== Starting Sample App ===================");
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
@@ -83,17 +83,15 @@ namespace Golem.Tests
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
 
-
             _logger.LogInformation("=================== Stopping Provider ===================");
             await StopGolem(golem, golemPath, StatusChannel(golem));
 
             Assert.Equal(JobStatus.Interrupted, currentJob.Status);
-
-            currentJob = await ReadChannel<Job?>(jobChannel);
-            Assert.Null(currentJob);
+            await AwaitValue<Job?>(jobChannel, null, TimeSpan.FromSeconds(1));
             Assert.Null(golem.CurrentJob);
 
-            await app.Stop(StopMethod.SigInt);
+            _logger.LogInformation("=================== Killing App ===================");
+            await app.Stop(StopMethod.SigKill);
         }
     }
 }
