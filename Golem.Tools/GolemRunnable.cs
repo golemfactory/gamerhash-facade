@@ -83,13 +83,13 @@ namespace Golem.Tools
             switch (stopMethod)
             {
                 case StopMethod.SigKill:
-                    _golemProcess.Kill();
+                    _golemProcess.Process.Kill(true);
                     break;
                 case StopMethod.SigInt:
                     if (!await _golemProcess.TrySignalAsync(CommandSignal.ControlC))
                     {
                         _logger.LogInformation("Failed to interrupt process. Killing");
-                        _golemProcess.Kill();
+                        _golemProcess.Process.Kill(true);
                     }
                     break;
             }
