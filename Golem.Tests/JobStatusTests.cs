@@ -43,8 +43,8 @@ namespace Golem.Tests
             var jobStatusChannel = JobStatusChannel(currentJob);
 
             // Wait until ExeUnit will be created.
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.DownloadingModel);
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
+            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
+                (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
 
@@ -83,8 +83,8 @@ namespace Golem.Tests
             var jobStatusChannel = JobStatusChannel(currentJob);
 
             // Wait until ExeUnit will be created.
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.DownloadingModel);
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
+            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
+                (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
 
@@ -120,8 +120,8 @@ namespace Golem.Tests
             var jobStatusChannel = JobStatusChannel(currentJob);
 
             // Wait until ExeUnit will be created.
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.DownloadingModel);
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
+            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
+                (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
 
@@ -167,8 +167,8 @@ namespace Golem.Tests
             var jobStatusChannel = JobStatusChannel(currentJob);
 
             // Wait until ExeUnit will be created.
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.DownloadingModel);
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
+            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
+                (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
 
@@ -207,8 +207,8 @@ namespace Golem.Tests
             var jobStatusChannel = JobStatusChannel(currentJob);
 
             // Wait until ExeUnit will be created.
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.DownloadingModel);
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
+            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
+                (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
 
