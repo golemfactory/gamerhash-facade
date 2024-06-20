@@ -43,6 +43,7 @@ namespace Golem.Tests
             var jobStatusChannel = JobStatusChannel(currentJob);
 
             // Wait until ExeUnit will be created.
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.DownloadingModel);
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
@@ -82,6 +83,7 @@ namespace Golem.Tests
             var jobStatusChannel = JobStatusChannel(currentJob);
 
             // Wait until ExeUnit will be created.
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.DownloadingModel);
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
@@ -118,6 +120,7 @@ namespace Golem.Tests
             var jobStatusChannel = JobStatusChannel(currentJob);
 
             // Wait until ExeUnit will be created.
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.DownloadingModel);
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
@@ -164,6 +167,7 @@ namespace Golem.Tests
             var jobStatusChannel = JobStatusChannel(currentJob);
 
             // Wait until ExeUnit will be created.
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.DownloadingModel);
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
@@ -203,6 +207,7 @@ namespace Golem.Tests
             var jobStatusChannel = JobStatusChannel(currentJob);
 
             // Wait until ExeUnit will be created.
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.DownloadingModel);
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
