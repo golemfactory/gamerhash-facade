@@ -126,11 +126,13 @@ namespace Golem.Tests
             await Task.Delay(2 * 1000);
 
             _logger.LogInformation("=================== Terminating App ===================");
-            // This part might be flaky. If it is the case, consider reimplementing this code, to
-            // kill requestor script first and than manually destroy activity.
-            _ = app.Stop(StopMethod.SigInt);
-            await Task.Delay(20);
-            await app.Stop(StopMethod.SigInt);
+            var rest = _requestor.Rest != null ? _requestor.Rest : throw new Exception("Rest api on Requestor not initialized.");
+            var activities = await rest.GetActivities(currentJob.Id);
+
+            // Kill script so he doesn't have chance to handle tasks termination.
+            // Later send `DestroyAcitvity` manually to simulate double ctrl-c in requestor script.
+            _ = app.Stop(StopMethod.SigKill);
+            await rest.DestroyActivity(activities.First());
 
             // Acitvity will be destroyed, but Agreement won't. We should be temporary in Idle state.
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Idle, TimeSpan.FromSeconds(1));

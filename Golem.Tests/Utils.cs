@@ -248,7 +248,7 @@ namespace Golem.Tests
             _requestor = await GolemRequestor.Build(_testClassName, _loggerFactory.CreateLogger("Requestor"));
             Assert.True(_requestor.Start());
             _requestor.InitPayment();
-            _requestorAppKey = _requestor.getTestAppKey();
+            _requestorAppKey = _requestor.GetTestAppKey();
         }
 
         public async Task StartGolem(IGolem golem, ChannelReader<GolemStatus> statusChannel)

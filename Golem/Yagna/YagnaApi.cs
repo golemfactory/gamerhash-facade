@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -35,12 +36,20 @@ namespace Golem.Yagna
         };
 
         public YagnaApi(ILoggerFactory loggerFactory, EventsPublisher events)
+            : this(YagnaOptionsFactory.DefaultYagnaApiUrl, loggerFactory.CreateLogger<YagnaApi>(), events)
+        { }
+
+        public YagnaApi(ILogger logger, EventsPublisher events)
+            : this(YagnaOptionsFactory.DefaultYagnaApiUrl, logger, events)
+        { }
+
+        public YagnaApi(string url, ILogger logger, EventsPublisher events)
         {
             _httpClient = new HttpClient
             {
-                BaseAddress = new Uri(YagnaOptionsFactory.DefaultYagnaApiUrl)
+                BaseAddress = new Uri(url)
             };
-            _logger = loggerFactory.CreateLogger<YagnaApi>();
+            _logger = logger;
             _events = events;
         }
 
@@ -51,36 +60,50 @@ namespace Golem.Yagna
 
         public async Task<T> RestGet<T>(string path, CancellationToken token = default) where T : class
         {
-            return await RestCall<T>(HttpMethod.Get, path, new Dictionary<string, string>(), token);
+            return await RestGet<T>(path, new Dictionary<string, string>(), token);
         }
 
-        public async Task<T> RestGet<T>(string path, Dictionary<string, string>? args, CancellationToken token = default) where T : class
+        /// <summary>
+        /// Path should contain query parameters.
+        /// </summary>
+        public async Task<T> RestGet<T>(string path, Dictionary<string, string> headers, CancellationToken token = default) where T : class
         {
-            return args != null
-                ? await RestGet<T>(path, args, new Dictionary<string, string>(), token)
-                : await RestGet<T>(path, new Dictionary<string, string>(), token);
+            return await RestCall<T>(HttpMethod.Get, path, headers, null, token);
         }
 
-        public async Task<T> RestGet<T>(string path, Dictionary<string, string> args, Dictionary<string, string> headers, CancellationToken token = default) where T : class
+        public async Task<T> RestPost<T, C>(string path, Dictionary<string, string> headers, C content, CancellationToken token = default) where T : class where C : class
         {
-            if (args != null && args.Count > 0)
-            {
-                path += "?";
-                for (int i = 0; i < args.Count; ++i)
-                {
-                    var (k, v) = args.ElementAt(i);
-                    path += $"{k}={v}" + (i == args.Count - 1 ? "" : "&");
-                }
-            }
-            return await RestCall<T>(HttpMethod.Get, path, headers, token);
+            var content_ = JsonContent.Create<C>(content);
+            return await RestPost<T>(path, headers, content_, token);
         }
 
-        private async Task<T> RestCall<T>(HttpMethod method, string path, Dictionary<string, string> headers, CancellationToken token = default) where T : class
+        /// <summary>
+        /// Path should contain query parameters.
+        /// </summary>
+        public async Task<T> RestPost<T>(string path, Dictionary<string, string> headers, JsonContent? content = null, CancellationToken token = default) where T : class
+        {
+            return await RestCall<T>(HttpMethod.Post, path, headers, content, token);
+        }
+
+        public async Task<T> RestDelete<T>(string path, CancellationToken token = default) where T : class
+        {
+            return await RestDelete<T>(path, new Dictionary<string, string>(), token);
+        }
+
+        public async Task<T> RestDelete<T>(string path, Dictionary<string, string> headers, CancellationToken token = default) where T : class
+        {
+            return await RestCall<T>(HttpMethod.Delete, path, headers, null, token);
+        }
+
+        private async Task<T> RestCall<T>(HttpMethod method, string path, Dictionary<string, string> headers, JsonContent? content = null, CancellationToken token = default) where T : class
         {
             using var requestMessage = new HttpRequestMessage(method, path);
 
             foreach (var (k, v) in headers)
                 requestMessage.Headers.Add(k, v);
+
+            if (content != null)
+                requestMessage.Content = content;
 
             var response = _httpClient.SendAsync(requestMessage, token).Result;
 
@@ -171,7 +194,7 @@ namespace Golem.Yagna
             var args = afterDate != null
              ? new Dictionary<string, string> { { "afterDate", FormatTimestamp(afterDate.Value) } }
              : null;
-            return await RestGet<List<YagnaAgreementInfo>>("/market-api/v1/agreements", args, token);
+            return await RestGet<List<YagnaAgreementInfo>>(BuildUrl("/market-api/v1/agreements", args), token);
         }
 
         public async Task<ActivityStatePair> GetState(string activityId, CancellationToken token = default)
@@ -196,7 +219,7 @@ namespace Golem.Yagna
         {
             var path = "/activity-api/v1/activity";
             var args = new Dictionary<string, string> { { "agreementId", agreementId } };
-            return await RestGet<List<string>>(path, args, token);
+            return await RestGet<List<string>>(BuildUrl(path, args), token);
         }
 
         public async Task<List<Invoice>> GetInvoices(DateTime? afterTimestamp = null, CancellationToken token = default)
@@ -206,7 +229,7 @@ namespace Golem.Yagna
              ? new Dictionary<string, string> { { "afterTimestamp", FormatTimestamp(afterTimestamp.Value) } }
              : null;
 
-            return await RestGet<List<Invoice>>(path, args, token);
+            return await RestGet<List<Invoice>>(BuildUrl(path, args), token);
         }
 
         public async Task<List<Payment>> GetPayments(DateTime? afterTimestamp = null, CancellationToken token = default)
@@ -215,7 +238,7 @@ namespace Golem.Yagna
             var args = afterTimestamp != null
              ? new Dictionary<string, string> { { "afterTimestamp", FormatTimestamp(afterTimestamp.Value) } }
              : null;
-            return await RestGet<List<Payment>>(path, args, token);
+            return await RestGet<List<Payment>>(BuildUrl(path, args), token);
         }
 
         public async Task<List<Payment>> GetInvoicePayments(string invoiceId, CancellationToken token = default)
@@ -248,7 +271,7 @@ namespace Golem.Yagna
             var args = afterTimestamp != null
              ? new Dictionary<string, string> { { "afterTimestamp", FormatTimestamp(afterTimestamp.Value) } }
              : null;
-            return await RestGet<List<YagnaAgreementEvent>>(path, args, token);
+            return await RestGet<List<YagnaAgreementEvent>>(BuildUrl(path, args), token);
         }
 
         public async Task<List<InvoiceEvent>> GetInvoiceEvents(DateTime since, CancellationToken token = default)
@@ -265,7 +288,13 @@ namespace Golem.Yagna
                 {"X-Provider-Events", string.Join(',', _monitorEventTypes)}
             };
 
-            return await RestGet<List<InvoiceEvent>>("/payment-api/v1/invoiceEvents", args, headers, token);
+            return await RestGet<List<InvoiceEvent>>(BuildUrl("/payment-api/v1/invoiceEvents", args), headers, token);
+        }
+
+        public async Task DestroyActivity(string activityId, CancellationToken token = default)
+        {
+            var path = $"/activity-api/v1/activity/{activityId}";
+            await RestDelete<YagnaAgreementEvent>(path, token);
         }
 
         public void CancelPendingRequests()
@@ -273,9 +302,23 @@ namespace Golem.Yagna
             _httpClient.CancelPendingRequests();
         }
 
-        private string FormatTimestamp(DateTime dateTime)
+        private static string FormatTimestamp(DateTime dateTime)
         {
             return dateTime.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture);
+        }
+
+        private static string BuildUrl(string path, Dictionary<string, string>? args)
+        {
+            if (args != null && args.Count > 0)
+            {
+                path += "?";
+                for (int i = 0; i < args.Count; ++i)
+                {
+                    var (k, v) = args.ElementAt(i);
+                    path += $"{k}={v}" + (i == args.Count - 1 ? "" : "&");
+                }
+            }
+            return path;
         }
     }
 }
