@@ -229,6 +229,7 @@ namespace Golem.Tests
             var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
             _loggerFactory = LoggerFactory.Create(builder => builder
                 .AddFilter("Golem", LogLevel.Debug)
+                .AddFilter("Requestor", LogLevel.Debug)
                 //// Console logger makes `dotnet test` hang on Windows
                 // .AddSimpleConsole(options => options.SingleLine = true)
                 .AddFile(logfile)

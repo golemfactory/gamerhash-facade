@@ -188,8 +188,6 @@ namespace Golem.Tools
 
         private YagnaApi? CreateRestAPI(string appKey)
         {
-            _logger.LogInformation($"Creating REST api using key: {appKey}");
-
             var rest = new YagnaApi(ApiUrl, _logger, new EventsPublisher());
             rest.Authorize(appKey);
             return rest;

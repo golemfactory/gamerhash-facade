@@ -175,6 +175,14 @@ namespace Golem.Yagna
                             .WithJsonNamingPolicy(JsonNamingPolicy.CamelCase)
                             .Build();
 
+            if (typeof(T) == typeof(EmptyResponse))
+            {
+                if (text == "null")
+                    return (T)(new EmptyResponse() as object);
+                else
+                    throw new Exception($"Deserializing: {typeof(T).Name}. Expected null, found: {text}");
+            }
+
             return JsonSerializer.Deserialize<T>(text, options)
                 ?? throw new Exception($"Failed to deserialize REST call reponse to type: {typeof(T).Name}");
         }
@@ -294,8 +302,15 @@ namespace Golem.Yagna
         public async Task DestroyActivity(string activityId, CancellationToken token = default)
         {
             var path = $"/activity-api/v1/activity/{activityId}";
-            await RestDelete<YagnaAgreementEvent>(path, token);
+            await RestDelete<EmptyResponse>(path, token);
         }
+
+        public async Task TerminateAgreement(string agreementId, Reason reason, CancellationToken token = default)
+        {
+            var path = $"/market-api/v1/agreements/{agreementId}/terminate";
+            await RestPost<EmptyResponse, Reason>(path, new Dictionary<string, string>(), reason, token);
+        }
+
 
         public void CancelPendingRequests()
         {

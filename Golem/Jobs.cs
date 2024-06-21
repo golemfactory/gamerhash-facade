@@ -226,6 +226,9 @@ class Jobs : IJobs, INotifyPropertyChanged
             // Normally we treat Agreements without Activity as `Idle`, but this means that in all these scenarios
             // Agreements from the past would be marked as `Idle`, what is definately not true.
             job.Status = JobStatus.Interrupted;
+
+            var reason = new Reason("Interrupted", "Agreement was interrupted and never terminated afterwards");
+            await _yagna.Api.TerminateAgreement(job.Id, reason);
         }
         else
         {

@@ -1,4 +1,7 @@
 
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
+
 namespace Golem.Model
 {
     public class YagnaAgreementInfo
@@ -25,6 +28,18 @@ namespace Golem.Model
         AgreementRejectedEvent,
         AgreementCancelledEvent,
         AgreementTerminatedEvent,
+    }
+
+    public class Reason
+    {
+        public required string Message { get; set; }
+        [JsonPropertyName("golem.requestor.code")]
+        public string? RequestorCode { get; set; }
+        [JsonPropertyName("golem.provider.code")]
+        public string? ProviderCode { get; set; }
+
+        [SetsRequiredMembers]
+        public Reason(string code, string fullMessage) => (Message, ProviderCode, RequestorCode) = (fullMessage, code, null);
     }
 
     public class YagnaAgreementEvent
