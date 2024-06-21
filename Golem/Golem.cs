@@ -383,7 +383,7 @@ namespace Golem
             Provider = new Provider(golemPath, prov_datadir, _events, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, options.Network, loggerFactory);
             _golemPrice = ProviderConfig.GolemPrice;
-            _jobs = new Jobs(Yagna, loggerFactory);
+            _jobs = new Jobs(Yagna, _events, loggerFactory);
 
             // Listen to property changed event on nested properties to update Provider presets.
             Price.PropertyChanged += OnGolemPriceChanged;

@@ -35,6 +35,7 @@ class Jobs : IJobs, INotifyPropertyChanged
 {
     private readonly YagnaService _yagna;
     private readonly ILogger _logger;
+    private readonly EventsPublisher _events;
     private readonly Dictionary<string, Job> _jobs = new();
     private DateTime _lastJobTimestamp { get; set; }
     public Job? CurrentJob { get; private set; }
@@ -46,10 +47,11 @@ class Jobs : IJobs, INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    public Jobs(YagnaService yagna, ILoggerFactory loggerFactory)
+    public Jobs(YagnaService yagna, EventsPublisher events, ILoggerFactory loggerFactory)
     {
         _yagna = yagna;
         _logger = loggerFactory.CreateLogger<Jobs>();
+        _events = events;
         _lastJobTimestamp = DateTime.Now;
     }
 
@@ -227,8 +229,15 @@ class Jobs : IJobs, INotifyPropertyChanged
             // Agreements from the past would be marked as `Idle`, what is definately not true.
             job.Status = JobStatus.Interrupted;
 
-            var reason = new Reason("Interrupted", "Agreement was interrupted and never terminated afterwards");
-            await _yagna.Api.TerminateAgreement(job.Id, reason);
+            try
+            {
+                var reason = new Reason("Interrupted", "Agreement was interrupted and never terminated afterwards");
+                await _yagna.Api.TerminateAgreement(job.Id, reason);
+            }
+            catch (Exception e)
+            {
+                _events.RaiseAndLog(new ApplicationEventArgs("Jobs", $"Failed to terminate hanging Agreement {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e), _logger);
+            }
         }
         else
         {
