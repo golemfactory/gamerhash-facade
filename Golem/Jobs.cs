@@ -253,6 +253,8 @@ class Jobs : IJobs, INotifyPropertyChanged
                 // This won't rather happen in correct cases. In incorrect case we will have incorrect state anyway.
                 if (activityStatePair.currentState() != StateType.Terminated)
                 {
+                    _logger.LogDebug($"Acitivity {activity} state: ({activityStatePair.currentState()} -> {activityStatePair.nextState()})");
+
                     allTerminated = false;
                     job.UpdateActivityState(activityStatePair);
                 }
