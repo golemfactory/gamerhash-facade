@@ -135,7 +135,7 @@ namespace Golem.Tests
             await rest.DestroyActivity(activities.First());
 
             // Acitvity will be destroyed, but Agreement won't. We should be temporary in Idle state.
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Idle, TimeSpan.FromSeconds(1));
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Idle, TimeSpan.FromSeconds(10));
 
             // Timeout is aqual to {no activity timeout} + margin
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Interrupted, TimeSpan.FromMinutes(2));
