@@ -138,10 +138,21 @@ namespace Golem.Yagna.Types
         /// Track Job idle time to Interrupt Job in case Provider won't be able to do it.
         /// </summary>
         /// <returns>Returns true if Idle time exceeded timeout.</returns>
-        public bool Idling()
+        public bool StartIdling()
         {
-            IdleStart ??= DateTime.Now;
-            return IdleStart + TimeSpan.FromSeconds(100) < DateTime.Now;
+            if (IdleStart == null)
+            {
+                IdleStart = DateTime.Now;
+                return true;
+            }
+            return false;
+        }
+
+        public bool IdlingTimeout()
+        {
+            if (IdleStart != null)
+                return IdleStart + TimeSpan.FromSeconds(100) < DateTime.Now;
+            return false;
         }
 
         public void StopIdling()

@@ -29,6 +29,7 @@ public interface IJobs
     Task UpdatePartialPayment(Payment payment);
 
     void SetCurrentJob(Job? job);
+    Job? SelectCurrentJob(List<Job> currentJobs);
     Job? GetCurrentJob();
     void CleanupJobs();
 }
@@ -281,12 +282,25 @@ class Jobs : IJobs, INotifyPropertyChanged
             {
                 // This solves scenario when Requestor yagna daemon disappeared and
                 // our Provider agent is unable to terminate Agreement.
-                // Note that Provider will be able to pick up next task.
-                if (job.Idling())
+                // Note that Provider will be able to pick up next task anyway.
+                if (job.StartIdling())
                 {
-                    _logger.LogDebug($"Job {job.Id} Interrupted because of exceding no activity timeout.");
+                    // We have to spawn task with delayed execution, because there might be
+                    // no trigger which can update task status afterwards.
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(101));
+                        await UpdateJobStatus(job.Id);
+                        SetCurrentJob(SelectCurrentJob(_jobs.Values.ToList()));
+                    });
+                }
+
+                if (job.IdlingTimeout())
+                {
+                    _logger.LogInformation($"Job {job.Id} Interrupted because of exceded no activity timeout.");
 
                     job.Status = JobStatus.Interrupted;
+                    job.StopIdling();
                     _lastJobTimestamp = DateTime.Now;
                 }
                 else
@@ -326,6 +340,22 @@ class Jobs : IJobs, INotifyPropertyChanged
 
         job.CurrentUsage = usage;
         return job;
+    }
+
+    public Job? SelectCurrentJob(List<Job> currentJobs)
+    {
+        if (currentJobs.Count == 0)
+        {
+            _logger.LogDebug("Cleaning current job field");
+            return null;
+        }
+        else
+        {
+            currentJobs.Sort((job1, job2) => job1.Timestamp.CompareTo(job2.Timestamp));
+            currentJobs.Reverse();
+
+            return currentJobs[0].Active ? currentJobs[0] : null;
+        }
     }
 
     public void SetCurrentJob(Job? job)
