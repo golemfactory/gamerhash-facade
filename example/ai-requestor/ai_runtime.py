@@ -66,6 +66,7 @@ def build_parser(description: str) -> argparse.ArgumentParser:
         "--payment-network", "--network", help="Payment network name, for example `holesky`"
     )
     parser.add_argument("--subnet-tag", help="Subnet name, for example `public`")
+    parser.add_argument("--select-node", default=None, help="Match only with selected Node")
     parser.add_argument("--runtime", default="automatic", help="Runtime name, for example `automatic`")
     parser.add_argument(
         "--log-file",
@@ -142,19 +143,30 @@ class ProviderOnceStrategy(MarketStrategy):
     """Hires provider only once.
     """
 
-    def __init__(self):
+    def __init__(self, select_node: str = None):
+        self.node = select_node
         self.history = set(())
         self.acceptable_prop_value_range_overrides =  {
             PROP_DEBIT_NOTE_INTERVAL_SEC: PropValueRange(60, None),
             PROP_PAYMENT_TIMEOUT_SEC: PropValueRange(int(180), None),
         }
 
+        if self.node is not None:
+            print(f"Accepting only Node: {self.node}")
+
     async def score_offer(self, offer):
-        if offer.issuer not in self.history:
-            return SCORE_TRUSTED
+        if self.node is not None:
+            if offer.issuer == self.node:
+                return SCORE_TRUSTED
+            else:
+                print(f"[Strategy] Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer}), because he is not on selected list.")
+                return SCORE_REJECTED
         else:
-            print(f"[Strategy] Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer})")
-            return SCORE_REJECTED
+            if offer.issuer not in self.history:
+                return SCORE_TRUSTED
+            else:
+                print(f"[Strategy] Rejecting issuer: {offer.props['golem.node.id.name']} ({offer.issuer})")
+                return SCORE_REJECTED
 
 
     def remember(self, provider_id: str):
@@ -232,9 +244,9 @@ async def ainput(prompt: str = ""):
 
 
 async def main(subnet_tag, driver=None, network=None, args=None):
-    strategy = ProviderOnceStrategy()
+    strategy = ProviderOnceStrategy(select_node=args.select_node)
     async with Golem(
-        budget=100.0,
+        budget=50.0,
         subnet_tag=subnet_tag,
         strategy=strategy,
         payment_driver=driver,

@@ -57,7 +57,7 @@ namespace Golem.Tests
 
             // Starting Sample App
 
-            _logger.LogInformation("Starting Sample App");
+            _logger.LogInformation("=================== Starting Sample App ===================");
             var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
@@ -82,19 +82,18 @@ namespace Golem.Tests
             _logger.LogInformation($"Got a job. Status {golem.CurrentJob?.Status}, Id: {golem.CurrentJob?.Id}, RequestorId: {golem.CurrentJob?.RequestorId}");
 
             var jobId = currentJob.Id;
-            // Stopping Sample App
-            _logger.LogInformation("Stopping App");
+
+            _logger.LogInformation("=================== Stopping App ===================");
             await app.Stop(StopMethod.SigInt);
 
-            Assert.Equal(JobStatus.Finished, await ReadChannel<JobStatus>(jobStatusChannel));
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Finished, TimeSpan.FromSeconds(30));
+
+            Assert.Null(await AwaitValue<Job?>(jobChannel, null));
+            Assert.Null(golem.CurrentJob);
 
             var jobs = await golem.ListJobs(DateTime.MinValue);
             var job = jobs.SingleOrDefault(j => j.Id == jobId);
             Assert.Equal(JobStatus.Finished, job?.Status);
-
-            currentJob = await ReadChannel<Job?>(jobChannel);
-            Assert.Null(currentJob);
-            Assert.Null(golem.CurrentJob);
 
             // Checking payments
 

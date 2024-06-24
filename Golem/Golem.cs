@@ -279,7 +279,7 @@ namespace Golem
 
             var account = await Yagna.WaitForIdentityAsync(cancellationToken);
 
-            _ = Yagna.StartActivityLoop(cancellationToken, SetCurrentJob, _jobs, _events);
+            _ = Yagna.StartActivityLoop(cancellationToken, _jobs, _events);
             _ = Yagna.StartInvoiceEventsLoop(cancellationToken, _jobs, _events);
 
             try
@@ -383,10 +383,17 @@ namespace Golem
             Provider = new Provider(golemPath, prov_datadir, _events, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, options.Network, loggerFactory);
             _golemPrice = ProviderConfig.GolemPrice;
-            _jobs = new Jobs(Yagna, SetCurrentJob, loggerFactory);
+            _jobs = new Jobs(Yagna, loggerFactory);
 
             // Listen to property changed event on nested properties to update Provider presets.
             Price.PropertyChanged += OnGolemPriceChanged;
+            _jobs.PropertyChanged += OnCurrentJobChanged;
+        }
+
+        private void OnCurrentJobChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            CurrentJob = _jobs.CurrentJob;
+            OnPropertyChanged(nameof(CurrentJob));
         }
 
         private void OnGolemPriceChanged(object? sender, PropertyChangedEventArgs e)
@@ -394,22 +401,6 @@ namespace Golem
             if (sender is GolemPrice price)
             {
                 ProviderConfig.GolemPrice = price;
-            }
-        }
-
-        private void SetCurrentJob(Job? job)
-        {
-            _logger.LogDebug($"Setting current job to {job?.Id}, status {job?.Status}");
-
-            if (CurrentJob != job && (CurrentJob == null || !CurrentJob.Equals(job)))
-            {
-                CurrentJob = job;
-                _logger.LogInformation("New job. Id: {0}, Requestor id: {1}, Status: {2}", job?.Id, job?.RequestorId, job?.Status);
-                OnPropertyChanged(nameof(CurrentJob));
-            }
-            else
-            {
-                _logger.LogDebug("Job has not changed.");
             }
         }
 

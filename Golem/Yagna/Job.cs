@@ -107,6 +107,14 @@ namespace Golem.Yagna.Types
         }
 
         public DateTime Timestamp { get; init; }
+        public bool Active
+        {
+            get
+            {
+                return Status != JobStatus.Finished && Status != JobStatus.Interrupted;
+            }
+        }
+
 
         public void UpdateActivityState(ActivityStatePair activityState)
         {
@@ -136,12 +144,28 @@ namespace Golem.Yagna.Types
                     return JobStatus.Computing;
                 case StateType.Ready:
                     return JobStatus.Computing;
-                case StateType.Terminated:
-                    return JobStatus.Finished;
                 case StateType.Unresponsive:
                     return JobStatus.Interrupted;
             }
             return JobStatus.Idle;
+        }
+
+        public static JobStatus ResolveTerminationReason(string? code)
+        {
+            return code switch
+            {
+                "InitializationError" => JobStatus.Interrupted,
+                "NoActivity" => JobStatus.Interrupted,
+                "DebitNotesDeadline" => JobStatus.Interrupted,
+                "DebitNoteRejected" => JobStatus.Interrupted,
+                "DebitNoteCancelled" => JobStatus.Interrupted,
+                "DebitNoteNotPaid" => JobStatus.Interrupted,
+                "RequestorUnreachable" => JobStatus.Interrupted,
+                "Shutdown" => JobStatus.Interrupted,
+                "Expired" => JobStatus.Finished,
+                "Cancelled" => JobStatus.Finished,
+                _ => JobStatus.Finished,
+            };
         }
 
         public GolemLib.Types.PaymentStatus? EvaluatePaymentStatus(GolemLib.Types.PaymentStatus? suggestedPaymentStatus)

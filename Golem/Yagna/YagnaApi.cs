@@ -236,6 +236,21 @@ namespace Golem.Yagna
             return await RestGet<ActivityUsage>(path, token);
         }
 
+        public async Task<YagnaAgreementEvent> GetTerminationReason(string agreementId, CancellationToken token = default)
+        {
+            var path = $"/market-api/v1/agreements/{agreementId}/terminate/reason";
+            return await RestGet<YagnaAgreementEvent>(path, token);
+        }
+
+        public async Task<List<YagnaAgreementEvent>> GetAgreementEvents(DateTime? afterTimestamp = null, CancellationToken token = default)
+        {
+            var path = "/market-api/v1/agreementEvents";
+            var args = afterTimestamp != null
+             ? new Dictionary<string, string> { { "afterTimestamp", FormatTimestamp(afterTimestamp.Value) } }
+             : null;
+            return await RestGet<List<YagnaAgreementEvent>>(path, args, token);
+        }
+
         public async Task<List<InvoiceEvent>> GetInvoiceEvents(DateTime since, CancellationToken token = default)
         {
             const int timeout = 10;

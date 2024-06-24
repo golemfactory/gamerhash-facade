@@ -22,18 +22,23 @@ class ActivityLoop
     private readonly IJobs _jobs;
     private readonly ILogger _logger;
     private readonly EventsPublisher _events;
+    private readonly CancellationToken _token;
 
-    public ActivityLoop(YagnaApi yagnaApi, IJobs jobs, EventsPublisher events, ILogger logger)
+    public ActivityLoop(YagnaApi yagnaApi, IJobs jobs, CancellationToken token, EventsPublisher events, ILogger logger)
     {
         _yagnaApi = yagnaApi;
         _jobs = jobs;
         _logger = logger;
         _events = events;
+        _token = token;
     }
 
-    public async Task Start(
-        Action<Job?> setCurrentJob,
-        CancellationToken token)
+    public Task Start()
+    {
+        return Task.WhenAll(Task.Run(ActivitiesLoop), Task.Run(AgreementsLoop));
+    }
+
+    public async Task ActivitiesLoop()
     {
         _logger.LogInformation("Starting monitoring activities");
 
@@ -44,38 +49,29 @@ class ActivityLoop
             while (true)
             {
                 _logger.LogDebug("Monitoring activities");
-                newReconnect = await ReconnectDelay(newReconnect, token);
+                newReconnect = await ReconnectDelay(newReconnect, _token);
 
-                token.ThrowIfCancellationRequested();
+                _token.ThrowIfCancellationRequested();
 
                 try
                 {
-                    await foreach (var trackingEvent in _yagnaApi.ActivityMonitorStream(token))
+                    await foreach (var trackingEvent in _yagnaApi.ActivityMonitorStream(_token))
                     {
                         var activities = trackingEvent?.Activities ?? new List<ActivityState>();
 
                         List<Job> currentJobs = await UpdateJobs(_jobs, activities);
-
-                        var job = SelectCurrentJob(currentJobs);
-                        setCurrentJob(job);
-                        if (job == null)
-                        {
-                            // Sometimes finished jobs end up in Idle state
-                            _jobs.SetAllJobsFinished();
-                        }
+                        _jobs.SetCurrentJob(SelectCurrentJob(currentJobs));
                     }
                 }
-                catch (OperationCanceledException e)
+                catch (OperationCanceledException)
                 {
-                    _events.Raise(new ApplicationEventArgs("ActivityLoop", "OperationCanceledException", ApplicationEventArgs.SeverityLevel.Error, e));
                     _logger.LogDebug("Activity loop cancelled");
                     return;
                 }
                 catch (Exception e)
                 {
-                    _events.Raise(new ApplicationEventArgs("ActivityLoop", $"Exception {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e));
-                    _logger.LogError(e, "Activity monitoring request failure");
-                    await Task.Delay(TimeSpan.FromSeconds(5), token);
+                    _events.RaiseAndLog(new ApplicationEventArgs("ActivityLoop", $"Exception in ActivityLoop {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e), _logger);
+                    await Task.Delay(TimeSpan.FromSeconds(5), _token);
                 }
             }
         }
@@ -86,10 +82,65 @@ class ActivityLoop
         }
         finally
         {
-            _logger.LogInformation("Activity monitoring loop closed. Current job clenup");
-            _jobs.SetAllJobsFinished();
-            setCurrentJob(null);
+            _logger.LogInformation("Activity monitoring loop closed. Current job cleanup");
+            _jobs.CleanupJobs();
+            _jobs.SetCurrentJob(null);
         }
+    }
+
+    public async Task AgreementsLoop()
+    {
+        _logger.LogInformation("Starting monitoring agreement events");
+
+        DateTime since = DateTime.Now;
+        while (true)
+        {
+            try
+            {
+                _token.ThrowIfCancellationRequested();
+                _logger.LogDebug("Checking for new Agreement events since: {}", since);
+
+                var events = await _yagnaApi.GetAgreementEvents(since, _token);
+                if (events.Count > 0)
+                {
+                    var agreements = FilterEvents(events);
+
+                    List<Job> currentJobs = await UpdateJobs(_jobs, agreements.ToList());
+                    _jobs.SetCurrentJob(SelectCurrentJob(currentJobs));
+
+                    since = events.Max(evt => evt.EventDate);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Agreement loop cancelled");
+                return;
+            }
+            catch (Exception e)
+            {
+                _events.RaiseAndLog(new ApplicationEventArgs("AgreementLoop", $"Exception in Agreement Loop {e.Message}", ApplicationEventArgs.SeverityLevel.Error, e), _logger);
+                await Task.Delay(TimeSpan.FromSeconds(5), _token);
+            }
+        }
+    }
+
+    private IEnumerable<string> FilterEvents(List<YagnaAgreementEvent> events)
+    {
+        events.ForEach(evt =>
+        {
+            if (evt.EventType == AgreementEventType.AgreementTerminatedEvent
+                && Job.ResolveTerminationReason(evt.Code) == JobStatus.Interrupted)
+            {
+                _events.RaiseAndLog(new ApplicationEventArgs("AgreementLoop", $"Agreement interrupted with: {evt.Code}, details: {evt.Message}",
+                    ApplicationEventArgs.SeverityLevel.Warning, null), _logger);
+            }
+        });
+
+        return events
+            .Where(evt => evt.EventType != AgreementEventType.AgreementRejectedEvent
+                && evt.EventType != AgreementEventType.AgreementCancelledEvent)
+            .Select(evt => evt.AgreementID)
+            .Distinct();
     }
 
     private Job? SelectCurrentJob(List<Job> currentJobs)
@@ -97,30 +148,14 @@ class ActivityLoop
         if (currentJobs.Count == 0)
         {
             _logger.LogDebug("Cleaning current job field");
-
             return null;
-        }
-        else if (currentJobs.Count == 1)
-        {
-            return currentJobs[0];
         }
         else
         {
-            _logger.LogWarning($"Multiple ({currentJobs.Count}) non terminated jobs");
-            currentJobs.ForEach(job => _logger.LogWarning($"Non terminated job {job.Id}, status {job.Status}"));
+            currentJobs.Sort((job1, job2) => job1.Timestamp.CompareTo(job2.Timestamp));
+            currentJobs.Reverse();
 
-            var job = currentJobs
-                .Where(job => new[] {
-                                        JobStatus.DownloadingModel,
-                                        JobStatus.Computing,
-                                        JobStatus.Idle
-                    }.Contains(job.Status))
-                .OrderByDescending(job => job.Status == JobStatus.DownloadingModel)
-                .ThenByDescending(job => job.Status == JobStatus.Computing)
-                .ThenByDescending(job => job.Status == JobStatus.Idle)
-                .FirstOrDefault();
-
-            return job;
+            return currentJobs[0].Active ? currentJobs[0] : null;
         }
     }
 
@@ -137,17 +172,29 @@ class ActivityLoop
 
     public async Task<List<Job>> UpdateJobs(IJobs jobs, List<ActivityState> activityStates)
     {
-        var result = await Task.WhenAll(
-            activityStates
-                .Select(async d =>
-                {
-                    var usage = d.Usage != null
-                            ? GolemUsage.From(d.Usage)
-                            : null;
+        var agreements = activityStates.Select(state => state.AgreementId).Distinct();
+        return await UpdateJobs(jobs, agreements.ToList());
+    }
 
-                    return await jobs.UpdateJobByActivity(d.Id, null, usage);
-                }
-                )
+    public async Task<List<Job>> UpdateJobs(IJobs jobs, List<string> jobIds)
+    {
+        // If Activity was destroyed, we can get list that doesn't contain current job.
+        var currentJob = _jobs.GetCurrentJob();
+        if (currentJob != null)
+        {
+            if (!jobIds.Contains(currentJob.Id))
+                jobIds.Add(currentJob.Id);
+        }
+
+        _logger.LogDebug("Updating jobs: {jobs}", string.Join(", ", jobIds));
+
+        var result = await Task.WhenAll(
+            jobIds
+                .Select(async jobId =>
+                {
+                    await jobs.UpdateJobStatus(jobId);
+                    return await jobs.UpdateJobUsage(jobId);
+                })
         );
 
         return result.ToList();

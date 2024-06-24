@@ -100,25 +100,49 @@ namespace Golem.Tests
         /// Reads from `channel` and returns first `T` for which `matcher` returns `false`
         /// </summary>
         /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
-        public async static Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? matcher = null, double timeoutMs = 10_000, ILogger? logger = null)
+        public async static Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? filter = null, TimeSpan? timeout = null, ILogger? logger = null)
         {
+            var timeout_ = timeout ?? TimeSpan.FromSeconds(10);
+
             var cancelTokenSource = new CancellationTokenSource();
-            cancelTokenSource.CancelAfter(TimeSpan.FromMilliseconds(timeoutMs));
+            cancelTokenSource.CancelAfter(timeout_);
+
             static bool FalseMatcher(T x) => false;
-            matcher ??= FalseMatcher;
-            while (await channel.WaitToReadAsync(cancelTokenSource.Token))
+            filter ??= FalseMatcher;
+
+            try
             {
-                if (channel.TryRead(out var value) && !matcher.Invoke(value))
+                while (await channel.WaitToReadAsync(cancelTokenSource.Token))
                 {
-                    return value;
-                }
-                else
-                {
-                    logger?.LogInformation($"Skipping element: {value}");
+                    if (channel.TryRead(out var value))
+                    {
+                        if (!filter.Invoke(value))
+                            return value;
+                        logger?.LogInformation($"Skipping element: {value}");
+                    }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                throw new Exception($"Failed to find expected value of type {nameof(T)} within {timeout_} ms.");
+            }
+            throw new Exception($"`AwaitValue` for {nameof(T)} returned unexpectedly.");
+        }
 
-            throw new Exception($"Failed to find matching {nameof(T)} within {timeoutMs} ms.");
+        /// <summary>
+        /// Reads channel until it will find `expected` value or throws exception after timeout.
+        /// </summary>
+        /// <exception cref="Exception"></exception>
+        public async static Task<T> AwaitValue<T>(ChannelReader<T> channel, T expected, TimeSpan? timeout = null, ILogger? logger = null)
+        {
+            bool MatchesExpected(T x)
+            {
+                // If `expected` is null, than Equals won't work correctly, so we need to
+                // check it separately.
+                return expected == null ? x == null : x != null && x.Equals(expected);
+            }
+
+            return await ReadChannel<T>(channel, (T x) => !MatchesExpected(x), timeout, logger);
         }
 
         public static Channel<GolemStatus> StatusChannel(Golem golem, ILoggerFactory loggerFactory) =>
@@ -203,6 +227,7 @@ namespace Golem.Tests
             var logfile = Path.Combine(PackageBuilder.TestDir(""), testClassName + "-{Date}.log");
             var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
             _loggerFactory = LoggerFactory.Create(builder => builder
+                .AddFilter("Golem", LogLevel.Debug)
                 //// Console logger makes `dotnet test` hang on Windows
                 // .AddSimpleConsole(options => options.SingleLine = true)
                 .AddFile(logfile)
@@ -250,12 +275,18 @@ namespace Golem.Tests
         }
 
         /// <summary>
-        /// Reads from `channel` and returns first `T` for which `matcher` returns `false`
+        /// Reads from `channel` and returns first `T` for which `filter` returns `false`
         /// </summary>
         /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
-        public async Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? matcher = null, double timeoutMs = 30_000)
+        public async Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? filter = null, TimeSpan? timeout = null)
         {
-            return await TestUtils.ReadChannel(channel, matcher, timeoutMs, _logger);
+            var timeout_ = timeout ?? TimeSpan.FromSeconds(30);
+            return await TestUtils.ReadChannel(channel, filter, timeout_, _logger);
+        }
+
+        public async Task<T> AwaitValue<T>(ChannelReader<T> channel, T expected, TimeSpan? timeout = null)
+        {
+            return await TestUtils.AwaitValue(channel, expected, timeout, _logger);
         }
 
         public Channel<T?> PropertyChangeChannel<OBJ, T>(OBJ? obj, string propName, Action<T?>? extraHandler = null) where OBJ : INotifyPropertyChanged
