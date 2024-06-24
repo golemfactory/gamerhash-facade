@@ -136,10 +136,12 @@ namespace Golem.Yagna.Types
         {
             switch (currentState)
             {
+                case StateType.New:
+                    return JobStatus.Idle;
                 case StateType.Initialized:
                     if (nextState == StateType.Deployed)
                         return JobStatus.DownloadingModel;
-                    break;
+                    return JobStatus.Idle;
                 case StateType.Deployed:
                     return JobStatus.Computing;
                 case StateType.Ready:

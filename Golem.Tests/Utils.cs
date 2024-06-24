@@ -124,9 +124,9 @@ namespace Golem.Tests
             }
             catch (OperationCanceledException)
             {
-                throw new Exception($"Failed to find expected value of type {nameof(T)} within {timeout_} s.");
+                throw new Exception($"Failed to find expected value of type {typeof(T).Name} within {timeout_} s.");
             }
-            throw new Exception($"`AwaitValue` for {nameof(T)} returned unexpectedly.");
+            throw new Exception($"`AwaitValue` for {typeof(T).Name} returned unexpectedly.");
         }
 
         /// <summary>
