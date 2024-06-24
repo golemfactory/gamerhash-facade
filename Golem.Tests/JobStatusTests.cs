@@ -227,47 +227,50 @@ namespace Golem.Tests
             await app.Stop(StopMethod.SigKill);
         }
 
-        // [Fact]
-        // public async Task RequestorBreaksAgreement_KillingYagna()
-        // {
-        //     string golemPath = await PackageBuilder.BuildTestDirectory();
-        //     await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
-        //     _logger.LogInformation($"Path: {golemPath}");
+        [Fact]
+        public async Task RequestorBreaksAgreement_KillingYagna()
+        {
+            // Run Requestor yagna before starting Provider to speed up Offers propagation.
+            await using var requestor = await GolemRequestor.Build("RequestorBreaksAgreement_KillingYagna", _loggerFactory.CreateLogger("Requestor2"));
+            requestor.AutoSetUrls(11000);
+            Assert.True(requestor.Start());
+            requestor.InitPayment();
 
-        //     await StartGolem(golem, StatusChannel(golem));
-        //     var jobChannel = JobChannel(golem);
+            string golemPath = await PackageBuilder.BuildTestDirectory();
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            _logger.LogInformation($"Path: {golemPath}");
 
-        //     _logger.LogInformation("=================== Starting Sample App ===================");
-        //     await using var requestor = await GolemRequestor.Build(_testClassName, _loggerFactory.CreateLogger("Requestor2"));
-        //     Assert.True(requestor.Start());
-        //     requestor.InitPayment();
+            await StartGolem(golem, StatusChannel(golem));
+            var jobChannel = JobChannel(golem);
 
-        //     await using var app = requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
-        //     Assert.True(app.Start());
+            _logger.LogInformation("=================== Starting Sample App ===================");
+            await using var app = requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
+            Assert.True(app.Start());
 
-        //     // Wait for job.
-        //     Job? currentJob = await ReadChannel<Job?>(jobChannel);
-        //     Assert.NotNull(currentJob);
+            // Wait for job.
+            Job? currentJob = await ReadChannel<Job?>(jobChannel, null, TimeSpan.FromSeconds(50));
+            Assert.NotNull(currentJob);
 
-        //     var jobStatusChannel = JobStatusChannel(currentJob);
+            var jobStatusChannel = JobStatusChannel(currentJob);
 
-        //     // Wait until ExeUnit will be created.
-        //     await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Computing);
-        //     // Let him compute for a while.
-        //     await Task.Delay(2 * 1000);
+            // Wait until ExeUnit will be created.
+            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
+                (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
+            // Let him compute for a while.
+            await Task.Delay(2 * 1000);
 
-        //     _logger.LogInformation("=================== Killing Yagna ===================");
-        //     await requestor.Stop(StopMethod.SigKill);
+            _logger.LogInformation("=================== Killing Yagna ===================");
+            await requestor.Stop(StopMethod.SigKill);
 
-        //     // Timeout is aqual to {debit notes interval} + {debit note accept timeout} + margin
-        //     await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Interrupted, TimeSpan.FromMinutes(3));
-        //     await AwaitValue<Job?>(jobChannel, null, TimeSpan.FromSeconds(2));
+            // Timeout is aqual to {debit notes interval} + {debit note accept timeout} + margin
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Interrupted, TimeSpan.FromMinutes(3));
+            await AwaitValue<Job?>(jobChannel, null, TimeSpan.FromSeconds(2));
 
-        //     Assert.Equal(JobStatus.Interrupted, currentJob.Status);
-        //     Assert.Null(golem.CurrentJob);
+            Assert.Equal(JobStatus.Interrupted, currentJob.Status);
+            Assert.Null(golem.CurrentJob);
 
-        //     // Stopping Golem
-        //     await StopGolem(golem, golemPath, StatusChannel(golem));
-        // }
+            // Stopping Golem
+            await StopGolem(golem, golemPath, StatusChannel(golem));
+        }
     }
 }

@@ -264,16 +264,38 @@ class Jobs : IJobs, INotifyPropertyChanged
                 // This won't rather happen in correct cases. In incorrect case we will have incorrect state anyway.
                 if (activityStatePair.currentState() != StateType.Terminated)
                 {
-                    _logger.LogDebug($"Acitivity {activity} state: ({activityStatePair.currentState()} -> {activityStatePair.nextState()})");
+                    _logger.LogDebug($"Activity {activity} state: ({activityStatePair.currentState()} -> {activityStatePair.nextState()}).");
 
                     allTerminated = false;
                     job.UpdateActivityState(activityStatePair);
+                }
+                else
+                {
+                    if (activityStatePair.reason != null || activityStatePair.error_message != null)
+                        _logger.LogInformation($"Activity {activity}: Reason: {activityStatePair.reason}, error: {activityStatePair.error_message}.");
                 }
             }
 
             // Agreement is still not terminated, so we should be in Idle state.
             if (allTerminated)
-                job.Status = JobStatus.Idle;
+            {
+                // This solves scenario when Requestor yagna daemon disappeared and
+                // our Provider agent is unable to terminate Agreement.
+                // Note that Provider will be able to pick up next task.
+                if (job.Idling())
+                {
+                    job.Status = JobStatus.Interrupted;
+                    _lastJobTimestamp = DateTime.Now;
+                }
+                else
+                {
+                    job.Status = JobStatus.Idle;
+                }
+            }
+            else
+            {
+                job.StopIdling();
+            }
         }
 
         return job;

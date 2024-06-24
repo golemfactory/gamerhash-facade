@@ -107,6 +107,8 @@ namespace Golem.Yagna.Types
         }
 
         public DateTime Timestamp { get; init; }
+        private DateTime? IdleStart { get; set; }
+
         public bool Active
         {
             get
@@ -130,6 +132,21 @@ namespace Golem.Yagna.Types
                 PaymentConfirmation.Add(payment);
                 PaymentStatus = EvaluatePaymentStatus(PaymentStatus);
             }
+        }
+
+        /// <summary>
+        /// Track Job idle time to Interrupt Job in case Provider won't be able to do it.
+        /// </summary>
+        /// <returns>Returns true if Idle time exceeded timeout.</returns>
+        public bool Idling()
+        {
+            IdleStart ??= DateTime.Now;
+            return IdleStart + TimeSpan.FromSeconds(90) > DateTime.Now;
+        }
+
+        public void StopIdling()
+        {
+            IdleStart = null;
         }
 
         private JobStatus ResolveStatus(StateType currentState, StateType? nextState)
