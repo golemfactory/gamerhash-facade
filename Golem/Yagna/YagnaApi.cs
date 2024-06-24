@@ -177,7 +177,7 @@ namespace Golem.Yagna
 
             if (typeof(T) == typeof(EmptyResponse))
             {
-                if (text == "null")
+                if (text == null || text == "null" || text == "")
                     return (T)(new EmptyResponse() as object);
                 else
                     throw new Exception($"Deserializing: {typeof(T).Name}. Expected null, found: {text}");
