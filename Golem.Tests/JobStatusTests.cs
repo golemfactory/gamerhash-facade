@@ -227,48 +227,51 @@ namespace Golem.Tests
             await app.Stop(StopMethod.SigKill);
         }
 
-        // [Fact]
-        // public async Task ProviderBreaksAgreement_KillingExeUnit()
-        // {
-        //     string golemPath = await PackageBuilder.BuildTestDirectory();
-        //     await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
-        //     _logger.LogInformation($"Path: {golemPath}");
+        [Fact]
+        public async Task ProviderBreaksAgreement_KillingExeUnit()
+        {
+            string golemPath = await PackageBuilder.BuildTestDirectory();
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            _logger.LogInformation($"Path: {golemPath}");
 
-        //     await StartGolem(golem, StatusChannel(golem));
-        //     var jobChannel = JobChannel(golem);
+            await StartGolem(golem, StatusChannel(golem));
+            var jobChannel = JobChannel(golem);
 
-        //     _logger.LogInformation("=================== Starting Sample App ===================");
-        //     var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
-        //     Assert.True(app.Start());
+            _logger.LogInformation("=================== Starting Sample App ===================");
+            var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
+            Assert.True(app.Start());
 
-        //     // Wait for job.
-        //     Job? currentJob = await ReadChannel<Job?>(jobChannel);
-        //     Assert.NotNull(currentJob);
+            // Wait for job.
+            Job? currentJob = await ReadChannel<Job?>(jobChannel);
+            Assert.NotNull(currentJob);
 
-        //     var jobStatusChannel = JobStatusChannel(currentJob);
+            var jobStatusChannel = JobStatusChannel(currentJob);
 
-        //     // Wait until ExeUnit will be created.
-        //     Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
-        //         (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
-        //     // Let him compute for a while.
-        //     await Task.Delay(2 * 1000);
+            // Wait until ExeUnit will be created.
+            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
+                (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
+            // Let him compute for a while.
+            await Task.Delay(2 * 1000);
 
-        //     _logger.LogInformation("=================== Killing Provider Agent ===================");
-        //     var pid = golem.GetProviderPid();
-        //     if (pid.HasValue)
-        //     {
+            _logger.LogInformation("=================== Killing Runtime ===================");
+            // TODO: How to avoid killing runtimes managed by non-test runs??
+            var runtimes = Process.GetProcessesByName("ya-runtime-ai");
+            foreach (var runtime in runtimes)
+            {
+                runtime.Kill(true);
+            }
 
-        //         Process.GetProcessById(pid.Value).Kill();
-        //     }
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Idle, TimeSpan.FromSeconds(5));
 
-        //     await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Interrupted, TimeSpan.FromSeconds(30));
-        //     Assert.Equal(JobStatus.Interrupted, currentJob.Status);
-        //     await AwaitValue<Job?>(jobChannel, null, TimeSpan.FromSeconds(1));
-        //     Assert.Null(golem.CurrentJob);
+            // Task should be Interrupted after Provider won't get new Activity from Requestor.
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Interrupted, TimeSpan.FromSeconds(100));
+            Assert.Equal(JobStatus.Interrupted, currentJob.Status);
+            await AwaitValue<Job?>(jobChannel, null, TimeSpan.FromSeconds(1));
+            Assert.Null(golem.CurrentJob);
 
-        //     _logger.LogInformation("=================== Killing App ===================");
-        //     await app.Stop(StopMethod.SigKill);
-        // }
+            _logger.LogInformation("=================== Killing App ===================");
+            await app.Stop(StopMethod.SigKill);
+        }
 
         [Fact]
         public async Task RequestorBreaksAgreement_KillingYagna()
