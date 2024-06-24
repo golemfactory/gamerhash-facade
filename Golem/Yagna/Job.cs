@@ -141,7 +141,7 @@ namespace Golem.Yagna.Types
         public bool Idling()
         {
             IdleStart ??= DateTime.Now;
-            return IdleStart + TimeSpan.FromSeconds(90) > DateTime.Now;
+            return IdleStart + TimeSpan.FromSeconds(90) < DateTime.Now;
         }
 
         public void StopIdling()

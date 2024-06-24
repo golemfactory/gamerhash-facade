@@ -284,6 +284,8 @@ class Jobs : IJobs, INotifyPropertyChanged
                 // Note that Provider will be able to pick up next task.
                 if (job.Idling())
                 {
+                    _logger.LogDebug($"Job {job.Id} Interrupted because of exceding no activity timeout.");
+
                     job.Status = JobStatus.Interrupted;
                     _lastJobTimestamp = DateTime.Now;
                 }
