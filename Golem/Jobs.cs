@@ -3,6 +3,8 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
+using AsyncKeyedLock;
+
 using Golem.Model;
 using Golem.Tools;
 using Golem.Yagna;
@@ -40,6 +42,13 @@ class Jobs : IJobs, INotifyPropertyChanged
     private DateTime _lastJobTimestamp { get; set; }
     public Job? CurrentJob { get; private set; }
 
+    private readonly AsyncKeyedLocker<string> _jobLocker = new(o =>
+    {
+        o.PoolSize = 20; // this is NOT a concurrency limit
+        o.PoolInitialFill = 1;
+    });
+
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
@@ -57,6 +66,8 @@ class Jobs : IJobs, INotifyPropertyChanged
 
     public async Task<Job> GetOrCreateJob(string jobId)
     {
+        using var locker = await _jobLocker.LockAsync(jobId);
+
         if (!_jobs.TryGetValue(jobId, out Job? job))
         {
             var agreement = await _yagna.Api.GetAgreement(jobId);
