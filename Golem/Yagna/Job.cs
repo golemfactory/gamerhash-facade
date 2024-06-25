@@ -174,8 +174,10 @@ namespace Golem.Yagna.Types
                     return JobStatus.Computing;
                 case StateType.Ready:
                     return JobStatus.Computing;
+                // Note: We don't set Interrupted, because Requestor could create next Activity
+                // as long as Agreement is still alive.
                 case StateType.Unresponsive:
-                    return JobStatus.Interrupted;
+                    return JobStatus.Idle;
             }
             return JobStatus.Idle;
         }

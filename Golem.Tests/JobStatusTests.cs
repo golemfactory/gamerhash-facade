@@ -33,7 +33,7 @@ namespace Golem.Tests
             var jobChannel = JobChannel(golem);
 
             _logger.LogInformation("=================== Starting Sample App ===================");
-            var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
+            await using var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
             // Wait for job.
@@ -73,7 +73,7 @@ namespace Golem.Tests
             var jobChannel = JobChannel(golem);
 
             _logger.LogInformation("=================== Starting Sample App ===================");
-            var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
+            await using var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
             // Wait for job.
@@ -110,7 +110,7 @@ namespace Golem.Tests
             var jobChannel = JobChannel(golem);
 
             _logger.LogInformation("=================== Starting Sample App ===================");
-            var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
+            await using var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
             // Wait for job.
@@ -159,7 +159,7 @@ namespace Golem.Tests
             var jobChannel = JobChannel(golem);
 
             _logger.LogInformation("=================== Starting Sample App ===================");
-            var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
+            await using var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
             // Wait for job.
@@ -199,7 +199,7 @@ namespace Golem.Tests
             var jobChannel = JobChannel(golem);
 
             _logger.LogInformation("=================== Starting Sample App ===================");
-            var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
+            await using var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
             // Wait for job.
@@ -238,7 +238,7 @@ namespace Golem.Tests
             var jobChannel = JobChannel(golem);
 
             _logger.LogInformation("=================== Starting Sample App ===================");
-            var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
+            await using var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
             Assert.True(app.Start());
 
             // Wait for job.
