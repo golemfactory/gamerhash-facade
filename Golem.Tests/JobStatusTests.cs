@@ -280,14 +280,15 @@ namespace Golem.Tests
 
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Idle, TimeSpan.FromSeconds(15));
 
+            _logger.LogInformation("=================== Killing App ===================");
+            // Killing app, so it won't terminate Agreement.
+            await app.Stop(StopMethod.SigKill);
+
             // Task should be Interrupted after Provider won't get new Activity from Requestor.
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Interrupted, TimeSpan.FromSeconds(100));
             Assert.Equal(JobStatus.Interrupted, currentJob.Status);
             await AwaitValue<Job?>(jobChannel, null, TimeSpan.FromSeconds(1));
             Assert.Null(golem.CurrentJob);
-
-            _logger.LogInformation("=================== Killing App ===================");
-            await app.Stop(StopMethod.SigKill);
         }
 
         [Fact]
