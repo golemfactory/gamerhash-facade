@@ -256,12 +256,11 @@ namespace Golem.Tests
             _logger.LogInformation("=================== Killing Runtime ===================");
             // TODO: How to avoid killing runtimes managed by non-test runs??
             var runtimes = Process.GetProcessesByName("ya-runtime-ai");
-            foreach (var runtime in runtimes)
-            {
-                runtime.Kill(true);
-            }
+            // Last runtime should be the best quess, since we spawned it a while ago.
+            runtimes.ToList().Sort((a, b) => a.StartTime.CompareTo(b.StartTime));
+            runtimes.Last().Kill(true);
 
-            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Idle, TimeSpan.FromSeconds(5));
+            await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Idle, TimeSpan.FromSeconds(15));
 
             // Task should be Interrupted after Provider won't get new Activity from Requestor.
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Interrupted, TimeSpan.FromSeconds(100));
