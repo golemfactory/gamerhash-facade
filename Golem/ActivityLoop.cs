@@ -63,7 +63,7 @@ class ActivityLoop
                         _jobs.SetCurrentJob(_jobs.SelectCurrentJob(currentJobs));
                     }
                 }
-                catch (OperationCanceledException)
+                catch (Exception e) when (e.IsCancelled())
                 {
                     _logger.LogDebug("Activity loop cancelled");
                     return;
@@ -111,7 +111,7 @@ class ActivityLoop
                     since = events.Max(evt => evt.EventDate);
                 }
             }
-            catch (OperationCanceledException)
+            catch (Exception e) when (e.IsCancelled())
             {
                 _logger.LogDebug("Agreement loop cancelled");
                 return;

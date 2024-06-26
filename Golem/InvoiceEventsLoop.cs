@@ -54,7 +54,7 @@ class InvoiceEventsLoop
                     }
                 }
             }
-            catch (OperationCanceledException)
+            catch (Exception e) when (e.IsCancelled())
             {
                 _logger.LogInformation("Invoice events loop cancelled");
                 return;
@@ -88,7 +88,7 @@ class InvoiceEventsLoop
                     since = payment.Timestamp;
                 }
             }
-            catch (OperationCanceledException)
+            catch (Exception e) when (e.IsCancelled())
             {
                 _logger.LogInformation("Payments loop cancelled");
                 return;
