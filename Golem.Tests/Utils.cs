@@ -102,10 +102,10 @@ namespace Golem.Tests
         /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
         public async static Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? filter = null, TimeSpan? timeout = null, ILogger? logger = null)
         {
-            var timeout_ = timeout ?? TimeSpan.FromSeconds(10);
+            timeout ??= TimeSpan.FromSeconds(10);
 
             var cancelTokenSource = new CancellationTokenSource();
-            cancelTokenSource.CancelAfter(timeout_);
+            cancelTokenSource.CancelAfter(timeout.Value);
 
             static bool FalseMatcher(T x) => false;
             filter ??= FalseMatcher;
@@ -124,7 +124,7 @@ namespace Golem.Tests
             }
             catch (OperationCanceledException)
             {
-                throw new Exception($"Failed to find expected value of type {typeof(T).Name} within {timeout_} s.");
+                throw new Exception($"Failed to find expected value of type {typeof(T).Name} within {timeout} s.");
             }
             throw new Exception($"`AwaitValue` for {typeof(T).Name} returned unexpectedly.");
         }
@@ -282,8 +282,8 @@ namespace Golem.Tests
         /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
         public async Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? filter = null, TimeSpan? timeout = null)
         {
-            var timeout_ = timeout ?? TimeSpan.FromSeconds(30);
-            return await TestUtils.ReadChannel(channel, filter, timeout_, _logger);
+            timeout ??= TimeSpan.FromSeconds(30);
+            return await TestUtils.ReadChannel(channel, filter, timeout, _logger);
         }
 
         public async Task<T> AwaitValue<T>(ChannelReader<T> channel, T expected, TimeSpan? timeout = null)
