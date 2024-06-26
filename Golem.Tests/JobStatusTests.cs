@@ -45,7 +45,7 @@ namespace Golem.Tests
             // Wait until ExeUnit will be created.
             // Workaround for situations, when status update was so fast, that we were not able to create
             // channel yet, so waiting for update would be pointless.
-            if (currentJob.Status == JobStatus.Computing)
+            if (currentJob.Status != JobStatus.Computing)
                 Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
                     (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
@@ -88,7 +88,7 @@ namespace Golem.Tests
             // Wait until ExeUnit will be created.
             // Workaround for situations, when status update was so fast, that we were not able to create
             // channel yet, so waiting for update would be pointless.
-            if (currentJob.Status == JobStatus.Computing)
+            if (currentJob.Status != JobStatus.Computing)
                 Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
                     (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
@@ -128,7 +128,7 @@ namespace Golem.Tests
             // Wait until ExeUnit will be created.
             // Workaround for situations, when status update was so fast, that we were not able to create
             // channel yet, so waiting for update would be pointless.
-            if (currentJob.Status == JobStatus.Computing)
+            if (currentJob.Status != JobStatus.Computing)
                 Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
                     (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
@@ -180,7 +180,7 @@ namespace Golem.Tests
             // Wait until ExeUnit will be created.
             // Workaround for situations, when status update was so fast, that we were not able to create
             // channel yet, so waiting for update would be pointless.
-            if (currentJob.Status == JobStatus.Computing)
+            if (currentJob.Status != JobStatus.Computing)
                 Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
                     (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
@@ -223,7 +223,7 @@ namespace Golem.Tests
             // Wait until ExeUnit will be created.
             // Workaround for situations, when status update was so fast, that we were not able to create
             // channel yet, so waiting for update would be pointless.
-            if (currentJob.Status == JobStatus.Computing)
+            if (currentJob.Status != JobStatus.Computing)
                 Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
                     (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
@@ -265,7 +265,7 @@ namespace Golem.Tests
             // Wait until ExeUnit will be created.
             // Workaround for situations, when status update was so fast, that we were not able to create
             // channel yet, so waiting for update would be pointless.
-            if (currentJob.Status == JobStatus.Computing)
+            if (currentJob.Status != JobStatus.Computing)
                 Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
                     (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
@@ -320,7 +320,7 @@ namespace Golem.Tests
             // Wait until ExeUnit will be created.
             // Workaround for situations, when status update was so fast, that we were not able to create
             // channel yet, so waiting for update would be pointless.
-            if (currentJob.Status == JobStatus.Computing)
+            if (currentJob.Status != JobStatus.Computing)
                 Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
                     (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
             // Let him compute for a while.
