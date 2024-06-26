@@ -27,7 +27,7 @@ namespace Golem.Yagna
         public readonly YagnaStartupOptions Options;
         private readonly string _yaExePath;
         private readonly string? _dataDir;
-        private Process? YagnaProcess { get; set; }
+        public Process? YagnaProcess { get; private set; }
         private SemaphoreSlim ProcLock { get; } = new SemaphoreSlim(1, 1);
 
         public readonly YagnaApi Api;

@@ -107,6 +107,8 @@ namespace Golem.Yagna.Types
         }
 
         public DateTime Timestamp { get; init; }
+        private DateTime? IdleStart { get; set; }
+
         public bool Active
         {
             get
@@ -132,20 +134,50 @@ namespace Golem.Yagna.Types
             }
         }
 
+        /// <summary>
+        /// Track Job idle time to Interrupt Job in case Provider won't be able to do it.
+        /// </summary>
+        /// <returns>Returns true if Idle time exceeded timeout.</returns>
+        public bool StartIdling()
+        {
+            if (IdleStart == null)
+            {
+                IdleStart = DateTime.Now;
+                return true;
+            }
+            return false;
+        }
+
+        public bool IdlingTimeout()
+        {
+            if (IdleStart != null)
+                return IdleStart + TimeSpan.FromSeconds(100) < DateTime.Now;
+            return false;
+        }
+
+        public void StopIdling()
+        {
+            IdleStart = null;
+        }
+
         private JobStatus ResolveStatus(StateType currentState, StateType? nextState)
         {
             switch (currentState)
             {
+                case StateType.New:
+                    return JobStatus.Idle;
                 case StateType.Initialized:
                     if (nextState == StateType.Deployed)
                         return JobStatus.DownloadingModel;
-                    break;
+                    return JobStatus.Idle;
                 case StateType.Deployed:
                     return JobStatus.Computing;
                 case StateType.Ready:
                     return JobStatus.Computing;
+                // Note: We don't set Interrupted, because Requestor could create next Activity
+                // as long as Agreement is still alive.
                 case StateType.Unresponsive:
-                    return JobStatus.Interrupted;
+                    return JobStatus.Idle;
             }
             return JobStatus.Idle;
         }
@@ -162,6 +194,7 @@ namespace Golem.Yagna.Types
                 "DebitNoteNotPaid" => JobStatus.Interrupted,
                 "RequestorUnreachable" => JobStatus.Interrupted,
                 "Shutdown" => JobStatus.Interrupted,
+                "Interrupted" => JobStatus.Interrupted,
                 "Expired" => JobStatus.Finished,
                 "Cancelled" => JobStatus.Finished,
                 _ => JobStatus.Finished,

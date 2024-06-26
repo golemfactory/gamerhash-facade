@@ -24,24 +24,36 @@ namespace Golem.Tools
         public string? Id;
     };
 
-    public class GolemRequestor : GolemRunnable
+    public class GolemRequestor : GolemRunnable, IAsyncLifetime
     {
-        private readonly Dictionary<string, string> _env;
+        private Dictionary<string, string> _env;
 
         public string? AppKey;
+        public string ApiUrl { get; set; }
+        public string GsbUrl { get; set; }
+        public string NetBindUrl { get; set; }
+        private readonly string _dataDir;
+
+        public YagnaApi? Rest { get; internal set; }
 
         private readonly bool _mainnet;
 
         private GolemRequestor(string dir, bool mainnet, ILogger logger) : base(dir, logger)
         {
+            ApiUrl = "http://127.0.0.1:7465";
+            GsbUrl = "tcp://127.0.0.1:7464";
+            NetBindUrl = "udp://0.0.0.0:11500";
+
+            _mainnet = mainnet;
+            _dataDir = Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna"));
+
             var envBuilder = new EnvironmentBuilder();
-            envBuilder.WithYagnaDataDir(Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna")));
-            envBuilder.WithYagnaApiUrl("http://127.0.0.1:7465");
-            envBuilder.WithGsbUrl("tcp://127.0.0.1:7464");
-            envBuilder.WithYaNetBindUrl("udp://0.0.0.0:11500");
+            envBuilder.WithYagnaDataDir(_dataDir);
+            envBuilder.WithYagnaApiUrl(ApiUrl);
+            envBuilder.WithGsbUrl(GsbUrl);
+            envBuilder.WithYaNetBindUrl(NetBindUrl);
             envBuilder.WithMetricsGroup("Example-GamerHash");
             _env = envBuilder.Build();
-            _mainnet = mainnet;
         }
 
         public async static Task<GolemRequestor> Build(string test_name, ILogger logger, bool cleanupData = true, bool mainnet = false)
@@ -58,13 +70,40 @@ namespace Golem.Tools
 
         public override bool Start()
         {
+            BuildEnv();
+
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
             AppKey = generateRandomAppkey();
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env["YAGNA_AUTOCONF_ID_SECRET"] = getRequestorAutoconfIdSecret();
             env["YAGNA_AUTOCONF_APPKEY"] = AppKey;
-            return StartProcess("yagna", working_dir, "service run", env, false);
+            var result = StartProcess("yagna", working_dir, "service run", env, false);
+
+            Rest = CreateRestAPI(AppKey);
+            return result;
+        }
+
+        public void AutoSetUrls(UInt16 portBase)
+        {
+            var apiPort = portBase;
+            var gsbPort = portBase + 1;
+            var bindPort = portBase + 2;
+
+            ApiUrl = $"http://127.0.0.1:{apiPort}";
+            GsbUrl = $"tcp://127.0.0.1:{gsbPort}";
+            NetBindUrl = $"udp://0.0.0.0:{bindPort}";
+        }
+
+        private void BuildEnv()
+        {
+            var envBuilder = new EnvironmentBuilder();
+            envBuilder.WithYagnaDataDir(_dataDir);
+            envBuilder.WithYagnaApiUrl(ApiUrl);
+            envBuilder.WithGsbUrl(GsbUrl);
+            envBuilder.WithYaNetBindUrl(NetBindUrl);
+            envBuilder.WithMetricsGroup("Example-GamerHash");
+            _env = envBuilder.Build();
         }
 
         private string getRequestorAutoconfIdSecret()
@@ -94,7 +133,7 @@ namespace Golem.Tools
         {
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env["YAGNA_APPKEY"] = AppKey ?? throw new Exception("Unable to create app process. No YAGNA_APPKEY.");
-            env["YAGNA_API_URL"] = "http://127.0.0.1:7465";
+            env["YAGNA_API_URL"] = ApiUrl;
             var pathEnvVar = Environment.GetEnvironmentVariable("PATH") ?? "";
             var binariesDir = Path.GetFullPath(PackageBuilder.BinariesDir(_dir));
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -117,7 +156,7 @@ namespace Golem.Tools
             env.Add("RUST_LOG", "none");
 
             var network = Factory.Network(_mainnet);
-            var payment_status_process = WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"payment status --json --network {network.Id}", env));
+            var payment_status_process = WaitAndPrintOnError(RunCommand("yagna", WorkingDir(), $"payment status --json --network {network.Id}", env));
             var payment_status_output_json = String.Join("\n", payment_status_process.GetOutputAndErrorLines());
             var payment_status_output_obj = JObject.Parse(payment_status_output_json);
             var totalGlm = payment_status_output_obj.Value<float>("amount");
@@ -125,12 +164,12 @@ namespace Golem.Tools
 
             if (reserved > 0.0)
             {
-                WaitAndPrintOnError(RunCommand("yagna", workingDir(), "payment release-allocations", _env));
+                WaitAndPrintOnError(RunCommand("yagna", WorkingDir(), "payment release-allocations", _env));
             }
 
             if (totalGlm < minFundThreshold && !_mainnet)
             {
-                WaitAndPrintOnError(RunCommand("yagna", workingDir(), $"payment fund --network {network.Id}", _env));
+                WaitAndPrintOnError(RunCommand("yagna", WorkingDir(), $"payment fund --network {network.Id}", _env));
             }
             return;
         }
@@ -150,7 +189,7 @@ namespace Golem.Tools
             return cmd;
         }
 
-        public AppKey getTestAppKey()
+        public AppKey GetTestAppKey()
         {
             var dataDir = _env["YAGNA_DATADIR"];
             if (!Path.Exists(dataDir) || Directory.EnumerateFiles(dataDir).Count() == 0)
@@ -161,7 +200,7 @@ namespace Golem.Tools
             var env = _env.ToDictionary(entry => entry.Key, entry => entry.Value);
             env.Add("RUST_LOG", "none");
 
-            var app_key_list_process = RunCommand("yagna", workingDir(), "app-key list --json", env);
+            var app_key_list_process = RunCommand("yagna", WorkingDir(), "app-key list --json", env);
             app_key_list_process.Wait();
             var app_key_list_output_json = string.Join("\n", app_key_list_process.GetOutputAndErrorLines());
 
@@ -179,11 +218,29 @@ namespace Golem.Tools
             return new AppKey();
         }
 
-        private string workingDir()
+        private YagnaApi? CreateRestAPI(string appKey)
+        {
+            var rest = new YagnaApi(ApiUrl, _logger, new EventsPublisher());
+            rest.Authorize(appKey);
+            return rest;
+        }
+
+        private string WorkingDir()
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "yagna");
             Directory.CreateDirectory(working_dir);
             return working_dir;
+        }
+
+        public async Task InitializeAsync()
+        {
+            await Task.CompletedTask;
+        }
+
+        public async Task DisposeAsync()
+        {
+            await Stop(StopMethod.SigInt);
+            Rest = null;
         }
     }
 }

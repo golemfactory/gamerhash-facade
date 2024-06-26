@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Golem
 {
-    public class Golem : IGolem, IAsyncDisposable
+    public class Golem : IGolem, IAsyncDisposable, IGolemTesting
     {
         private YagnaService Yagna { get; set; }
         private Provider Provider { get; set; }
@@ -383,7 +383,7 @@ namespace Golem
             Provider = new Provider(golemPath, prov_datadir, _events, loggerFactory);
             ProviderConfig = new ProviderConfigService(Provider, options.Network, loggerFactory);
             _golemPrice = ProviderConfig.GolemPrice;
-            _jobs = new Jobs(Yagna, loggerFactory);
+            _jobs = new Jobs(Yagna, _events, loggerFactory);
 
             // Listen to property changed event on nested properties to update Provider presets.
             Price.PropertyChanged += OnGolemPriceChanged;
@@ -437,6 +437,16 @@ namespace Golem
             var logFiles = yagnaLogFiles.Concat(providerLogFiles).ToList();
             logFiles.Sort();
             return logFiles;
+        }
+
+        public int? GetYagnaPid()
+        {
+            return Yagna.YagnaProcess?.Id;
+        }
+
+        public int? GetProviderPid()
+        {
+            return Provider.ProviderProcess?.Id;
         }
     }
 }

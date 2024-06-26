@@ -60,7 +60,7 @@ class ActivityLoop
                         var activities = trackingEvent?.Activities ?? new List<ActivityState>();
 
                         List<Job> currentJobs = await UpdateJobs(_jobs, activities);
-                        _jobs.SetCurrentJob(SelectCurrentJob(currentJobs));
+                        _jobs.SetCurrentJob(_jobs.SelectCurrentJob(currentJobs));
                     }
                 }
                 catch (OperationCanceledException)
@@ -106,14 +106,14 @@ class ActivityLoop
                     var agreements = FilterEvents(events);
 
                     List<Job> currentJobs = await UpdateJobs(_jobs, agreements.ToList());
-                    _jobs.SetCurrentJob(SelectCurrentJob(currentJobs));
+                    _jobs.SetCurrentJob(_jobs.SelectCurrentJob(currentJobs));
 
                     since = events.Max(evt => evt.EventDate);
                 }
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Agreement loop cancelled");
+                _logger.LogDebug("Agreement loop cancelled");
                 return;
             }
             catch (Exception e)
@@ -141,22 +141,6 @@ class ActivityLoop
                 && evt.EventType != AgreementEventType.AgreementCancelledEvent)
             .Select(evt => evt.AgreementID)
             .Distinct();
-    }
-
-    private Job? SelectCurrentJob(List<Job> currentJobs)
-    {
-        if (currentJobs.Count == 0)
-        {
-            _logger.LogDebug("Cleaning current job field");
-            return null;
-        }
-        else
-        {
-            currentJobs.Sort((job1, job2) => job1.Timestamp.CompareTo(job2.Timestamp));
-            currentJobs.Reverse();
-
-            return currentJobs[0].Active ? currentJobs[0] : null;
-        }
     }
 
     private static async Task<DateTime> ReconnectDelay(DateTime newReconnect, CancellationToken token)

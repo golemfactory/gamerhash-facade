@@ -3,14 +3,20 @@ using System.Text.Json.Serialization;
 
 namespace Golem.Tools
 {
+    public class EmptyResponse { }
+
     public class JsonSerializerOptionsBuilder
     {
         private JsonNamingPolicy JsonNamingPolicy { get; set; } = JsonNamingPolicy.CamelCase;
         private bool PropertyNameCaseInsensitive { get; set; } = true;
         private bool WriteIndented { get; set; } = true;
-        private List<JsonConverter> JsonConverters { get; set; } = new List<JsonConverter> { new DateTimeJsonConverter(), new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) };
+        private List<JsonConverter> JsonConverters { get; set; } = new List<JsonConverter> {
+            new DateTimeJsonConverter(),
+            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
+        };
 
-        public JsonSerializerOptions Build() { 
+        public JsonSerializerOptions Build()
+        {
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = this.PropertyNameCaseInsensitive,
@@ -18,7 +24,7 @@ namespace Golem.Tools
                 WriteIndented = this.WriteIndented,
             };
             this.JsonConverters.ForEach(options.Converters.Add);
-            
+
             return options;
         }
 

@@ -3,6 +3,8 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
+using AsyncKeyedLock;
+
 using Golem.Model;
 using Golem.Tools;
 using Golem.Yagna;
@@ -27,6 +29,7 @@ public interface IJobs
     Task UpdatePartialPayment(Payment payment);
 
     void SetCurrentJob(Job? job);
+    Job? SelectCurrentJob(List<Job> currentJobs);
     Job? GetCurrentJob();
     void CleanupJobs();
 }
@@ -35,9 +38,17 @@ class Jobs : IJobs, INotifyPropertyChanged
 {
     private readonly YagnaService _yagna;
     private readonly ILogger _logger;
+    private readonly EventsPublisher _events;
     private readonly Dictionary<string, Job> _jobs = new();
     private DateTime _lastJobTimestamp { get; set; }
     public Job? CurrentJob { get; private set; }
+
+    private readonly AsyncKeyedLocker<string> _jobLocker = new(o =>
+    {
+        o.PoolSize = 20; // this is NOT a concurrency limit
+        o.PoolInitialFill = 1;
+    });
+
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -46,15 +57,18 @@ class Jobs : IJobs, INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    public Jobs(YagnaService yagna, ILoggerFactory loggerFactory)
+    public Jobs(YagnaService yagna, EventsPublisher events, ILoggerFactory loggerFactory)
     {
         _yagna = yagna;
         _logger = loggerFactory.CreateLogger<Jobs>();
+        _events = events;
         _lastJobTimestamp = DateTime.Now;
     }
 
     public async Task<Job> GetOrCreateJob(string jobId)
     {
+        using var locker = await _jobLocker.LockAsync(jobId);
+
         if (!_jobs.TryGetValue(jobId, out Job? job))
         {
             var agreement = await _yagna.Api.GetAgreement(jobId);
@@ -226,6 +240,16 @@ class Jobs : IJobs, INotifyPropertyChanged
             // Normally we treat Agreements without Activity as `Idle`, but this means that in all these scenarios
             // Agreements from the past would be marked as `Idle`, what is definately not true.
             job.Status = JobStatus.Interrupted;
+
+            try
+            {
+                var reason = new Reason("Interrupted", "Agreement was interrupted and never terminated afterwards");
+                await _yagna.Api.TerminateAgreement(job.Id, reason);
+            }
+            catch (Exception e)
+            {
+                _events.RaiseAndLog(new ApplicationEventArgs("Jobs", $"Failed to terminate hanging Agreement {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e), _logger);
+            }
         }
         else
         {
@@ -241,14 +265,53 @@ class Jobs : IJobs, INotifyPropertyChanged
                 // This won't rather happen in correct cases. In incorrect case we will have incorrect state anyway.
                 if (activityStatePair.currentState() != StateType.Terminated)
                 {
+                    _logger.LogDebug($"Activity {activity} state: ({activityStatePair.currentState()} -> {activityStatePair.nextState()}).");
+
                     allTerminated = false;
                     job.UpdateActivityState(activityStatePair);
+                }
+                else
+                {
+                    if (activityStatePair.reason != null || activityStatePair.error_message != null)
+                        _logger.LogInformation($"Activity {activity}: Reason: {activityStatePair.reason}, error: {activityStatePair.error_message}.");
                 }
             }
 
             // Agreement is still not terminated, so we should be in Idle state.
             if (allTerminated)
-                job.Status = JobStatus.Idle;
+            {
+                // This solves scenario when Requestor yagna daemon disappeared and
+                // our Provider agent is unable to terminate Agreement.
+                // Note that Provider will be able to pick up next task anyway.
+                if (job.StartIdling())
+                {
+                    // We have to spawn task with delayed execution, because there might be
+                    // no trigger which can update task status afterwards.
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(101));
+                        await UpdateJobStatus(job.Id);
+                        SetCurrentJob(SelectCurrentJob(_jobs.Values.ToList()));
+                    });
+                }
+
+                if (job.IdlingTimeout())
+                {
+                    _logger.LogInformation($"Job {job.Id} Interrupted because of exceded no activity timeout.");
+
+                    job.Status = JobStatus.Interrupted;
+                    job.StopIdling();
+                    _lastJobTimestamp = DateTime.Now;
+                }
+                else
+                {
+                    job.Status = JobStatus.Idle;
+                }
+            }
+            else
+            {
+                job.StopIdling();
+            }
         }
 
         return job;
@@ -277,6 +340,22 @@ class Jobs : IJobs, INotifyPropertyChanged
 
         job.CurrentUsage = usage;
         return job;
+    }
+
+    public Job? SelectCurrentJob(List<Job> currentJobs)
+    {
+        if (currentJobs.Count == 0)
+        {
+            _logger.LogDebug("Cleaning current job field");
+            return null;
+        }
+        else
+        {
+            currentJobs.Sort((job1, job2) => job1.Timestamp.CompareTo(job2.Timestamp));
+            currentJobs.Reverse();
+
+            return currentJobs[0].Active ? currentJobs[0] : null;
+        }
     }
 
     public void SetCurrentJob(Job? job)
@@ -308,6 +387,7 @@ class Jobs : IJobs, INotifyPropertyChanged
             // REST api reponses, but at this point we are sure that CurrentJob was interrupted.
             if (job != null && job.Status != JobStatus.Finished)
             {
+                _logger.LogDebug($"Job cleanup: changing {job.Id} status to Interrupted");
                 job.Status = JobStatus.Interrupted;
             }
         }

@@ -102,10 +102,10 @@ namespace Golem.Tests
         /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
         public async static Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? filter = null, TimeSpan? timeout = null, ILogger? logger = null)
         {
-            var timeout_ = timeout ?? TimeSpan.FromSeconds(10);
+            timeout ??= TimeSpan.FromSeconds(10);
 
             var cancelTokenSource = new CancellationTokenSource();
-            cancelTokenSource.CancelAfter(timeout_);
+            cancelTokenSource.CancelAfter(timeout.Value);
 
             static bool FalseMatcher(T x) => false;
             filter ??= FalseMatcher;
@@ -124,9 +124,9 @@ namespace Golem.Tests
             }
             catch (OperationCanceledException)
             {
-                throw new Exception($"Failed to find expected value of type {nameof(T)} within {timeout_} ms.");
+                throw new Exception($"Failed to find expected value of type {typeof(T).Name} within {timeout} s.");
             }
-            throw new Exception($"`AwaitValue` for {nameof(T)} returned unexpectedly.");
+            throw new Exception($"`AwaitValue` for {typeof(T).Name} returned unexpectedly.");
         }
 
         /// <summary>
@@ -216,6 +216,7 @@ namespace Golem.Tests
         protected GolemRequestor? _requestor;
         protected AppKey? _requestorAppKey;
         protected String _testClassName;
+        protected GolemRequestor? _requestor2;
 
 
         public JobsTestBase(ITestOutputHelper outputHelper, GolemFixture golemFixture, string testClassName) : base(outputHelper)
@@ -228,6 +229,7 @@ namespace Golem.Tests
             var loggerProvider = new TestLoggerProvider(golemFixture.Sink);
             _loggerFactory = LoggerFactory.Create(builder => builder
                 .AddFilter("Golem", LogLevel.Debug)
+                .AddFilter("Requestor", LogLevel.Debug)
                 //// Console logger makes `dotnet test` hang on Windows
                 // .AddSimpleConsole(options => options.SingleLine = true)
                 .AddFile(logfile)
@@ -247,7 +249,7 @@ namespace Golem.Tests
             _requestor = await GolemRequestor.Build(_testClassName, _loggerFactory.CreateLogger("Requestor"));
             Assert.True(_requestor.Start());
             _requestor.InitPayment();
-            _requestorAppKey = _requestor.getTestAppKey();
+            _requestorAppKey = _requestor.GetTestAppKey();
         }
 
         public async Task StartGolem(IGolem golem, ChannelReader<GolemStatus> statusChannel)
@@ -280,8 +282,8 @@ namespace Golem.Tests
         /// <exception cref="Exception">Thrown when reading channel exceeds in total `timeoutMs`</exception>
         public async Task<T> ReadChannel<T>(ChannelReader<T> channel, Func<T, bool>? filter = null, TimeSpan? timeout = null)
         {
-            var timeout_ = timeout ?? TimeSpan.FromSeconds(30);
-            return await TestUtils.ReadChannel(channel, filter, timeout_, _logger);
+            timeout ??= TimeSpan.FromSeconds(30);
+            return await TestUtils.ReadChannel(channel, filter, timeout, _logger);
         }
 
         public async Task<T> AwaitValue<T>(ChannelReader<T> channel, T expected, TimeSpan? timeout = null)

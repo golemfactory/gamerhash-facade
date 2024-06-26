@@ -110,7 +110,7 @@ namespace Golem.Yagna
         private readonly EventsPublisher _events;
 
 
-        private Process? ProviderProcess { get; set; }
+        public Process? ProviderProcess { get; private set; }
         private SemaphoreSlim ProcLock { get; } = new SemaphoreSlim(1, 1);
 
         public Provider(string golemPath, string? dataDir, EventsPublisher events, ILoggerFactory loggerFactory)
