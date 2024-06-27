@@ -11,12 +11,18 @@ using Microsoft.Extensions.Options;
 /// </summary>
 public class GolemUsage : GolemPrice
 {
+    private const int DIGITS = 15;
+    private static decimal Round(decimal v) => Math.Round(v, DIGITS);
+
     public decimal Reward(GolemPrice prices)
     {
-        return prices.StartPrice * this.StartPrice
-            + prices.GpuPerSec * this.GpuPerSec
-            + prices.NumRequests * this.NumRequests
-            + prices.EnvPerSec * this.EnvPerSec;
+        var result = 
+                Round(prices.StartPrice) * Round(this.StartPrice)
+                + Round(prices.GpuPerSec) * Round(this.GpuPerSec)
+                + Round(prices.NumRequests) * Round(this.NumRequests)
+                + Round(prices.EnvPerSec) * Round(this.EnvPerSec);
+
+        return result;
     }
 
     // Constructor from GolemPrice
