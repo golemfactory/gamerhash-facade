@@ -11,12 +11,18 @@ using Microsoft.Extensions.Options;
 /// </summary>
 public class GolemUsage : GolemPrice
 {
+    // according to https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/floating-point-numeric-types
+    // double precision is 15-17 digits
+    // for compatibility with Rust ::std::f64::DIGITS this is hardcoded to 15
+    private const int DIGITS = 15;
+    private static decimal Round(decimal v) => Math.Round(v, DIGITS);
+
     public decimal Reward(GolemPrice prices)
     {
-        return prices.StartPrice * this.StartPrice
-            + prices.GpuPerSec * this.GpuPerSec
-            + prices.NumRequests * this.NumRequests
-            + prices.EnvPerSec * this.EnvPerSec;
+        return Round(prices.StartPrice) * Round(this.StartPrice)
+                + Round(prices.GpuPerSec) * Round(this.GpuPerSec)
+                + Round(prices.NumRequests) * Round(this.NumRequests)
+                + Round(prices.EnvPerSec) * Round(this.EnvPerSec);
     }
 
     // Constructor from GolemPrice

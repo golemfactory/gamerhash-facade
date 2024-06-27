@@ -18,6 +18,8 @@ Mock/obj/
 /Golem.Tests/Tools/App/build
 /Golem.Tests/Tools/App/dist
 /Golem.Tests/Tools/App/app.spec
+/GolemLib.Tests/bin/
+/GolemLib.Tests/obj/
 
 /Golem.Tools/bin/
 /Golem.Tools/obj/
