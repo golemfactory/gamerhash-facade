@@ -20,7 +20,9 @@ namespace Golem.Tests
     {
         public JobStatusTests(ITestOutputHelper outputHelper, GolemFixture golemFixture)
             : base(outputHelper, golemFixture, nameof(JobStatusTests))
-        { }
+        {
+            Environment.SetEnvironmentVariable("DEBIT_NOTE_ACCEPTANCE_DEADLINE", "30s");
+        }
 
         [Fact]
         public async Task RequestorBreaksAgreement_KillingScript()
