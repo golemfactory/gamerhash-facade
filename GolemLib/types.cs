@@ -19,13 +19,10 @@ public class GolemUsage : GolemPrice
 
     public decimal Reward(GolemPrice prices)
     {
-        var result = 
-                Round(prices.StartPrice) * Round(this.StartPrice)
+        return Round(prices.StartPrice) * Round(this.StartPrice)
                 + Round(prices.GpuPerSec) * Round(this.GpuPerSec)
                 + Round(prices.NumRequests) * Round(this.NumRequests)
                 + Round(prices.EnvPerSec) * Round(this.EnvPerSec);
-
-        return result;
     }
 
     // Constructor from GolemPrice
