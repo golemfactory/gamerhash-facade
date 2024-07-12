@@ -224,6 +224,7 @@ namespace Golem.Yagna
                 var env = new Dictionary<string, string>(Env);
                 env["MIN_AGREEMENT_EXPIRATION"] = "30s";
                 env["YAGNA_APPKEY"] = appKey;
+                env["RUST_LOG"] = "debug,ya_client=info";
 
                 ProviderProcess = await Task.Run(() => ProcessFactory.StartProcess(_yaProviderPath, arguments, env));
                 ChildProcessTracker.AddProcess(ProviderProcess);

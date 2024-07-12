@@ -5,11 +5,11 @@ namespace Golem.Yagna
         public const String DefaultLocalAddress = "127.0.0.1";
         public const int DefaultGsbPort = 12501;
         public const int DefaultApiPort = 12502;
-        
+
         public const String DefaultBindAddress = "0.0.0.0";
         public const int DefaultBindPort = 12503;
 
-        private static readonly Dictionary<string, string> defaultEnv = new Dictionary<string, string>()
+        private static readonly Dictionary<string, string> DefaultEnv = new Dictionary<string, string>()
         {
             { "GSB_URL", $@"tcp://{DefaultLocalAddress}:{DefaultGsbPort}" },
             { "YAGNA_API_URL", $@"http://{DefaultLocalAddress}:{DefaultApiPort}" },
@@ -17,7 +17,7 @@ namespace Golem.Yagna
             { "YA_NET_BROADCAST_SIZE", "12" },
             { "YA_NET_RELAY_HOST", "yacn2.dev.golem.network:7477" },
             { "YA_NET_TYPE", "hybrid" },
-            { "EXE_UNIT_FILE_LOG_LEVEL", "debug,h2=info" },
+            { "EXE_UNIT_FILE_LOG_LEVEL", "debug,h2=info,hyper=info,hyper_util=info" },
             { "BCAST_NODE_BAN_TIMEOUT", "5s" },
         };
 
@@ -97,7 +97,7 @@ namespace Golem.Yagna
 
         public Dictionary<string, string> Build()
         {
-            foreach (var kvp in defaultEnv)
+            foreach (var kvp in DefaultEnv)
             {
                 if (!env.ContainsKey(kvp.Key) && Environment.GetEnvironmentVariable(kvp.Key) == null)
                 {
