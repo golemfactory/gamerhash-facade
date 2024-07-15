@@ -122,7 +122,7 @@ namespace App
 
                 Message = "Payment Initialization";
                 _logger.LogInformation("Initializing payment accounts for: " + Name);
-                await Task.Run(() => Requestor.InitPayment());
+                await Task.Run(async () => await Requestor.InitPayment());
 
                 _logger.LogInformation("Creating requestor application: " + Name);
                 Message = "Starting Application";

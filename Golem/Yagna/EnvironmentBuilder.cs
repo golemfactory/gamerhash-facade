@@ -21,77 +21,84 @@ namespace Golem.Yagna
             { "BCAST_NODE_BAN_TIMEOUT", "5s" },
         };
 
-        private readonly Dictionary<string, string> env = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _env = new Dictionary<string, string>();
+
+
+        public string this[string key]
+        {
+            get => _env[key];
+            set => _env[key] = value;
+        }
 
         public EnvironmentBuilder WithGsbUrl(string s)
         {
-            env["GSB_URL"] = s;
+            _env["GSB_URL"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithMetricsGroup(string s)
         {
-            env["YAGNA_METRICS_GROUP"] = s;
+            _env["YAGNA_METRICS_GROUP"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithYagnaApiUrl(string s)
         {
-            env["YAGNA_API_URL"] = s;
+            _env["YAGNA_API_URL"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithYagnaAppKey(string s)
         {
-            env["YAGNA_APPKEY"] = s;
+            _env["YAGNA_APPKEY"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithYaNetBindUrl(string s)
         {
-            env["YA_NET_BIND_URL"] = s;
+            _env["YA_NET_BIND_URL"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithExeUnitPath(string s)
         {
-            env["EXE_UNIT_PATH"] = s;
+            _env["EXE_UNIT_PATH"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithDataDir(string s)
         {
-            env["DATA_DIR"] = s;
+            _env["DATA_DIR"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithYagnaDataDir(string s)
         {
-            env["YAGNA_DATADIR"] = s;
+            _env["YAGNA_DATADIR"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithYaNetRelayHost(string s)
         {
-            env["YA_NET_RELAY_HOST"] = s;
+            _env["YA_NET_RELAY_HOST"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithPrivateKey(string s)
         {
-            env["YAGNA_AUTOCONF_ID_SECRET"] = s;
+            _env["YAGNA_AUTOCONF_ID_SECRET"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithAppKey(string s)
         {
-            env["YAGNA_AUTOCONF_APPKEY"] = s;
+            _env["YAGNA_AUTOCONF_APPKEY"] = s;
             return this;
         }
 
         public EnvironmentBuilder WithSslCertFile(string s)
         {
-            env["SSL_CERT_FILE"] = s;
+            _env["SSL_CERT_FILE"] = s;
             return this;
         }
 
@@ -99,12 +106,12 @@ namespace Golem.Yagna
         {
             foreach (var kvp in DefaultEnv)
             {
-                if (!env.ContainsKey(kvp.Key) && Environment.GetEnvironmentVariable(kvp.Key) == null)
+                if (!_env.ContainsKey(kvp.Key) && Environment.GetEnvironmentVariable(kvp.Key) == null)
                 {
-                    env.Add(kvp.Key, kvp.Value);
+                    _env.Add(kvp.Key, kvp.Value);
                 }
             }
-            return env;
+            return _env;
         }
     }
 }

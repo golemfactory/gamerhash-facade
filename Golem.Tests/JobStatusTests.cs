@@ -29,7 +29,7 @@ namespace Golem.Tests
         public async Task RequestorBreaksAgreement_KillingScript()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
             _logger.LogInformation($"Path: {golemPath}");
 
             await StartGolem(golem, StatusChannel(golem));
@@ -72,7 +72,7 @@ namespace Golem.Tests
         public async Task ProviderBreaksAgreement_Graceful()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
             _logger.LogInformation($"Path: {golemPath}");
 
             await StartGolem(golem, StatusChannel(golem));
@@ -112,7 +112,7 @@ namespace Golem.Tests
         public async Task RequestorBreaksAgreement_FastTerminatingScript()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
             _logger.LogInformation($"Path: {golemPath}");
 
             await StartGolem(golem, StatusChannel(golem));
@@ -164,7 +164,7 @@ namespace Golem.Tests
         public async Task ProviderBreaksAgreement_KillingAgent()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
             _logger.LogInformation($"Path: {golemPath}");
 
             await StartGolem(golem, StatusChannel(golem));
@@ -207,7 +207,7 @@ namespace Golem.Tests
         public async Task ProviderBreaksAgreement_KillingYagna()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
             _logger.LogInformation($"Path: {golemPath}");
 
             await StartGolem(golem, StatusChannel(golem));
@@ -249,7 +249,7 @@ namespace Golem.Tests
         public async Task ProviderBreaksAgreement_KillingExeUnit()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
             _logger.LogInformation($"Path: {golemPath}");
 
             await StartGolem(golem, StatusChannel(golem));
@@ -300,11 +300,12 @@ namespace Golem.Tests
             // Run Requestor yagna before starting Provider to speed up Offers propagation.
             await using var requestor = await GolemRequestor.Build("RequestorBreaksAgreement_KillingYagna", _loggerFactory.CreateLogger("Requestor2"));
             requestor.AutoSetUrls(11000);
+            requestor.SetSecret("test_key_2.plain");
             Assert.True(requestor.Start());
-            requestor.InitPayment();
+            await requestor.InitPayment();
 
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
             _logger.LogInformation($"Path: {golemPath}");
 
             await StartGolem(golem, StatusChannel(golem));
@@ -347,7 +348,7 @@ namespace Golem.Tests
         public async Task ProviderRestart_RequestorBreaksAgreement()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
             _logger.LogInformation($"Path: {golemPath}");
 
             await StartGolem(golem, StatusChannel(golem));
@@ -417,7 +418,7 @@ namespace Golem.Tests
         public async Task ProviderRestart_ProviderBreaksAgreement()
         {
             string golemPath = await PackageBuilder.BuildTestDirectory();
-            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
             _logger.LogInformation($"Path: {golemPath}");
 
             await StartGolem(golem, StatusChannel(golem));
