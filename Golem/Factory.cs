@@ -43,7 +43,7 @@ namespace Golem
         public static RelayType DecideRelayType()
         {
             var env = Environment.GetEnvironmentVariable("GOLEM_RELAY_TYPE") ?? "";
-            return Enum.TryParse(env, out RelayType relay) ? relay : RelayType.Public;
+            return Enum.TryParse(env, out RelayType relay) ? relay : RelayType.Central;
         }
 
         private static async Task ConfigureAccess(Golem golem, string dir, bool mainnet, ILoggerFactory loggerFactory)

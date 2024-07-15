@@ -19,7 +19,7 @@ public class AppArguments
 {
     [Option('g', "golem", Required = true, HelpText = "Path to a folder with golem executables (modules)")]
     public string? GolemPath { get; set; }
-    [Option('r', "relay", Default = RelayType.Public, Required = false, HelpText = "Change relay to devnet yacn2a, local or central net")]
+    [Option('r', "relay", Default = RelayType.Central, Required = false, HelpText = "Change relay to devnet yacn2a, local or central net")]
     public required RelayType Relay { get; set; }
     [Option('f', "framework", Default = Framework.Automatic, Required = false, HelpText = "Type of AI Framework to run")]
     public required Framework AiFramework { get; set; }
