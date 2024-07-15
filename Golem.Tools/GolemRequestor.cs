@@ -130,6 +130,7 @@ namespace Golem.Tools
         {
             AppKey = appKey;
             _env.WithAppKey(appKey);
+            _env.WithYagnaAppKey(appKey);
         }
 
         public SampleApp CreateSampleApp(string? extraArgs = null)
