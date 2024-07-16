@@ -192,7 +192,7 @@ namespace Golem.Tests
             _logger.LogInformation("=================== Killing Provider Agent ===================");
             var pid = golem.GetProviderPid();
             if (pid.HasValue)
-                Process.GetProcessById(pid.Value).Kill();
+                Process.GetProcessById(pid.Value).Kill(true);
 
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Interrupted, TimeSpan.FromSeconds(30));
             Assert.Equal(JobStatus.Interrupted, currentJob.Status);
@@ -235,7 +235,7 @@ namespace Golem.Tests
             _logger.LogInformation("=================== Killing Provider Yagna ===================");
             var pid = golem.GetYagnaPid();
             if (pid.HasValue)
-                Process.GetProcessById(pid.Value).Kill();
+                Process.GetProcessById(pid.Value).Kill(true);
 
             await AwaitValue<Job?>(jobChannel, null, TimeSpan.FromSeconds(30));
             Assert.Null(golem.CurrentJob);
@@ -381,7 +381,7 @@ namespace Golem.Tests
             var golemStatusChannel = StatusChannel(golem);
             var pid = golem.GetProviderPid();
             if (pid.HasValue)
-                Process.GetProcessById(pid.Value).Kill();
+                Process.GetProcessById(pid.Value).Kill(true);
 
             _logger.LogInformation("=================== Killing App ===================");
             // Note: We need to manually send termination from Requestor with correct Reason.
@@ -451,7 +451,7 @@ namespace Golem.Tests
             var golemStatusChannel = StatusChannel(golem);
             var pid = golem.GetProviderPid();
             if (pid.HasValue)
-                Process.GetProcessById(pid.Value).Kill();
+                Process.GetProcessById(pid.Value).Kill(true);
 
             _logger.LogInformation("=================== Killing App ===================");
             // Note: Provider needs to send termination with correct Reason.
