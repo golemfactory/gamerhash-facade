@@ -374,6 +374,12 @@ namespace Golem.Tests
             // Let him compute for a while.
             await Task.Delay(TimeSpan.FromSeconds(2));
 
+            _logger.LogInformation("=================== Killing App ===================");
+            // Note: We need to manually send termination from Requestor with correct Reason.
+            // It's better to avoid yapapi finding out that Provider stopped working, because it
+            // could take action otherwise.
+            await app.Stop(StopMethod.SigKill);
+
             _logger.LogInformation("=================== Killing Provider Agent ===================");
             // Provider is killed so he is not able to terminate Agreement.
             // Yagna has chance to be closed gracefully and close net connection with Requestor.
@@ -382,12 +388,6 @@ namespace Golem.Tests
             var pid = golem.GetProviderPid();
             if (pid.HasValue)
                 Process.GetProcessById(pid.Value).Kill(true);
-
-            _logger.LogInformation("=================== Killing App ===================");
-            // Note: We need to manually send termination from Requestor with correct Reason.
-            // It's better to avoid yapapi finding out that Provider stopped working, because it
-            // could take action otherwise.
-            await app.Stop(StopMethod.SigKill);
 
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Interrupted, TimeSpan.FromSeconds(30));
             Assert.Equal(JobStatus.Interrupted, currentJob.Status);
