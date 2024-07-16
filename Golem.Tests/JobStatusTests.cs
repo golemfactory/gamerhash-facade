@@ -274,6 +274,10 @@ namespace Golem.Tests
             // Let him compute for a while.
             await Task.Delay(2 * 1000);
 
+            _logger.LogInformation("=================== Killing App ===================");
+            // Killing app, so it won't terminate Agreement.
+            await app.Stop(StopMethod.SigKill);
+
             _logger.LogInformation("=================== Killing Runtime ===================");
             // TODO: How to avoid killing runtimes managed by non-test runs??
             var runtimes = Process.GetProcessesByName("ya-runtime-ai").ToList();
@@ -282,10 +286,6 @@ namespace Golem.Tests
             runtimes.Last().Kill(true);
 
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Idle, TimeSpan.FromSeconds(15));
-
-            _logger.LogInformation("=================== Killing App ===================");
-            // Killing app, so it won't terminate Agreement.
-            await app.Stop(StopMethod.SigKill);
 
             // Task should be Interrupted after Provider won't get new Activity from Requestor.
             await AwaitValue<JobStatus>(jobStatusChannel, JobStatus.Interrupted, TimeSpan.FromSeconds(100));
