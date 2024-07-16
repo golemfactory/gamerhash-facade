@@ -29,7 +29,7 @@ namespace Golem.Tests
             string golemPath = await PackageBuilder.BuildTestDirectory();
             _logger.LogInformation("Path: " + golemPath);
 
-            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.Local);
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
 
             var statusChannel = StatusChannel(golem);
 

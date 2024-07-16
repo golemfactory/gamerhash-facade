@@ -212,7 +212,7 @@ namespace Golem.Tests
     {
         protected readonly ILoggerFactory _loggerFactory;
         protected readonly ILogger _logger;
-        protected GolemRelay? _relay;
+        protected GolemCentralNet? _router;
         protected GolemRequestor? _requestor;
         protected AppKey? _requestorAppKey;
         protected String _testClassName;
@@ -240,15 +240,15 @@ namespace Golem.Tests
 
         public async Task InitializeAsync()
         {
-            var testDir = PackageBuilder.TestDir($"{_testClassName}_relay");
-            _relay = await GolemRelay.Build(testDir, _loggerFactory.CreateLogger("Relay"));
-            Assert.True(_relay.Start());
-            NetConfig.SetEnv(RelayType.Local);
+            var testDir = PackageBuilder.TestDir($"{_testClassName}_router");
+            _router = await GolemCentralNet.Build(testDir, _loggerFactory.CreateLogger("Router"));
+            Assert.True(_router.Start());
+            NetConfig.SetEnv(RelayType.LocalCentral);
             System.Environment.SetEnvironmentVariable("RUST_LOG", "debug");
 
             _requestor = await GolemRequestor.Build(_testClassName, _loggerFactory.CreateLogger("Requestor"));
             Assert.True(_requestor.Start());
-            _requestor.InitPayment();
+            await _requestor.InitPayment();
             _requestorAppKey = _requestor.GetTestAppKey();
         }
 
@@ -319,8 +319,8 @@ namespace Golem.Tests
             if (_requestor != null)
                 await _requestor.Stop(StopMethod.SigInt);
 
-            if (_relay != null)
-                await _relay.Stop(StopMethod.SigInt);
+            if (_router != null)
+                await _router.Stop(StopMethod.SigInt);
         }
 
         public void Dispose()

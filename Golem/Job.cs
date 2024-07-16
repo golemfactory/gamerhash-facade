@@ -195,7 +195,12 @@ namespace Golem.Yagna.Types
                 "RequestorUnreachable" => JobStatus.Interrupted,
                 "Shutdown" => JobStatus.Interrupted,
                 "Interrupted" => JobStatus.Interrupted,
+                "HealthCheckFailed" => JobStatus.Interrupted,
+                "ConnectionTimedOut" => JobStatus.Interrupted,
+                "ProviderUnreachable" => JobStatus.Interrupted,
                 "Expired" => JobStatus.Finished,
+                "NotSpecified" => JobStatus.Finished,
+                "NoLongerNeeded" => JobStatus.Finished,
                 "Cancelled" => JobStatus.Finished,
                 _ => JobStatus.Finished,
             };

@@ -21,6 +21,10 @@ namespace Golem
         /// </summary>
         Central,
         /// <summary>
+        /// Use central net local setup.
+        /// </summary>
+        LocalCentral,
+        /// <summary>
         /// Facade won't set any value. It must be set from outside using env variables.
         /// </summary>
         None,
@@ -48,6 +52,11 @@ namespace Golem
             {
                 Environment.SetEnvironmentVariable("YA_NET_TYPE", "central");
                 // Will use default yagna central net configuration: resolving `_net._tcp.dev.golem.network` record.
+            }
+            else if (relay == RelayType.LocalCentral)
+            {
+                Environment.SetEnvironmentVariable("YA_NET_TYPE", "central");
+                Environment.SetEnvironmentVariable("CENTRAL_NET_HOST", "127.0.0.1:6464");
             }
         }
     }
