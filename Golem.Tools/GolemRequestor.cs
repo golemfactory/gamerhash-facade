@@ -49,13 +49,12 @@ namespace Golem.Tools
             _mainnet = mainnet;
             _dataDir = Path.GetFullPath(Path.Combine(dir, "modules", "golem-data", "yagna"));
 
-            var envBuilder = new EnvironmentBuilder();
-            envBuilder.WithYagnaDataDir(_dataDir);
-            envBuilder.WithYagnaApiUrl(ApiUrl);
-            envBuilder.WithGsbUrl(GsbUrl);
-            envBuilder.WithYaNetBindUrl(NetBindUrl);
-            envBuilder.WithMetricsGroup("Example-GamerHash");
-            _env = envBuilder;
+            _env = new EnvironmentBuilder();
+            _env.WithYagnaDataDir(_dataDir);
+            _env.WithYagnaApiUrl(ApiUrl);
+            _env.WithGsbUrl(GsbUrl);
+            _env.WithYaNetBindUrl(NetBindUrl);
+            _env.WithMetricsGroup("Example-GamerHash");
 
             SetSecret(_mainnet ? "main_key.plain" : "test_key.plain");
             SetAppKey(GenerateRandomAppkey());

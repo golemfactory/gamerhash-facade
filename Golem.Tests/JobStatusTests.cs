@@ -480,9 +480,9 @@ namespace Golem.Tests
             Assert.Equal(JobStatus.Interrupted, prevJob.Status);
 
             _logger.LogInformation("=================== Requestor terminates Agreement ===================");
-            // Try to terminate Agreement with Reason which in normal situation would be treated as correct termination
-            // resulting in Finished status. If Provider didn't terminate Agreement with Reason leading to Interrupted
-            // state, then JobStatus would be restored to Finished and it would reveal error.
+            // Provider should have already noticed that Agreement was terminated and changed the status to Interrupted.
+            // Let's try to terminate Agreement from Requestor with Reason resulting in Finished status.
+            // If Provider didn't work correctly, status will be restored to Finished.
             var rest = _requestor.Rest ?? throw new Exception("Rest api on Requestor not initialized.");
             var reason = new Reason(null!, "Agreement is no longer needed");
             reason.RequestorCode = "NoLongerNeeded";
