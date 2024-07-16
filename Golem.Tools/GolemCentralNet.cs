@@ -20,7 +20,7 @@ namespace Golem.Tools
         {
             var working_dir = Path.Combine(_dir, "modules", "golem-data", "central-net");
             Directory.CreateDirectory(working_dir);
-            return StartProcess("modules/golem/ya-sb-router", working_dir, "-l tcp://127.0.0.1:6464", new Dictionary<string, string>());
+            return StartProcess("ya-sb-router", working_dir, "-l tcp://127.0.0.1:6464", new Dictionary<string, string>());
         }
 
         protected static async Task<string> BuildCentralNetDir(string test_dir)
