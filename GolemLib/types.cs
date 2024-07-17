@@ -3,6 +3,7 @@ namespace GolemLib.Types;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Globalization;
 
 using Microsoft.Extensions.Options;
 
@@ -14,8 +15,14 @@ public class GolemUsage : GolemPrice
     // according to https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/floating-point-numeric-types
     // double precision is 15-17 digits
     // for compatibility with Rust ::std::f64::DIGITS this is hardcoded to 15
-    private const int DIGITS = 15;
-    private static decimal Round(decimal v) => Math.Round(v, DIGITS);
+    public static decimal Round(decimal v) => GolemUsage.RoundThroughDouble(v);
+
+    private static decimal RoundThroughDouble(decimal i)
+    {
+        // Print to string with exponential notation including 15 significant digits.
+        var formattedDouble = ((double)i).ToString("E15", CultureInfo.InvariantCulture);
+        return decimal.Parse(formattedDouble, System.Globalization.NumberStyles.Float);
+    }
 
     public decimal Reward(GolemPrice prices)
     {
