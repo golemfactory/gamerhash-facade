@@ -2,6 +2,7 @@ using GolemLib.Types;
 
 namespace GolemLib.Tests;
 
+// The following tests ensure that C# code's behavior matches Rust's one.
 public class TypesTests
 {
     [Fact]
