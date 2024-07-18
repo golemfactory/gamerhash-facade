@@ -17,7 +17,7 @@ public class GolemUsage : GolemPrice
     // I couldn't find definite answer if C#'s `double` is IEEE-754 compliant floating number:
     // https://csharpindepth.com/Articles/FloatingPoint claims that it is, stackoverflow claimed that it isn't.
     // Still, both `double` and IEEE-754 64-bit floating numbers use 52 bits for binary significant digits,
-    // which correspond to - depending or value of the highest digits - 15 to 17 decimal digits.
+    // which correspond to - depending or value of the highest mantisse bits - 15 to 17 decimal digits.
     // Rust library `bignum` in version 0.2 currently used in `yagna` incorrectly handles the most significant
     // digits when parsing floats. In order to get the same results in Rust and C#, we need to match its behavior.
     private static decimal RustCompatibilityRound(decimal i)
