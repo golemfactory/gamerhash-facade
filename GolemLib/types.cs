@@ -3,6 +3,7 @@ namespace GolemLib.Types;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Globalization;
 
 using Microsoft.Extensions.Options;
 
@@ -11,11 +12,23 @@ using Microsoft.Extensions.Options;
 /// </summary>
 public class GolemUsage : GolemPrice
 {
-    // according to https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/floating-point-numeric-types
-    // double precision is 15-17 digits
-    // for compatibility with Rust ::std::f64::DIGITS this is hardcoded to 15
-    private const int DIGITS = 15;
-    private static decimal Round(decimal v) => Math.Round(v, DIGITS);
+    public static decimal Round(decimal v) => GolemUsage.RustCompatibilityRound(v);
+
+    // I couldn't find definite answer if C#'s `double` is IEEE-754 compliant floating number:
+    // https://csharpindepth.com/Articles/FloatingPoint claims that it is, stackoverflow claimed that it isn't.
+    // Still, both `double` and IEEE-754 64-bit floating numbers use 52 bits for binary significant digits,
+    // which correspond to - depending or value of the highest mantisse bits - 15 to 17 decimal digits.
+    // Rust library `bignum` in version 0.2 currently used in `yagna` incorrectly handles the most significant
+    // digits when parsing floats. In order to get the same results in Rust and C#, we need to match its behavior.
+    private static decimal RustCompatibilityRound(decimal i)
+    {
+        // `decimal` constructor using `double` argument truncates the value to 15 significant digits.
+        // To receive a more accurate result (needed to match Rust's behavior), we need to use the `string`-based construction method.
+
+        // Print to string with exponential notation including 16 significant digits (1 integer digit and 15 fractional digits).
+        var formattedDouble = ((double)i).ToString("E15", CultureInfo.InvariantCulture);
+        return decimal.Parse(formattedDouble, NumberStyles.Float);
+    }
 
     public decimal Reward(GolemPrice prices)
     {

@@ -94,7 +94,7 @@ public class GolemPrice : INotifyPropertyChanged, IEquatable<GolemPrice>
         };
     }
 
-    public static GolemPrice From(decimal? InitialPrice, Dictionary<string, decimal> coeffs)
+    public static GolemPrice From(decimal? initialPrice, Dictionary<string, decimal> coeffs)
     {
         if (!coeffs.TryGetValue("ai-runtime.requests", out var numRequests))
             numRequests = 0;
@@ -103,7 +103,7 @@ public class GolemPrice : INotifyPropertyChanged, IEquatable<GolemPrice>
         if (!coeffs.TryGetValue("golem.usage.gpu-sec", out var gpuSec))
             gpuSec = 0;
 
-        var initPrice = InitialPrice ?? 0m;
+        var initPrice = initialPrice ?? 0m;
 
         return new GolemPrice
         {
