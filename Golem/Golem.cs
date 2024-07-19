@@ -200,8 +200,8 @@ namespace Golem
 
                 await StartupProvider(exitHandler, providerCancellationTokenSource.Token);
 
-                // ListJobs will check Jobs from last days and attempt to terminate Agreements, that are still open.
-                var _ = Task.Run(async () => await ListJobs(DateTime.Now - TimeSpan.FromDays(2)));
+                // Check Jobs from previous session and attempt to terminate Agreements, that are still open.
+                var _ = Task.Run(async () => await _jobs.TerminateOrphaned(yagnaCancellationTokenSource.Token));
                 Status = GolemStatus.Ready;
             }
             catch (OperationCanceledException e)

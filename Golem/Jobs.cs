@@ -240,16 +240,7 @@ class Jobs : IJobs, INotifyPropertyChanged
             // Normally we treat Agreements without Activity as `Idle`, but this means that in all these scenarios
             // Agreements from the past would be marked as `Idle`, what is definately not true.
             job.Status = JobStatus.Interrupted;
-
-            try
-            {
-                var reason = new Reason("Interrupted", "Agreement was interrupted and never terminated afterwards");
-                await _yagna.Api.TerminateAgreement(job.Id, reason);
-            }
-            catch (Exception e)
-            {
-                _events.RaiseAndLog(new ApplicationEventArgs("Jobs", $"Failed to terminate hanging Agreement {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e), _logger);
-            }
+            await TerminateIfInterrupted(job);
         }
         else
         {
@@ -390,6 +381,32 @@ class Jobs : IJobs, INotifyPropertyChanged
                 _logger.LogDebug($"Job cleanup: changing {job.Id} status to Interrupted");
                 job.Status = JobStatus.Interrupted;
             }
+        }
+    }
+
+    public async Task TerminateOrphaned(CancellationToken token = default)
+    {
+        foreach (var job in _jobs.Values.Where(job => job.Status == JobStatus.Interrupted))
+        {
+            await TerminateIfInterrupted(job, token);
+        }
+    }
+
+    public async Task TerminateIfInterrupted(Job job, CancellationToken token = default)
+    {
+        if (job.Status != JobStatus.Interrupted)
+            return;
+
+        try
+        {
+            var reason = new Reason("Interrupted", $"Agreement {job.Id} was interrupted and never terminated afterwards");
+            await _yagna.Api.TerminateAgreement(job.Id, reason, token);
+        }
+        catch (Exception e) when (e.IsCancelled())
+        { }
+        catch (Exception e)
+        {
+            _events.RaiseAndLog(new ApplicationEventArgs("Jobs", $"Failed to terminate hanging Agreement {job.Id}: {e.Message}", ApplicationEventArgs.SeverityLevel.Warning, e), _logger);
         }
     }
 }
