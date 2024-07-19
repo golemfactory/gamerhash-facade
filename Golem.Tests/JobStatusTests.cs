@@ -406,7 +406,17 @@ namespace Golem.Tests
             var rest = _requestor.Rest ?? throw new Exception("Rest api on Requestor not initialized.");
             var reason = new Reason(null!, "Healthcheck failed");
             reason.RequestorCode = "HealthCheckFailed";
-            await rest.TerminateAgreement(agreementId, reason);
+
+            try
+            {
+                // Termination should fail, because Provider already terminated Agreement.
+                // But even if he didn't, we should be in Interrupted state anyway, because Reason points to it.
+                await rest.TerminateAgreement(agreementId, reason);
+            }
+            catch (Exception e)
+            {
+                _logger.LogInformation(e, "Failed to terminate agreement");
+            }
 
             // Wait for propagation of termination event
             await Task.Delay(TimeSpan.FromSeconds(2));

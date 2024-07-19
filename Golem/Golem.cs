@@ -199,6 +199,9 @@ namespace Golem
                     ?? throw new Exception("Can't get app-key, neither 'default' nor 'autoconfigured'");
 
                 await StartupProvider(exitHandler, providerCancellationTokenSource.Token);
+
+                // Check Jobs from previous session and attempt to terminate Agreements, that are still open.
+                var _ = Task.Run(async () => await _jobs.TerminateOrphaned(yagnaCancellationTokenSource.Token));
                 Status = GolemStatus.Ready;
             }
             catch (OperationCanceledException e)
