@@ -131,7 +131,7 @@ class ActivityLoop
             if (evt.EventType == AgreementEventType.AgreementTerminatedEvent
                 && Job.ResolveTerminationReason(evt.Code) == JobStatus.Interrupted)
             {
-                _events.RaiseAndLog(new ApplicationEventArgs("AgreementLoop", $"Agreement interrupted with: {evt.Code}, details: {evt.Message}",
+                _events.RaiseAndLog(new ApplicationEventArgs("AgreementLoop", $"Agreement {evt.AgreementID} interrupted with: {evt.Code}, details: {evt.Message}",
                     ApplicationEventArgs.SeverityLevel.Warning, null), _logger);
             }
         });
