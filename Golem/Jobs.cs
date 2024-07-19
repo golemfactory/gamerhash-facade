@@ -388,6 +388,10 @@ class Jobs : IJobs, INotifyPropertyChanged
     {
         foreach (var job in _jobs.Values.Where(job => job.Status == JobStatus.Interrupted))
         {
+            var agreement = await _yagna.Api.GetAgreement(job.Id);
+            if (agreement.State == "Terminated")
+                continue;
+
             await TerminateIfInterrupted(job, token);
         }
     }
