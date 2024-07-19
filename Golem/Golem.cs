@@ -199,6 +199,9 @@ namespace Golem
                     ?? throw new Exception("Can't get app-key, neither 'default' nor 'autoconfigured'");
 
                 await StartupProvider(exitHandler, providerCancellationTokenSource.Token);
+
+                // ListJobs will check Jobs from last days and attempt to terminate Agreements, that are still open.
+                var _ = Task.Run(async () => await ListJobs(DateTime.Now - TimeSpan.FromDays(2)));
                 Status = GolemStatus.Ready;
             }
             catch (OperationCanceledException e)
