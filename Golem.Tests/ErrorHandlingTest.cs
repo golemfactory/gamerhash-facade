@@ -46,7 +46,13 @@ namespace Golem.Tests
             Job? currentJob = await ReadChannel<Job?>(jobChannel);
             Assert.NotNull(currentJob);
             var jobStatusChannel = JobStatusChannel(currentJob);
-            Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel, (JobStatus s) => s == JobStatus.Idle || s == JobStatus.DownloadingModel, TimeSpan.FromSeconds(60)));
+
+            // Wait until ExeUnit will be created.
+            // Workaround for situations, when status update was so fast, that we were not able to create
+            // channel yet, so waiting for update would be pointless.
+            if (currentJob.Status != JobStatus.Computing)
+                Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
+                    (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle, TimeSpan.FromSeconds(60)));
 
             // Access Provider process
             var providerPidFile = Path.Combine(golemPath, "modules", "golem-data", "provider", "ya-provider.pid");
