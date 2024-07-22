@@ -5,6 +5,7 @@ namespace GolemLib.Tests;
 // The following tests ensure that C# code's behavior matches Rust's one.
 public class TypesTests
 {
+
     [Fact]
     public void GolemUsage_Reward_HappyPath()
     {
@@ -151,5 +152,108 @@ public class TypesTests
 
         var reward = usage.Reward(price);
         Assert.Equal(0.088189239176m, reward);
+    }
+
+    public static GolemUsage UsageFromAgreement(decimal[] array)
+    {
+        return new GolemUsage(new GolemPrice
+        {
+            StartPrice = 1.0m,
+            EnvPerSec = array[1],
+            GpuPerSec = array[2],
+            NumRequests = array[0]
+        });
+    }
+
+    public static GolemPrice PriceFromAgreement(decimal[] array)
+    {
+        return new GolemPrice
+        {
+            StartPrice = array[3],
+            EnvPerSec = array[1],
+            GpuPerSec = array[2],
+            NumRequests = array[0]
+        };
+    }
+
+
+    [Fact]
+    public void GolemUsage_Reward_Case1()
+    {
+        var usage = UsageFromAgreement(new decimal[] { 27.0m, 538.8576082m, 8.7264478m });
+        var price = PriceFromAgreement(new decimal[] { 0.0m, 0.0004m, 0.0003m, 0.0002m });
+
+        var reward = usage.Reward(price);
+        Assert.Equal(0.21836097762m, reward);
+    }
+
+    [Fact]
+    public void GolemUsage_Reward_Case2()
+    {
+        var usage = UsageFromAgreement(new decimal[] { 0.0m, 9.119924900000001m, 0.0m });
+        var price = PriceFromAgreement(new decimal[] { 0.0m, 0.0004m, 0.0003m, 0.0002m });
+
+        var reward = usage.Reward(price);
+        Assert.Equal(0.00384796996m, reward);
+    }
+
+    [Fact]
+    public void GolemUsage_Reward_Case3()
+    {
+        var usage = UsageFromAgreement(new decimal[] { 0.0m, 9.1072277m, 0.0m });
+        var price = PriceFromAgreement(new decimal[] { 0.0m, 0.0004m, 0.0003m, 0.0002m });
+
+        var reward = usage.Reward(price);
+        Assert.Equal(0.00384289108m, reward);
+    }
+
+    [Fact]
+    public void GolemUsage_Reward_Case4()
+    {
+        var usage = UsageFromAgreement(new decimal[] { 31.0m, 474.6873272m, 9.761029m });
+        var price = PriceFromAgreement(new decimal[] { 0.0m, 0.0003m, 0.0005m, 0.0m });
+
+        var reward = usage.Reward(price);
+        Assert.Equal(0.147286712660000001m, reward);
+    }
+
+    [Fact]
+    public void GolemUsage_Reward_Case5()
+    {
+        var usage = UsageFromAgreement(new decimal[] { 0.0m, 66.5695986m, 0.0m });
+        var price = PriceFromAgreement(new decimal[] { 0.0m, 0.00025m, 0.00025m, 0.0m });
+
+        var reward = usage.Reward(price);
+        Assert.Equal(0.016642399650000003m, reward);
+    }
+
+    [Fact]
+    public void GolemUsage_Reward_Case6()
+    {
+        var usage = UsageFromAgreement(new decimal[] { 1.0m, 41.4281323m, 9.8315089m });
+        var price = PriceFromAgreement(new decimal[] { 0.0m, 0.00025m, 0.00025m, 0.0m });
+
+        var reward = usage.Reward(price);
+        Assert.Equal(0.0128149103m, reward);
+    }
+
+    [Fact]
+    public void GolemUsage_Reward_Case7()
+    {
+        var usage = UsageFromAgreement(new decimal[] { 0.0m, 9.132793m, 0.0m });
+        var price = PriceFromAgreement(new decimal[] { 0.0m, 0.00025m, 0.00025m, 0.0m });
+
+        var reward = usage.Reward(price);
+        Assert.Equal(0.00228319825m, reward);
+    }
+
+    [Fact]
+    public void GolemUsage_Reward_Case8()
+    {
+        var usage = UsageFromAgreement(new decimal[] { 0.0m, 88.9031127m, 0.0m });
+        var price = PriceFromAgreement(new decimal[] { 0.0m, 0.00025m, 0.00025m, 0.0m });
+
+        var reward = usage.Reward(price);
+        Assert.Equal(0.022225778174999998m, reward);
     }
 }
