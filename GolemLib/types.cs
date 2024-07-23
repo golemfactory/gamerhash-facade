@@ -26,7 +26,8 @@ public class GolemUsage : GolemPrice
         // To receive a more accurate result (needed to match Rust's behavior), we need to use the `string`-based construction method.
 
         // Print to string with exponential notation including 16 significant digits (1 integer digit and 15 fractional digits).
-        var formattedDouble = ((double)i).ToString("E15", CultureInfo.InvariantCulture);
+        var formattedDecimal = double.Parse(i.ToString("E15", CultureInfo.InvariantCulture));
+        var formattedDouble = formattedDecimal.ToString("E15", CultureInfo.InvariantCulture);
         return decimal.Parse(formattedDouble, NumberStyles.Float);
     }
 

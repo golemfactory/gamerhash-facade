@@ -184,7 +184,7 @@ public class TypesTests
         var price = PriceFromAgreement(new decimal[] { 0.0m, 0.0004m, 0.0003m, 0.0002m });
 
         var reward = usage.Reward(price);
-        Assert.Equal(0.21836097762m, reward);
+        Assert.Equal(0.2183609776200000003m, reward);
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class TypesTests
         var price = PriceFromAgreement(new decimal[] { 0.0m, 0.0004m, 0.0003m, 0.0002m });
 
         var reward = usage.Reward(price);
-        Assert.Equal(0.00384796996m, reward);
+        Assert.Equal(0.0038479699600000004m, reward);
     }
 
     [Fact]
@@ -204,7 +204,7 @@ public class TypesTests
         var price = PriceFromAgreement(new decimal[] { 0.0m, 0.0004m, 0.0003m, 0.0002m });
 
         var reward = usage.Reward(price);
-        Assert.Equal(0.00384289108m, reward);
+        Assert.Equal(0.0038428910799999996m, reward);
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public class TypesTests
         var price = PriceFromAgreement(new decimal[] { 0.0m, 0.0003m, 0.0005m, 0.0m });
 
         var reward = usage.Reward(price);
-        Assert.Equal(0.147286712660000001m, reward);
+        Assert.Equal(0.1472867126600000005m, reward);
     }
 
     [Fact]
@@ -224,7 +224,7 @@ public class TypesTests
         var price = PriceFromAgreement(new decimal[] { 0.0m, 0.00025m, 0.00025m, 0.0m });
 
         var reward = usage.Reward(price);
-        Assert.Equal(0.016642399650000003m, reward);
+        Assert.Equal(0.0166423996500000025m, reward);
     }
 
     [Fact]
@@ -234,7 +234,7 @@ public class TypesTests
         var price = PriceFromAgreement(new decimal[] { 0.0m, 0.00025m, 0.00025m, 0.0m });
 
         var reward = usage.Reward(price);
-        Assert.Equal(0.0128149103m, reward);
+        Assert.Equal(0.01281491029999999975m, reward);
     }
 
     [Fact]
@@ -244,7 +244,7 @@ public class TypesTests
         var price = PriceFromAgreement(new decimal[] { 0.0m, 0.00025m, 0.00025m, 0.0m });
 
         var reward = usage.Reward(price);
-        Assert.Equal(0.00228319825m, reward);
+        Assert.Equal(0.00228319824999999975m, reward);
     }
 
     [Fact]
@@ -254,6 +254,6 @@ public class TypesTests
         var price = PriceFromAgreement(new decimal[] { 0.0m, 0.00025m, 0.00025m, 0.0m });
 
         var reward = usage.Reward(price);
-        Assert.Equal(0.022225778174999998m, reward);
+        Assert.Equal(0.0222257781749999975m, reward);
     }
 }
