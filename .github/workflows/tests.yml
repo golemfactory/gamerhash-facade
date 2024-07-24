@@ -37,6 +37,7 @@ jobs:
           Golem.Tests/tests/*.log
           Golem.Tests/tests/*/modules/golem-data/yagna/*.log
           Golem.Tests/tests/*/modules/golem-data/provider/*.log
+          Golem.Tests/tests/*/modules/golem-data/provider/*.json
           Golem.Tests/tests/*/modules/golem-data/provider/exe-unit/work/logs/*.log
           Golem.Tests/tests/*/modules/golem-data/provider/exe-unit/work/*/agreement.json
           Golem.Tests/tests/*/modules/golem-data/provider/exe-unit/work/*/*/*.log
