@@ -25,8 +25,11 @@ public class GolemUsage : GolemPrice
         // `decimal` constructor using `double` argument truncates the value to 15 significant digits.
         // To receive a more accurate result (needed to match Rust's behavior), we need to use the `string`-based construction method.
 
-        // Print to string with exponential notation including 16 significant digits (1 integer digit and 15 fractional digits).
+        // Decimal -> double default conversion rounds decimal in a way that after converting back to decimal we get different number.
+        // FOr this reason we need to use string as an intermediate step.
         var formattedDecimal = double.Parse(i.ToString("E15", CultureInfo.InvariantCulture));
+
+        // Print to string with exponential notation including 16 significant digits (1 integer digit and 15 fractional digits).
         var formattedDouble = formattedDecimal.ToString("E15", CultureInfo.InvariantCulture);
         return decimal.Parse(formattedDouble, NumberStyles.Float);
     }
