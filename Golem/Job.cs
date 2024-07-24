@@ -214,8 +214,7 @@ namespace Golem.Yagna.Types
             Logger.LogInformation($"Job: {this.Id}, confirmed sum: {confirmedSum}, job expected reward: {this.CurrentReward}");
 
             // Workaround for yagna unable to change status to SETTLED when using partial payments
-            if (suggestedPaymentStatus == GolemLib.Types.PaymentStatus.Accepted
-                && this.CurrentReward == confirmedSum)
+            if (this.CurrentReward == confirmedSum)
             {
                 return IntoPaymentStatus(InvoiceStatus.SETTLED);
             }
