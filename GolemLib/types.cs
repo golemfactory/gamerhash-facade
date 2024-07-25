@@ -14,6 +14,9 @@ public class GolemUsage : GolemPrice
 {
     public static decimal Round(decimal v) => GolemUsage.RustCompatibilityRound(v);
 
+    // Print to string with exponential notation including 16 significant digits (1 integer digit and 15 fractional digits).
+    private const string print16SignificantDigitsFormat = "E15";
+
     // I couldn't find definite answer if C#'s `double` is IEEE-754 compliant floating number:
     // https://csharpindepth.com/Articles/FloatingPoint claims that it is, stackoverflow claimed that it isn't.
     // Still, both `double` and IEEE-754 64-bit floating numbers use 52 bits for binary significant digits,
@@ -22,11 +25,14 @@ public class GolemUsage : GolemPrice
     // digits when parsing floats. In order to get the same results in Rust and C#, we need to match its behavior.
     private static decimal RustCompatibilityRound(decimal i)
     {
-        // `decimal` constructor using `double` argument truncates the value to 15 significant digits.
-        // To receive a more accurate result (needed to match Rust's behavior), we need to use the `string`-based construction method.
+        // `decimal` constructor using `double` argument truncates the value to 15 decimal significant digits.
+        // `decimal` to double cast also truncates the argument to 15 decimal significant digits.
+        // To receive a more accurate result (needed to match Rust's behavior), we need to use the `string`-based construction methods.
 
-        // Print to string with exponential notation including 16 significant digits (1 integer digit and 15 fractional digits).
-        var formattedDouble = ((double)i).ToString("E15", CultureInfo.InvariantCulture);
+        string formattedDecimal = i.ToString(print16SignificantDigitsFormat, CultureInfo.InvariantCulture);
+        // We need to go through a `double` to introduce float inaccuracies to match Rust's behavior.
+        double doubleIntroducingInaccuracy = double.Parse(formattedDecimal);
+        string formattedDouble = doubleIntroducingInaccuracy.ToString(print16SignificantDigitsFormat, CultureInfo.InvariantCulture);
         return decimal.Parse(formattedDouble, NumberStyles.Float);
     }
 
