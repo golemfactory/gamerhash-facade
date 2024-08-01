@@ -102,6 +102,11 @@ namespace Golem.Yagna
             return this;
         }
 
+        public EnvironmentBuilder WithYaUseHttpsDnsResolver() {
+            _env["YA_USE_HTTPS_DNS_RESOLVER"] = "1";
+            return this;
+        }
+
         public Dictionary<string, string> Build()
         {
             foreach (var kvp in DefaultEnv)
