@@ -1,5 +1,5 @@
 param (
-    [string]$automatic_runtime_package_url = "https://gpu-on-golem.s3.eu-central-1.amazonaws.com/sd-webui-standalone/sd-webui-gh-pre-rel-v0.2.5-rc2.zip",
+    [string]$automatic_runtime_package_url = "https://gpu-on-golem.s3.eu-central-1.amazonaws.com/sd-webui-standalone/sd-webui-gh-pre-rel-v0.2.5-rc3.zip",
     [string]$automatic_package_dir = "package",
     [bool]$compress = 0,
     [bool]$cleanup = 0
