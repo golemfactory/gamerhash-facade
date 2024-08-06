@@ -113,6 +113,12 @@ class Jobs : IJobs, INotifyPropertyChanged
                 await UpdateJobPayment(invoice);
         }
 
+        // Not all Jobs have Invoices (for example Interrupted Jobs might not have them).
+        // We need to fetch Payments separately.
+        var payments = await _yagna.Api.GetPayments(since);
+        foreach (var payment in payments.OrderBy(pay => pay.Timestamp))
+            await UpdatePartialPayment(payment);
+
         return _jobs.Values.Where(job => job.Timestamp >= since).OrderByDescending(job => job.Timestamp).Cast<IJob>().ToList();
     }
 

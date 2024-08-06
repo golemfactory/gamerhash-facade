@@ -78,6 +78,7 @@ namespace Golem.Tools
             Directory.CreateDirectory(working_dir);
 
             var env = _env.Build();
+            env.Add("RUST_LOG", "debug,sqlx=warn,ya_erc20_driver=info,erc20_payment_lib=info");
             var result = StartProcess("yagna", working_dir, "service run", env, false);
 
             Rest = CreateRestAPI(AppKey);

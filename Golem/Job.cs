@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using static Golem.Model.ActivityState;
 
-namespace Golem.Yagna.Types
+namespace Golem
 {
     public class Job : IJob
     {
@@ -50,8 +50,8 @@ namespace Golem.Yagna.Types
             }
         }
 
-        private GolemLib.Types.PaymentStatus? _paymentStatus;
-        public GolemLib.Types.PaymentStatus? PaymentStatus
+        private PaymentStatus? _paymentStatus;
+        public PaymentStatus? PaymentStatus
         {
             get => _paymentStatus;
             set
@@ -131,6 +131,8 @@ namespace Golem.Yagna.Types
             if (!PaymentConfirmation.Exists(pay => pay.PaymentId == payment.PaymentId))
             {
                 PaymentConfirmation.Add(payment);
+                OnPropertyChanged(nameof(PaymentConfirmation));
+
                 PaymentStatus = EvaluatePaymentStatus(PaymentStatus);
             }
         }
