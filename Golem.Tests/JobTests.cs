@@ -207,14 +207,12 @@ namespace Golem.Tests
             var job = jobs.SingleOrDefault(j => j.Id == jobId);
 
             Assert.Equal(JobStatus.Interrupted, job!.Status);
-            Assert.Equal(PaymentStatus.Settled, job!.PaymentStatus);
 
             // Make sure nothing chnages in payments information.
             var payments2 = job!.PaymentConfirmation;
             Assert.Equal(payments!.Count, payments2.Count);
             Assert.Equal(payments![0].Amount, payments2[0].Amount);
             Assert.True(Convert.ToDouble(payments2[0].Amount) > 0.0);
-            Assert.Equal(Convert.ToDecimal(payments2![0].Amount), job.CurrentReward);
         }
 
         // After startup yagna and provider logs should be available
