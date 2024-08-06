@@ -27,10 +27,10 @@ namespace Golem.Tests
             await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
 
             // Set prices so we won't get 0 Invoice
-            golem.Price.EnvPerSec = 0.1m;
+            golem.Price.EnvPerSec = 0.001m;
             golem.Price.NumRequests = 0.0m;
-            golem.Price.GpuPerSec = 0.5m;
-            golem.Price.StartPrice = 0.5m;
+            golem.Price.GpuPerSec = 0.005m;
+            golem.Price.StartPrice = 0.005m;
 
             var golemStatusChannel = StatusChannel(golem);
             var jobChannel = JobChannel(golem);
@@ -137,6 +137,84 @@ namespace Golem.Tests
 
             // Stop
             await StopGolem(golem, golemPath, golemStatusChannel);
+        }
+
+        [Fact]
+        public async Task CompleteScenarioInterrupted()
+        {
+            string golemPath = await PackageBuilder.BuildTestDirectory();
+            await using var golem = (Golem)await TestUtils.Golem(golemPath, _loggerFactory, null, RelayType.LocalCentral);
+            _logger.LogInformation($"Path: {golemPath}");
+
+            // Set prices so we won't get 0 Invoice
+            golem.Price.EnvPerSec = 0.0001m;
+            golem.Price.NumRequests = 0.0m;
+            golem.Price.GpuPerSec = 0.0005m;
+            golem.Price.StartPrice = 0.0005m;
+
+            await StartGolem(golem, StatusChannel(golem));
+            var jobChannel = JobChannel(golem);
+
+            _logger.LogInformation("=================== Starting Sample App ===================");
+            await using var app = _requestor?.CreateSampleApp() ?? throw new Exception("Requestor not started yet");
+            Assert.True(app.Start());
+
+            // Wait for job.
+            Job? currentJob = await ReadChannel<Job?>(jobChannel);
+            Assert.NotNull(currentJob);
+
+            var jobId = currentJob.Id;
+            var jobStatusChannel = JobStatusChannel(currentJob);
+            var jobPaymentStatusChannel = JobPaymentStatusChannel(currentJob);
+            var jobPaymentConfirmationChannel = JobPaymentConfirmationChannel(currentJob);
+
+            // Wait until ExeUnit will be created.
+            // Workaround for situations, when status update was so fast, that we were not able to create
+            // channel yet, so waiting for update would be pointless.
+            if (currentJob.Status != JobStatus.Computing)
+                Assert.Equal(JobStatus.Computing, await ReadChannel(jobStatusChannel,
+                    (JobStatus s) => s == JobStatus.DownloadingModel || s == JobStatus.Idle));
+
+            // Wait for partial payment
+            var payments = await ReadChannel(jobPaymentConfirmationChannel,
+                (List<Payment>? payments) => payments == null || payments.Count == 0, TimeSpan.FromMinutes(10));
+
+            Assert.Single(payments!);
+            Assert.True(Convert.ToDecimal(payments![0].Amount) > 0.0m);
+            Assert.Equal(_requestorAppKey!.Id, payments![0].PayerId);
+            Assert.True(Convert.ToDecimal(payments![0].Amount) <= currentJob.CurrentReward);
+
+            foreach (Payment payment in payments ?? new List<Payment>())
+            {
+                _logger.LogInformation($"Got payment confirmation {payment.PaymentId}, payee {payment.PayeeId}, payee adr {payment.PayeeAddr}, amount {payment.Amount}, details {payment.Details}");
+            }
+
+
+            _logger.LogInformation("=================== Stopping Provider ===================");
+            await StopGolem(golem, golemPath, StatusChannel(golem));
+
+            Assert.Equal(JobStatus.Interrupted, currentJob.Status);
+            await AwaitValue<Job?>(jobChannel, null, TimeSpan.FromSeconds(1));
+            Assert.Null(golem.CurrentJob);
+
+            await app.Stop(StopMethod.SigInt);
+
+
+            _logger.LogInformation("=================== Validate ListJobs ===================");
+            await StartGolem(golem, StatusChannel(golem));
+
+            var jobs = await golem.ListJobs(DateTime.MinValue);
+            var job = jobs.SingleOrDefault(j => j.Id == jobId);
+
+            Assert.Equal(JobStatus.Interrupted, job!.Status);
+            Assert.Equal(PaymentStatus.Settled, job!.PaymentStatus);
+
+            // Make sure nothing chnages in payments information.
+            var payments2 = job!.PaymentConfirmation;
+            Assert.Equal(payments!.Count, payments2.Count);
+            Assert.Equal(payments![0].Amount, payments2[0].Amount);
+            Assert.True(Convert.ToDouble(payments2[0].Amount) > 0.0);
+            Assert.Equal(Convert.ToDecimal(payments2![0].Amount), job.CurrentReward);
         }
 
         // After startup yagna and provider logs should be available

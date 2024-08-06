@@ -131,6 +131,8 @@ namespace Golem
             if (!PaymentConfirmation.Exists(pay => pay.PaymentId == payment.PaymentId))
             {
                 PaymentConfirmation.Add(payment);
+                OnPropertyChanged(nameof(PaymentConfirmation));
+
                 PaymentStatus = EvaluatePaymentStatus(PaymentStatus);
             }
         }

@@ -23,7 +23,7 @@ public class DownloadArgs
 {
     [Option('t', "target", Default = "modules", Required = false, HelpText = "Directory where binaries will be generated relative to working dir")]
     public required string Target { get; set; }
-    [Option('p', "version", Default = "pre-rel-v5.0.1", Required = false, HelpText = "Gamerhash module integration package version")]
+    [Option('p', "version", Default = "pre-rel-v5.0.7", Required = false, HelpText = "Gamerhash module integration package version")]
     public required string PackageVersion { get; set; }
 }
 
