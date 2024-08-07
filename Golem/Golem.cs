@@ -312,6 +312,7 @@ namespace Golem
         {
             try
             {
+                Provider.ResetDefaultProfile();
                 Provider.PresetConfig.InitilizeDefaultPresets();
                 await Provider.Run(Yagna.Options.AppKey, Yagna.Options.Network, exitHandler, cancellationToken, true);
             }

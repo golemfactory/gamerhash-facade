@@ -203,6 +203,11 @@ namespace Golem.Yagna
             ExecToText($"profile update {param} {value} default".Split());
         }
 
+        public void ResetDefaultProfile()
+        {
+            ExecToText("profile update --reset-to-defaults --name default".Split());
+        }
+
         public async Task Run(string appKey, Network network, Func<int, string, Task> exitHandler, CancellationToken cancellationToken, bool enableDebugLogs = false)
         {
             await ProcLock.WaitAsync(cancellationToken);
