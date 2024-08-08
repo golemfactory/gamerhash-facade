@@ -183,10 +183,14 @@ namespace Golem.Yagna
             catch (Exception e)
             {
                 Logger?.LogError(e, "Failed to execute cmd. Args: {0}", args);
-                throw new GolemProcessException(string.Format("Failed to execute command: {0} {1}", Executable, e.Message));
+                throw new GolemProcessException(string.Format("Failed to execute command: {0} {1}, {2}", Executable, String.Join(" ", args.ToArray()), e.Message));
             }
-            if (process.HasExited && process.ExitCode!=0)
-                throw new GolemProcessException(string.Format("Failed to execute command: {0}, error code: {1}, stderr: {2}", Executable, process.ExitCode, stdError));
+            if (process.HasExited && process.ExitCode != 0)
+            {
+                throw new GolemProcessException(string.Format("Failed to execute command: {0} {1}, error code: {2}, stderr: {3}", Executable, String.Join(" ", args.ToArray()), process.ExitCode, stdError));
+            }
+
+
             return stdOutput;
         }
 

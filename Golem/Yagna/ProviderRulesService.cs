@@ -72,7 +72,9 @@ namespace Golem.Yagna
 
         public string AddCertificate(string certPath)
         {
-            var args = $"rule add {GetRuleCommand()} certified import-cert {certPath}".Split().ToList();
+            var args = $"rule add {GetRuleCommand()} certified import-cert".Split().ToList();
+            // Path can contains spaces, so we need to add it as separate argument.
+            args.Add(certPath);
             return _provider.ExecToText(args);
         }
 
