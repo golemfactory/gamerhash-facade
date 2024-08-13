@@ -13,6 +13,17 @@
     <PackageReference Include="AsyncKeyedLock" Version="6.4.2" />
   </ItemGroup>
 
+  <Choose>
+    <When Condition=" '$(OS)' == 'Windows_NT' ">
+        <PropertyGroup>
+          <DefineConstants>OS_WINDOWS</DefineConstants>
+        </PropertyGroup>
+        <ItemGroup>
+          <PackageReference Include="Microsoft.Win32.SystemEvents" Version="8.0.0" />
+        </ItemGroup>
+    </When>
+  </Choose>
+
   <ItemGroup>
     <ProjectReference Include="..\GolemLib\GolemLib.csproj" />
   </ItemGroup>

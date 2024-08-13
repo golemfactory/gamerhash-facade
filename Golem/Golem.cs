@@ -11,6 +11,11 @@ using GolemLib.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+#if OS_WINDOWS
+using Microsoft.Win32;
+using System.Runtime.Versioning;
+#endif
+
 namespace Golem
 {
     public class Golem : IGolem, IAsyncDisposable, IGolemTesting
@@ -87,6 +92,11 @@ namespace Golem
         }
 
         private GolemStatus status;
+
+        private SemaphoreSlim SuspendHandlerLock { get; } = new SemaphoreSlim(1, 1);
+
+        private bool _isSuspendHandlerSetUp;
+
         public GolemStatus Status
         {
             get { return status; }
@@ -183,6 +193,15 @@ namespace Golem
             if (IsRunning())
                 return;
 
+            await SetupSuspendHandlerAsync();
+
+            await InternalStart();
+        }
+
+        private async Task InternalStart() {
+            if (IsRunning())
+                return;
+
             _logger.LogInformation("Starting Golem");
 
             Status = GolemStatus.Starting;
@@ -227,6 +246,15 @@ namespace Golem
         /// </summary>
         public async Task Stop()
         {
+            if (!IsRunning() && Status != GolemStatus.Error)
+                return;
+
+            await DetachSuspendHandler();
+
+            await InternalStop();
+        }
+
+        private async Task InternalStop() {
             if (!IsRunning() && Status != GolemStatus.Error)
                 return;
 
@@ -353,6 +381,8 @@ namespace Golem
                     }
 
                     Status = GolemStatus.Error;
+
+                    await DetachSuspendHandler();
                 }
             };
         }
@@ -451,5 +481,88 @@ namespace Golem
         {
             return Provider.ProviderProcess?.Id;
         }
+
+        private async Task SetupSuspendHandlerAsync()
+        {
+            await SuspendHandlerLock.WaitAsync();
+            try {
+                if (_isSuspendHandlerSetUp) {
+                    return;
+                }
+    #pragma warning disable CA1416 // Validate platform compatibility ensured by #if
+                SetupSuspendHandler_Impl();
+    #pragma warning restore CA1416 // Validate platform compatibility
+                _isSuspendHandlerSetUp = true;
+            } finally {
+                SuspendHandlerLock.Release();
+            }
+
+        }
+        private async Task DetachSuspendHandler()
+        {
+            await SuspendHandlerLock.WaitAsync();
+            try {
+#pragma warning disable CA1416 // Validate platform compatibility ensured by #if
+            DetachSuspendHandler_Impl();
+#pragma warning restore CA1416 // Validate platform compatibility
+            _isSuspendHandlerSetUp = false;
+            } finally {
+                SuspendHandlerLock.Release();
+            }
+        }
+
+        #if OS_WINDOWS
+
+        [SupportedOSPlatform("Windows")]
+        private void SetupSuspendHandler_Impl()
+        {
+            _logger.LogInformation("Setting up Suspend handler (Windows).");
+            SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        }
+
+        [SupportedOSPlatform("Windows")]
+        private void DetachSuspendHandler_Impl()
+        {
+            _logger.LogInformation("Detaching Suspend handler (Windows).");
+            SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        }
+
+        [SupportedOSPlatform("Windows")]
+        private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+        {
+            // Start and Stop tasks won't be waited upon in this event handler.
+            switch (e.Mode) {
+                case PowerModes.Suspend:
+                    _logger.LogInformation("Received Suspend event - stopping Golem.");
+                    InternalStop().ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
+                    break;
+                case PowerModes.Resume:
+                    _logger.LogInformation("Received Resume event - starting Golem.");
+                    RestartOnResume().ContinueWith(t => Console.WriteLine(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
+                    break;
+            }
+        }
+
+        private async Task RestartOnResume()
+        {
+            // We are trying to stop Golem when the system is Resumed from a sleep
+            // because we cannot ensure that Suspend handler will execute to completion
+            // before the system is suspended.
+            await InternalStop();
+            await InternalStart();
+        }
+
+        #else // OS_WINDOWS
+
+        private void SetupSuspendHandler_Impl()
+        {
+            _logger.LogInformation("Suspend handler cannot be set on current platform.");
+        }
+
+        private void DetachSuspendHandler_Impl()
+        {
+        }
+
+        #endif // OS_WINDOWS
     }
 }
