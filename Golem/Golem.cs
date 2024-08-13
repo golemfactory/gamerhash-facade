@@ -381,6 +381,8 @@ namespace Golem
                     }
 
                     Status = GolemStatus.Error;
+
+                    await DetachSuspendHandler();
                 }
             };
         }
@@ -528,7 +530,7 @@ namespace Golem
         [SupportedOSPlatform("Windows")]
         private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
         {
-            // Start and Stop tasks will be won't be waited upon in this event handler.
+            // Start and Stop tasks won't be waited upon in this event handler.
             switch (e.Mode) {
                 case PowerModes.Suspend:
                     _logger.LogInformation("Received Suspend event - stopping Golem.");
