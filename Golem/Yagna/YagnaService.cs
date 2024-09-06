@@ -165,7 +165,7 @@ namespace Golem.Yagna
                 environment = Options.YagnaApiUrl != null ? environment.WithYagnaApiUrl(Options.YagnaApiUrl) : environment;
                 environment = Options.PrivateKey != null ? environment.WithPrivateKey(Options.PrivateKey) : environment;
                 environment = Options.AppKey != null ? environment.WithAppKey(Options.AppKey) : environment;
-                environment = environment.WithMetricsGroup("GamerHash." + Options.Network.ToString());
+                environment = environment.WithMetricsGroup("GamerHash." + Options.Network.Id);
                 environment = environment.WithYaUseHttpsDnsResolver();
 
                 var args = $"service run {debugFlag}".Split();
