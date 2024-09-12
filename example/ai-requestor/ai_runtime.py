@@ -191,12 +191,26 @@ class AiRuntimeService(Service):
     @staticmethod
     async def get_payload():
         ## TODO switched into using smaller model to avoid problems during tests. Resolve it when automatic runtime integrated
-        # return AiPayload(image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true")
         # return AiPayload(image_url="hash:sha3:0b682cf78786b04dc108ff0b254db1511ef820105129ad021d2e123a7b975e7c:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true")
+        
         return AiPayload(
             image_url="hash:sha3:b2da48d618beddab1887739d75b50a3041c810bc73805a416761185998359b24:https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors?download=true",
             runtime=AiRuntimeService.runtime,
         )
+        # return AiPayload(
+        #     image_url="hash:sha2:26ebb6db2a68593c54c74902d7a74f332da66297693f965cc9f1b0af4abf3894:https://huggingface.co/cointegrated/rubert-tiny2/resolve/main/model.safetensors?download=true",
+        #     runtime=AiRuntimeService.runtime,
+        # )
+        # return AiPayload(
+        #     image_url="hash:sha3:92180a67d096be309c5e6a7146d89aac4ef900e2bf48a52ea569df7d:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true",
+        #     runtime=AiRuntimeService.runtime,
+        # )
+        # return AiPayload(
+        #     image_url="hash:sha2:31e35c80fc4829d14f90153f4c74cd59c90b779f6afe05a74cd6120b893f7e5b:https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true",
+        #     runtime=AiRuntimeService.runtime,
+        # )
+
+        
     
     async def start(self):
         self.strategy.remember(self._ctx.provider_id)
