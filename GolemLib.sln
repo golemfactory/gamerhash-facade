@@ -17,7 +17,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Golem.Tools", "Golem.Tools\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Golem.Package", "Golem.Package\Golem.Package.csproj", "{299443D2-91EB-4C12-B654-3B9852E14120}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleRunner", "ExampleRunner\ExampleRunner.csproj", "{35C7BEC1-FA91-4B29-9C6C-48ABA08388D2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleRunner", "example\ExampleRunner\ExampleRunner.csproj", "{35C7BEC1-FA91-4B29-9C6C-48ABA08388D2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GolemLib.Tests", "GolemLib.Tests\GolemLib.Tests.csproj", "{840D9798-C88E-4120-B19C-FFE1B62CCBF3}"
 EndProject
