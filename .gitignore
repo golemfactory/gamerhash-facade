@@ -6,8 +6,8 @@ GolemLib/bin/
 GolemLib/obj/
 Mock/bin/
 Mock/obj/
-/FacadeApp/bin/
-/FacadeApp/obj/
+/FacadeHeadlessApp/bin/
+/FacadeHeadlessApp/obj/
 /Golem/bin/
 /Golem/obj/
 /Golem.Tests/bin/

@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GolemLib", "GolemLib\GolemLib.csproj", "{40CD8A07-4E06-49EA-8B3E-A7D087596015}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FacadeApp", "FacadeApp\FacadeApp.csproj", "{8B1A5AC1-BC71-4565-BB56-A6DD22D967AF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FacadeHeadlessApp", "FacadeHeadlessApp\FacadeHeadlessApp.csproj", "{8B1A5AC1-BC71-4565-BB56-A6DD22D967AF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Golem", "Golem\Golem.csproj", "{7C980FF1-986D-4059-BFB7-8B52AFC6D9F2}"
 EndProject
