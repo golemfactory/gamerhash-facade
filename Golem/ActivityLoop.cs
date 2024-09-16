@@ -51,10 +51,10 @@ class ActivityLoop
                 _logger.LogDebug("Monitoring activities");
                 newReconnect = await ReconnectDelay(newReconnect, _token);
 
-                _token.ThrowIfCancellationRequested();
-
                 try
                 {
+                    _token.ThrowIfCancellationRequested();
+
                     await foreach (var trackingEvent in _yagnaApi.ActivityMonitorStream(_token))
                     {
                         var activities = trackingEvent?.Activities ?? new List<ActivityState>();

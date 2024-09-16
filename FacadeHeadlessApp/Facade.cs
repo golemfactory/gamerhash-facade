@@ -40,6 +40,9 @@ internal class Facade
         var logger = loggerFactory.CreateLogger<Facade>();
 
         var args = Parser.Default.ParseArguments<FacadeAppArguments>(argsArray).Value;
+        if (args == null)
+            return;
+
         string golemPath = args.GolemPath ?? "";
 
         logger.LogInformation("Path: " + golemPath);
@@ -90,7 +93,7 @@ internal class Facade
         else
         {
             await golem.Start();
-            ConsoleHelper.WaitForCtrlC();
+            await ConsoleHelper.WaitForCancellation();
         }
     }
 }
