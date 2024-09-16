@@ -1,12 +1,12 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using MockGUI.ViewModels;
 using CommandLine;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 
 using Golem;
+using Golem.Tools.ViewModels;
 
 namespace MockGUI;
 

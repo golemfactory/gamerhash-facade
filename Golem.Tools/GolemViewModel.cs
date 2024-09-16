@@ -1,23 +1,15 @@
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 using GolemLib;
 using App;
 using System.Reflection;
-using Microsoft.Extensions.Logging.Abstractions;
-using Golem.Tools;
-using Golem;
-using System.Collections.Generic;
-using Golem.Yagna.Types;
 using GolemLib.Types;
 
 
-namespace MockGUI.ViewModels
+namespace Golem.Tools.ViewModels
 {
     public class GolemViewModel : INotifyPropertyChanged, IAsyncDisposable
     {
@@ -100,7 +92,7 @@ namespace MockGUI.ViewModels
             var golem = await createGolem(loggerFactory);
             if (mainnet)
             {
-                ((Golem.Golem)golem).WalletAddress = mainnetWalletAddr();
+                ((Golem)golem).WalletAddress = mainnetWalletAddr();
             }
             var relay = await CreateRelay(modulesDir, relayType, loggerFactory);
             return new GolemViewModel(modulesDir, golem, relay, loggerFactory);

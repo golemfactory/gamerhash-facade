@@ -4,7 +4,7 @@ using CommandLine;
 
 using Golem;
 
-using GolemLib;
+using Golem.Tools;
 
 using Microsoft.Extensions.Logging;
 
@@ -63,7 +63,7 @@ class ExampleRunner
 
         logger.LogInformation("Press Ctrl+C To Terminate");
 
-        waitForCtrlC();
+        ConsoleHelper.WaitForCtrlC();
 
         Task[] tasks = new Task[2];
         tasks[0] = Task.Run(() =>
@@ -75,7 +75,7 @@ class ExampleRunner
 
         tasks[1] = Task.Run(() =>
         {
-            waitForCtrlC();
+            ConsoleHelper.WaitForCtrlC();
 
             logger.LogInformation("Captured second Ctrl-C. Killing...");
             App.Kill().Wait(100);
@@ -83,16 +83,5 @@ class ExampleRunner
         });
 
         Task.WaitAny(tasks);
-    }
-
-    static void waitForCtrlC()
-    {
-        Console.TreatControlCAsInput = true;
-
-        ConsoleKeyInfo cki;
-        do
-        {
-            cki = Console.ReadKey();
-        } while (!(((cki.Modifiers & ConsoleModifiers.Control) != 0) && (cki.Key == ConsoleKey.C)));
     }
 }

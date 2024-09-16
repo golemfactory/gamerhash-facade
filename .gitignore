@@ -6,8 +6,8 @@ GolemLib/bin/
 GolemLib/obj/
 Mock/bin/
 Mock/obj/
-/FacadeApp/bin/
-/FacadeApp/obj/
+/FacadeHeadlessApp/bin/
+/FacadeHeadlessApp/obj/
 /Golem/bin/
 /Golem/obj/
 /Golem.Tests/bin/
@@ -34,8 +34,8 @@ Mock/obj/
 /Golem.Package/tests/
 /Golem.Package/package/
 
-/ExampleRunner/bin/
-/ExampleRunner/obj/
+/example/ExampleRunner/bin/
+/example/ExampleRunner/obj/
 
 /MockGUI/bin/
 /MockGUI/obj/
@@ -48,6 +48,7 @@ Mock/obj/
 /example/ai-requestor/.venv/
 /example/ai-requestor/dist
 
+example/ai-requestor/outputs/
 output.png
 
 /example/DummyAiHttpServer/__pycache__/
