@@ -93,7 +93,7 @@ internal class Facade
         else
         {
             await golem.Start();
-            ConsoleHelper.WaitForCtrlC();
+            await ConsoleHelper.WaitForCancellation();
         }
     }
 }
