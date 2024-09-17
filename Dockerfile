@@ -6,9 +6,8 @@ RUN apt-get update && apt-get install -y python3 python3-venv python3-pip
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN pip3 install pyinstaller
 
-RUN git clone https://github.com/golemfactory/gamerhash-facade.git
+COPY . /gamerhash-facade
 WORKDIR /gamerhash-facade
-RUN git checkout headless-facade
 
 # Build necessary application
 RUN dotnet build FacadeHeadlessApp
