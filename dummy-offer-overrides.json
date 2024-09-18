@@ -1,0 +1,16 @@
+{
+  "properties": {
+    "golem.!exp.gap-35.v1.inf.gpu.clocks.graphics.mhz": 3105,
+    "golem.!exp.gap-35.v1.inf.gpu.clocks.memory.mhz": 10501,
+    "golem.!exp.gap-35.v1.inf.gpu.clocks.sm.mhz": 3105,
+    "golem.!exp.gap-35.v1.inf.gpu.clocks.video.mhz": 2415,
+    "golem.!exp.gap-35.v1.inf.gpu.cuda.compute-capability": "8.9",
+    "golem.!exp.gap-35.v1.inf.gpu.cuda.cores": 16384,
+    "golem.!exp.gap-35.v1.inf.gpu.cuda.enabled": true,
+    "golem.!exp.gap-35.v1.inf.gpu.cuda.version": "12.6",
+    "golem.!exp.gap-35.v1.inf.gpu.memory.total.gib": 23.98828125,
+    "golem.!exp.gap-35.v1.inf.gpu.model": "NVIDIA GeForce RTX 8080"
+  },
+  "constraints": ""
+}
+

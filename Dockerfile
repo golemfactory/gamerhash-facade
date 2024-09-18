@@ -23,5 +23,9 @@ WORKDIR /apps
 COPY --from=build /apps .
 
 RUN ./Golem.Package download --target modules --version v5.1.0
+
+COPY ./dummy-offer-overrides.json /dummy-offer-overrides.json
+ENV OFFER_OVERRIDE_FILE_PATH="/dummy-offer-overrides.json"
+
 ENTRYPOINT ["./FacadeHeadlessApp", "--golem", "modules"]
 CMD ["--wallet", "0x82a630d2447ffd282657978f9f76c02da8be9819"]
