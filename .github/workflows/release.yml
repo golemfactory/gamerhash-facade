@@ -68,10 +68,9 @@ jobs:
           -cleanup 1
         
         Write-S3Object `
-          -BucketName gh-facade `
+          -BucketName modelserve-gamerhash-facade `
           -AccessKey $env:AWS_ACCESS_KEY_ID `
           -SecretKey $env:AWS_SECRET_ACCESS_KEY `
           -File "bin\dist_package.zip" `
           -Key "packages\$($env:PKG_NAME)" `
-          -PublicReadOnly `
           -Force
