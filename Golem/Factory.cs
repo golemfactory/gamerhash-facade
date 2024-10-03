@@ -75,6 +75,7 @@ namespace Golem
             return new List<string>
             {
                 "https://ca.golem.network/cert/scalepoint.signed.json",
+                "https://ca.golem.network/cert/modelserve.signed.json",
             };
         }
 
