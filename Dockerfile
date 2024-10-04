@@ -6,9 +6,8 @@ RUN apt-get update && apt-get install -y python3 python3-venv python3-pip
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN pip3 install pyinstaller
 
-RUN git clone https://github.com/golemfactory/gamerhash-facade.git
+COPY . /gamerhash-facade
 WORKDIR /gamerhash-facade
-RUN git checkout headless-facade
 
 # Build necessary application
 RUN dotnet build FacadeHeadlessApp
@@ -24,5 +23,9 @@ WORKDIR /apps
 COPY --from=build /apps .
 
 RUN ./Golem.Package download --target modules --version v5.1.0
+
+COPY ./dummy-offer-overrides.json /dummy-offer-overrides.json
+ENV OFFER_OVERRIDE_FILE_PATH="/dummy-offer-overrides.json"
+
 ENTRYPOINT ["./FacadeHeadlessApp", "--golem", "modules"]
 CMD ["--wallet", "0x82a630d2447ffd282657978f9f76c02da8be9819"]
