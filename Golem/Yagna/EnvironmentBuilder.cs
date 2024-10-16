@@ -19,6 +19,7 @@ namespace Golem.Yagna
             { "YA_NET_TYPE", "hybrid" },
             { "EXE_UNIT_FILE_LOG_LEVEL", "debug,h2=info,hyper=info,hyper_util=info" },
             { "BCAST_NODE_BAN_TIMEOUT", "5s" },
+            { "YA_CONSENT_STATS", "allow" },
         };
 
         private readonly Dictionary<string, string> _env = new Dictionary<string, string>();
@@ -102,7 +103,8 @@ namespace Golem.Yagna
             return this;
         }
 
-        public EnvironmentBuilder WithYaUseHttpsDnsResolver() {
+        public EnvironmentBuilder WithYaUseHttpsDnsResolver()
+        {
             _env["YA_USE_HTTPS_DNS_RESOLVER"] = "1";
             return this;
         }
