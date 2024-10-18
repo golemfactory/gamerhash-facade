@@ -1,5 +1,5 @@
 param (
-    [string]$automatic_runtime_package_url = "https://modelserve-automatic1111.s3.eu-central-1.amazonaws.com/sd-webui-gh-pre-rel-v0.2.8-rc1.zip",
+    [string]$automatic_runtime_package_url = "https://modelserve-automatic1111.s3.eu-central-1.amazonaws.com/sd-webui-gh-v0.2.8.zip",
     [string]$automatic_package_dir = "package",
     [bool]$compress = 0,
     [bool]$cleanup = 0
